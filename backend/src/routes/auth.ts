@@ -1,4 +1,4 @@
-import express from 'express';
+import express, { Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { body, validationResult } from 'express-validator';
@@ -12,7 +12,7 @@ router.post('/register', [
   body('email').isEmail().normalizeEmail(),
   body('password').isLength({ min: 6 }),
   body('fullName').optional().trim()
-], async (req, res) => {
+], async (req: Request, res: Response) => {
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -39,10 +39,11 @@ router.post('/register', [
     const user = userResult.rows[0];
 
     // Generate token
+    const jwtSecret = process.env.JWT_SECRET || 'secret';
     const token = jwt.sign(
       { userId: user.id },
-      process.env.JWT_SECRET || 'secret',
-      { expiresIn: process.env.JWT_EXPIRE || '7d' }
+      jwtSecret,
+      { expiresIn: process.env.JWT_EXPIRE || '7d' } as jwt.SignOptions
     );
 
     res.status(201).json({
@@ -63,7 +64,7 @@ router.post('/register', [
 router.post('/login', [
   body('email').isEmail().normalizeEmail(),
   body('password').notEmpty()
-], async (req, res) => {
+], async (req: Request, res: Response) => {
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -87,10 +88,11 @@ router.post('/login', [
     }
 
     // Generate token
+    const jwtSecret = process.env.JWT_SECRET || 'secret';
     const token = jwt.sign(
       { userId: user.id },
-      process.env.JWT_SECRET || 'secret',
-      { expiresIn: process.env.JWT_EXPIRE || '7d' }
+      jwtSecret,
+      { expiresIn: process.env.JWT_EXPIRE || '7d' } as jwt.SignOptions
     );
 
     // Get user's companies
@@ -115,7 +117,7 @@ router.post('/login', [
 });
 
 // Get current user
-router.get('/me', authenticate, async (req: AuthRequest, res) => {
+router.get('/me', authenticate, async (req: AuthRequest, res: Response) => {
   try {
     const userResult = await pool.query('SELECT id, email, full_name, created_at FROM users WHERE id = $1', [req.userId]);
     

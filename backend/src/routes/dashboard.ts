@@ -1,4 +1,4 @@
-import express from 'express';
+import express, { Response } from 'express';
 import { authenticate, requireCompany, AuthRequest } from '../middleware/auth';
 import pool from '../database/connection';
 
@@ -8,7 +8,7 @@ router.use(authenticate);
 router.use(requireCompany);
 
 // Get dashboard stats
-router.get('/stats', async (req: AuthRequest, res) => {
+router.get('/stats', async (req: AuthRequest, res: Response) => {
   try {
     // Total quotations
     const quotationsResult = await pool.query(

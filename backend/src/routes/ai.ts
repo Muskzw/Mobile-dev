@@ -1,4 +1,4 @@
-import express from 'express';
+import express, { Response } from 'express';
 import OpenAI from 'openai';
 import { authenticate, requireCompany, AuthRequest } from '../middleware/auth';
 import pool from '../database/connection';
@@ -17,7 +17,7 @@ const openai = new OpenAI({
 router.post('/write-description', [
   body('prompt').notEmpty().trim(),
   body('type').optional().isIn(['quotation', 'invoice', 'email'])
-], async (req: AuthRequest, res) => {
+], async (req: AuthRequest, res: Response) => {
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -54,7 +54,7 @@ router.post('/estimate-price', [
   body('itemName').notEmpty(),
   body('cost').optional().isNumeric(),
   body('industry').optional().trim()
-], async (req: AuthRequest, res) => {
+], async (req: AuthRequest, res: Response) => {
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -125,7 +125,7 @@ Provide a suggested selling price with a brief explanation.`;
 // AI Auto-Fill - Extract items from uploaded document/text
 router.post('/auto-fill', [
   body('text').notEmpty()
-], async (req: AuthRequest, res) => {
+], async (req: AuthRequest, res: Response) => {
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -178,7 +178,7 @@ Return only valid JSON array, no other text.`;
 });
 
 // AI Smart Insights
-router.get('/insights', async (req: AuthRequest, res) => {
+router.get('/insights', async (req: AuthRequest, res: Response) => {
   try {
     // Get client acceptance rates
     const acceptanceResult = await pool.query(

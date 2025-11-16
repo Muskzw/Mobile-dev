@@ -1,4 +1,4 @@
-import express from 'express';
+import express, { Response } from 'express';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
@@ -44,7 +44,7 @@ router.post('/', authenticate, upload.single('logo'), [
   body('name').notEmpty().trim(),
   body('email').optional().isEmail(),
   body('currency').optional().isLength({ min: 3, max: 3 })
-], async (req: AuthRequest, res) => {
+], async (req: AuthRequest, res: Response) => {
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -92,7 +92,7 @@ router.post('/', authenticate, upload.single('logo'), [
 });
 
 // Get all companies for user
-router.get('/', authenticate, async (req: AuthRequest, res) => {
+router.get('/', authenticate, async (req: AuthRequest, res: Response) => {
   try {
     const result = await pool.query(
       'SELECT * FROM companies WHERE user_id = $1 ORDER BY created_at DESC',
@@ -106,7 +106,7 @@ router.get('/', authenticate, async (req: AuthRequest, res) => {
 });
 
 // Get single company
-router.get('/:id', authenticate, async (req: AuthRequest, res) => {
+router.get('/:id', authenticate, async (req: AuthRequest, res: Response) => {
   try {
     const result = await pool.query(
       'SELECT * FROM companies WHERE id = $1 AND user_id = $2',
@@ -125,7 +125,7 @@ router.get('/:id', authenticate, async (req: AuthRequest, res) => {
 });
 
 // Update company
-router.put('/:id', authenticate, upload.single('logo'), async (req: AuthRequest, res) => {
+router.put('/:id', authenticate, upload.single('logo'), async (req: AuthRequest, res: Response) => {
   try {
     const {
       name,
@@ -188,7 +188,7 @@ router.put('/:id', authenticate, upload.single('logo'), async (req: AuthRequest,
 });
 
 // Delete company
-router.delete('/:id', authenticate, async (req: AuthRequest, res) => {
+router.delete('/:id', authenticate, async (req: AuthRequest, res: Response) => {
   try {
     const result = await pool.query(
       'DELETE FROM companies WHERE id = $1 AND user_id = $2 RETURNING id',

@@ -1,4 +1,4 @@
-import express from 'express';
+import express, { Response } from 'express';
 import { authenticate, requireCompany, AuthRequest } from '../middleware/auth';
 import pool from '../database/connection';
 import { body, validationResult } from 'express-validator';
@@ -12,7 +12,7 @@ router.use(requireCompany);
 router.post('/', [
   body('name').notEmpty().trim(),
   body('email').optional().isEmail()
-], async (req: AuthRequest, res) => {
+], async (req: AuthRequest, res: Response) => {
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -36,7 +36,7 @@ router.post('/', [
 });
 
 // Get all clients
-router.get('/', async (req: AuthRequest, res) => {
+router.get('/', async (req: AuthRequest, res: Response) => {
   try {
     const result = await pool.query(
       'SELECT * FROM clients WHERE company_id = $1 ORDER BY name ASC',
@@ -50,7 +50,7 @@ router.get('/', async (req: AuthRequest, res) => {
 });
 
 // Get single client
-router.get('/:id', async (req: AuthRequest, res) => {
+router.get('/:id', async (req: AuthRequest, res: Response) => {
   try {
     const result = await pool.query(
       `SELECT c.*, 
@@ -82,7 +82,7 @@ router.get('/:id', async (req: AuthRequest, res) => {
 });
 
 // Update client
-router.put('/:id', async (req: AuthRequest, res) => {
+router.put('/:id', async (req: AuthRequest, res: Response) => {
   try {
     const { name, email, phone, address, taxNumber, notes } = req.body;
 
@@ -112,7 +112,7 @@ router.put('/:id', async (req: AuthRequest, res) => {
 });
 
 // Delete client
-router.delete('/:id', async (req: AuthRequest, res) => {
+router.delete('/:id', async (req: AuthRequest, res: Response) => {
   try {
     const result = await pool.query(
       'DELETE FROM clients WHERE id = $1 AND company_id = $2 RETURNING id',
@@ -131,7 +131,7 @@ router.delete('/:id', async (req: AuthRequest, res) => {
 });
 
 // Search clients (for autocomplete)
-router.get('/search/:query', async (req: AuthRequest, res) => {
+router.get('/search/:query', async (req: AuthRequest, res: Response) => {
   try {
     const query = `%${req.params.query}%`;
     const result = await pool.query(

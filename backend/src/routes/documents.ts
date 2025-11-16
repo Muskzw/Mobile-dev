@@ -1,4 +1,4 @@
-import express from 'express';
+import express, { Response } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import { authenticate, requireCompany, AuthRequest } from '../middleware/auth';
 import pool from '../database/connection';
@@ -23,7 +23,7 @@ router.post('/', [
   body('type').isIn(['quotation', 'invoice', 'proforma', 'receipt', 'delivery_note']),
   body('clientId').optional().isUUID(),
   body('items').isArray({ min: 1 })
-], async (req: AuthRequest, res) => {
+], async (req: AuthRequest, res: Response) => {
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -116,9 +116,13 @@ router.post('/', [
 });
 
 // Get all documents
-router.get('/', async (req: AuthRequest, res) => {
+router.get('/', async (req: AuthRequest, res: Response) => {
   try {
     const { type, status, search, page = 1, limit = 20 } = req.query;
+    
+    // Convert page and limit to numbers
+    const pageNum = parseInt(page as string, 10) || 1;
+    const limitNum = parseInt(limit as string, 10) || 20;
     
     let query = `
       SELECT d.*, c.name as client_name, c.email as client_email
@@ -148,7 +152,7 @@ router.get('/', async (req: AuthRequest, res) => {
     }
 
     query += ` ORDER BY d.created_at DESC LIMIT $${paramCount + 1} OFFSET $${paramCount + 2}`;
-    params.push(limit, (page - 1) * limit);
+    params.push(limitNum, (pageNum - 1) * limitNum);
 
     const result = await pool.query(query, params);
     res.json(result.rows);
@@ -159,7 +163,7 @@ router.get('/', async (req: AuthRequest, res) => {
 });
 
 // Get single document
-router.get('/:id', async (req: AuthRequest, res) => {
+router.get('/:id', async (req: AuthRequest, res: Response) => {
   try {
     const document = await getDocumentWithItems(req.params.id);
     
@@ -180,7 +184,7 @@ router.get('/:id', async (req: AuthRequest, res) => {
 });
 
 // Update document
-router.put('/:id', async (req: AuthRequest, res) => {
+router.put('/:id', async (req: AuthRequest, res: Response) => {
   try {
     const {
       clientId,
@@ -305,7 +309,7 @@ router.put('/:id', async (req: AuthRequest, res) => {
 });
 
 // Delete document
-router.delete('/:id', async (req: AuthRequest, res) => {
+router.delete('/:id', async (req: AuthRequest, res: Response) => {
   try {
     const result = await pool.query(
       'DELETE FROM documents WHERE id = $1 AND company_id = $2 RETURNING id',
@@ -324,7 +328,7 @@ router.delete('/:id', async (req: AuthRequest, res) => {
 });
 
 // Duplicate document
-router.post('/:id/duplicate', async (req: AuthRequest, res) => {
+router.post('/:id/duplicate', async (req: AuthRequest, res: Response) => {
   try {
     const original = await getDocumentWithItems(req.params.id);
     
@@ -388,7 +392,7 @@ router.post('/:id/duplicate', async (req: AuthRequest, res) => {
 });
 
 // Generate PDF
-router.get('/:id/pdf', async (req: AuthRequest, res) => {
+router.get('/:id/pdf', async (req: AuthRequest, res: Response) => {
   try {
     const document = await getDocumentWithItems(req.params.id);
     
@@ -421,7 +425,7 @@ router.get('/:id/pdf', async (req: AuthRequest, res) => {
 router.post('/:id/send-email', [
   body('email').isEmail(),
   body('subject').optional()
-], async (req: AuthRequest, res) => {
+], async (req: AuthRequest, res: Response) => {
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -472,7 +476,7 @@ router.post('/:id/send-email', [
 });
 
 // Get WhatsApp share link
-router.get('/:id/whatsapp-link', async (req: AuthRequest, res) => {
+router.get('/:id/whatsapp-link', async (req: AuthRequest, res: Response) => {
   try {
     const document = await getDocumentWithItems(req.params.id);
     

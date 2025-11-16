@@ -1,4 +1,4 @@
-import express from 'express';
+import express, { Response } from 'express';
 import { authenticate, requireCompany, AuthRequest } from '../middleware/auth';
 import pool from '../database/connection';
 import { body, validationResult } from 'express-validator';
@@ -9,7 +9,7 @@ router.use(authenticate);
 router.use(requireCompany);
 
 // Get saved items
-router.get('/', async (req: AuthRequest, res) => {
+router.get('/', async (req: AuthRequest, res: Response) => {
   try {
     const result = await pool.query(
       'SELECT * FROM saved_items WHERE company_id = $1 ORDER BY name ASC',
@@ -26,7 +26,7 @@ router.get('/', async (req: AuthRequest, res) => {
 router.post('/', [
   body('name').notEmpty(),
   body('unitPrice').isNumeric()
-], async (req: AuthRequest, res) => {
+], async (req: AuthRequest, res: Response) => {
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -50,7 +50,7 @@ router.post('/', [
 });
 
 // Delete saved item
-router.delete('/:id', async (req: AuthRequest, res) => {
+router.delete('/:id', async (req: AuthRequest, res: Response) => {
   try {
     const result = await pool.query(
       'DELETE FROM saved_items WHERE id = $1 AND company_id = $2 RETURNING id',
