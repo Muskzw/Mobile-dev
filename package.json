@@ -1,0 +1,16 @@
+{
+  "name": "ai-quotation-maker",
+  "version": "1.0.0",
+  "description": "AI-Powered Business Quotation & Invoice Maker",
+  "main": "index.js",
+  "scripts": {
+    "dev:backend": "cd backend && npm run dev",
+    "dev:web": "cd web && npm run dev",
+    "dev:mobile": "cd mobile && npm start",
+    "install:all": "npm install && cd backend && npm install && cd ../web && npm install && cd ../mobile && npm install"
+  },
+  "keywords": ["quotation", "invoice", "ai", "business"],
+  "author": "techub",
+  "license": "MIT"
+}
+
