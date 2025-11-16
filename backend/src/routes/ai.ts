@@ -152,6 +152,10 @@ Return only valid JSON array, no other text.`;
     });
 
     const response = completion.choices[0].message.content;
+    if (!response) {
+      throw new Error('AI returned empty response');
+    }
+    
     let items;
     
     try {
@@ -212,7 +216,7 @@ router.get('/insights', async (req: AuthRequest, res: Response) => {
     const winRate = winRateResult.rows[0];
     const winPercentage = winRate.total > 0 
       ? ((winRate.accepted / winRate.total) * 100).toFixed(1)
-      : 0;
+      : '0';
 
     // Get best follow-up times (analyze when clients respond)
     const followUpResult = await pool.query(
@@ -264,7 +268,7 @@ Provide brief, actionable recommendations.`;
         acceptanceRate: ((row.accepted / row.total_quotes) * 100).toFixed(1),
         avgResponseDays: parseFloat(row.avg_response_days || 0).toFixed(1)
       })),
-      winPercentage: parseFloat(winPercentage),
+      winPercentage: parseFloat(winPercentage.toString()),
       bestFollowUpTimes: followUpResult.rows.map((row: any) => ({
         hour: parseInt(row.hour),
         responses: parseInt(row.responses)
