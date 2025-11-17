@@ -14,6 +14,8 @@ import Documents from './pages/Documents';
 import DocumentCreate from './pages/DocumentCreate';
 import DocumentView from './pages/DocumentView';
 import Settings from './pages/Settings';
+import QuotesPage from './pages/qoutes/QoutesPage';
+import QuoteEditor from './pages/qoutes/QouteEditor';
 
 const queryClient = new QueryClient();
 
@@ -92,6 +94,30 @@ function App() {
                 <Settings />
               </PrivateRoute>
             }
+          />
+          <Route
+            path="/quotes"
+            element={
+              <PrivateRoute>
+                <QuotesPage />
+              </PrivateRoute>
+            }   
+          />
+          <Route
+            path="/quotes/new"
+            element={
+              <PrivateRoute>
+                <QuoteEditor />
+              </PrivateRoute>
+            } 
+          />
+          <Route
+            path="/quotes/:id"
+            element={
+              <PrivateRoute>
+                <QuoteEditor />
+              </PrivateRoute>
+            } 
           />
         </Routes>
         <Toaster position="top-right" />
