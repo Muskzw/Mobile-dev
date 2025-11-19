@@ -254,6 +254,10 @@ router.put('/:id', async (req: AuthRequest, res: Response) => {
       updateFields.push(`status = $${paramCount++}`);
       updateValues.push(status);
     }
+    if (req.body.metadata !== undefined) {
+      updateFields.push(`metadata = $${paramCount++}`);
+      updateValues.push(req.body.metadata);
+    }
     if (updateData.subtotal !== undefined) {
       updateFields.push(`subtotal = $${paramCount++}`);
       updateValues.push(updateData.subtotal);

@@ -73,6 +73,11 @@ export default function QuoteEditor() {
       setNotes(data.notes || "");
       setTerms(data.terms || "");
 
+      if (data.metadata) {
+        setCompanyLogo(data.metadata.companyLogo || null);
+        setClientAddress(data.metadata.clientAddress || "");
+      }
+
       if (data.items && data.items.length > 0) {
         setItems(data.items.map((item: any) => ({
           id: item.id || `i${Math.random()}`,
@@ -144,6 +149,10 @@ export default function QuoteEditor() {
         notes,
         terms,
         total: calcTotal(),
+        metadata: {
+          companyLogo,
+          clientAddress
+        }
       };
 
       if (id) {
