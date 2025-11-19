@@ -6,8 +6,24 @@
 - PostgreSQL database running
 - OpenAI API key (for AI features)
 - SMTP credentials (for email sending)
+- Docker and Docker Compose (optional, for easier setup)
 
-## Backend Setup
+## Quick Start with Docker (Recommended)
+
+The easiest way to run the backend and database is using Docker.
+
+1. Make sure you have Docker Desktop installed and running.
+2. Run the following command in the root directory:
+```bash
+docker-compose up --build
+```
+3. This will start:
+   - PostgreSQL database on port 5432
+   - Backend API on port 5000
+
+You can now proceed to the **Web Frontend Setup** section.
+
+## Manual Backend Setup
 
 1. Navigate to the backend directory:
 ```bash
