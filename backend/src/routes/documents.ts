@@ -61,8 +61,8 @@ router.post('/', [
     const docResult = await pool.query(
       `INSERT INTO documents (
         company_id, client_id, type, document_number, issue_date, due_date,
-        subtotal, tax_rate, tax_amount, total, currency, notes, terms
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+        subtotal, tax_rate, tax_amount, total, currency, notes, terms, metadata
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
       RETURNING *`,
       [
         req.companyId,
@@ -77,7 +77,8 @@ router.post('/', [
         total,
         currency,
         notes || null,
-        terms || null
+        terms || null,
+        req.body.metadata || null
       ]
     );
 
@@ -87,7 +88,7 @@ router.post('/', [
     for (let i = 0; i < items.length; i++) {
       const item = items[i];
       const itemTotal = parseFloat(item.quantity) * parseFloat(item.unitPrice);
-      
+
       await pool.query(
         `INSERT INTO document_items (
           document_id, name, description, quantity, unit_price, tax_rate, total, sort_order
@@ -119,11 +120,11 @@ router.post('/', [
 router.get('/', async (req: AuthRequest, res: Response) => {
   try {
     const { type, status, search, page = 1, limit = 20 } = req.query;
-    
+
     // Convert page and limit to numbers
     const pageNum = parseInt(page as string, 10) || 1;
     const limitNum = parseInt(limit as string, 10) || 20;
-    
+
     let query = `
       SELECT d.*, c.name as client_name, c.email as client_email
       FROM documents d
@@ -166,7 +167,7 @@ router.get('/', async (req: AuthRequest, res: Response) => {
 router.get('/:id', async (req: AuthRequest, res: Response) => {
   try {
     const document = await getDocumentWithItems(req.params.id);
-    
+
     if (!document) {
       return res.status(404).json({ error: 'Document not found' });
     }
@@ -276,12 +277,12 @@ router.put('/:id', async (req: AuthRequest, res: Response) => {
     if (items) {
       // Delete old items
       await pool.query('DELETE FROM document_items WHERE document_id = $1', [req.params.id]);
-      
+
       // Insert new items
       for (let i = 0; i < items.length; i++) {
         const item = items[i];
         const itemTotal = parseFloat(item.quantity) * parseFloat(item.unitPrice);
-        
+
         await pool.query(
           `INSERT INTO document_items (
             document_id, name, description, quantity, unit_price, tax_rate, total, sort_order
@@ -331,14 +332,14 @@ router.delete('/:id', async (req: AuthRequest, res: Response) => {
 router.post('/:id/duplicate', async (req: AuthRequest, res: Response) => {
   try {
     const original = await getDocumentWithItems(req.params.id);
-    
+
     if (!original || original.company_id !== req.companyId) {
       return res.status(404).json({ error: 'Document not found' });
     }
 
     // Create new document with same data
     const newDocNumber = generateDocumentNumber(original.type, req.companyId!);
-    
+
     const docResult = await pool.query(
       `INSERT INTO documents (
         company_id, client_id, type, document_number, issue_date, due_date,
@@ -395,7 +396,7 @@ router.post('/:id/duplicate', async (req: AuthRequest, res: Response) => {
 router.get('/:id/pdf', async (req: AuthRequest, res: Response) => {
   try {
     const document = await getDocumentWithItems(req.params.id);
-    
+
     if (!document || document.company_id !== req.companyId) {
       return res.status(404).json({ error: 'Document not found' });
     }
@@ -411,7 +412,7 @@ router.get('/:id/pdf', async (req: AuthRequest, res: Response) => {
     }
 
     const pdfBuffer = await generatePDF(document, company, client);
-    
+
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename="${document.document_number}.pdf"`);
     res.send(pdfBuffer);
@@ -433,7 +434,7 @@ router.post('/:id/send-email', [
     }
 
     const document = await getDocumentWithItems(req.params.id);
-    
+
     if (!document || document.company_id !== req.companyId) {
       return res.status(404).json({ error: 'Document not found' });
     }
@@ -479,7 +480,7 @@ router.post('/:id/send-email', [
 router.get('/:id/whatsapp-link', async (req: AuthRequest, res: Response) => {
   try {
     const document = await getDocumentWithItems(req.params.id);
-    
+
     if (!document || document.company_id !== req.companyId) {
       return res.status(404).json({ error: 'Document not found' });
     }
@@ -512,7 +513,7 @@ router.get('/:id/whatsapp-link', async (req: AuthRequest, res: Response) => {
 // Helper function to get document with items
 async function getDocumentWithItems(documentId: string) {
   const docResult = await pool.query('SELECT * FROM documents WHERE id = $1', [documentId]);
-  
+
   if (docResult.rows.length === 0) {
     return null;
   }
