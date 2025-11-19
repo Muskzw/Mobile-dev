@@ -1,8 +1,8 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import Layout from "../../components/Layout";
-import { Plus, Search, FileText, Filter, MoreHorizontal } from "lucide-react";
+import { Plus, Search, FileText } from "lucide-react";
 import api from "../../api/client";
 
 export default function QuotesPage() {
@@ -57,8 +57,8 @@ export default function QuotesPage() {
                 key={status}
                 onClick={() => setStatusFilter(status)}
                 className={`px-4 py-1.5 rounded-md text-sm font-medium capitalize transition ${statusFilter === status
-                    ? 'bg-white text-gray-900 shadow-sm'
-                    : 'text-gray-500 hover:text-gray-700'
+                  ? 'bg-white text-gray-900 shadow-sm'
+                  : 'text-gray-500 hover:text-gray-700'
                   }`}
               >
                 {status}
