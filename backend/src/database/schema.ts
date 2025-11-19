@@ -2,7 +2,7 @@ import pool from './connection';
 
 export async function createTables() {
   const client = await pool.connect();
-  
+
   try {
     // Users table
     await client.query(`
@@ -11,6 +11,9 @@ export async function createTables() {
         email VARCHAR(255) UNIQUE NOT NULL,
         password_hash VARCHAR(255) NOT NULL,
         full_name VARCHAR(255),
+        subscription_status VARCHAR(50) DEFAULT 'trial',
+        trial_ends_at TIMESTAMP,
+        subscription_ends_at TIMESTAMP,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
