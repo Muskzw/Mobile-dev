@@ -209,21 +209,25 @@ export default function QuoteEditor() {
     <Layout>
       <div className="max-w-7xl mx-auto space-y-6 pb-20">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-4 rounded-xl shadow-sm border border-gray-200 sticky top-0 z-10">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-card text-card-foreground p-4 rounded-xl shadow-sm border border-border sticky top-0 z-10">
           <div className="flex items-center gap-4">
-            <button onClick={() => navigate("/quotes")} className="p-2 hover:bg-gray-100 rounded-full transition">
-              <ArrowLeft className="w-6 h-6 text-gray-600" />
+            <button onClick={() => navigate("/quotes")} className="p-2 hover:bg-accent hover:text-accent-foreground rounded-full transition">
+              <ArrowLeft className="w-6 h-6" />
             </button>
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">{id ? "Edit Quote" : "New Quote"}</h1>
-              <p className="text-sm text-gray-500">Create a professional quote in seconds</p>
+              <h1 className="text-2xl font-bold">
+                {id ? "Edit Quote" : "New Quote"}
+              </h1>
+              <p className="text-sm text-muted-foreground">
+                Create a professional quote in seconds
+              </p>
             </div>
           </div>
           <div className="flex gap-3">
             {id && (
               <button
                 onClick={handleExportPdf}
-                className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium transition"
+                className="flex items-center gap-2 px-4 py-2 bg-secondary text-secondary-foreground border border-border rounded-lg hover:bg-secondary/80 font-medium transition"
               >
                 <FileDown className="w-4 h-4" />
                 <span className="hidden sm:inline">Export PDF</span>
@@ -232,7 +236,7 @@ export default function QuoteEditor() {
             <button
               onClick={handleSave}
               disabled={isSaving}
-              className="flex items-center gap-2 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition disabled:opacity-50 shadow-sm"
+              className="flex items-center gap-2 px-6 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 font-medium transition disabled:opacity-50 shadow-sm"
             >
               <Save className="w-4 h-4" />
               {isSaving ? "Saving..." : "Save & Continue"}
@@ -245,42 +249,42 @@ export default function QuoteEditor() {
           <div className="space-y-6">
 
             {/* Section: Company Settings */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            <div className="bg-card text-card-foreground rounded-xl shadow-sm border border-border overflow-hidden">
               <button
                 onClick={() => toggleSection('company')}
-                className="w-full flex items-center justify-between p-6 bg-gray-50 hover:bg-gray-100 transition text-left"
+                className="w-full flex items-center justify-between p-6 hover:bg-accent/50 transition text-left"
               >
                 <div className="flex items-center gap-3">
-                  <div className="p-2 bg-blue-100 text-blue-600 rounded-lg">
+                  <div className="p-2 bg-primary/10 text-primary rounded-lg">
                     <Building className="w-5 h-5" />
                   </div>
                   <div>
-                    <h3 className="font-semibold text-gray-900">Company Details</h3>
-                    <p className="text-sm text-gray-500">Your business information</p>
+                    <h3 className="font-semibold">Company Details</h3>
+                    <p className="text-sm text-muted-foreground">Your business information</p>
                   </div>
                 </div>
-                {activeSection === 'company' ? <ChevronUp className="w-5 h-5 text-gray-400" /> : <ChevronDown className="w-5 h-5 text-gray-400" />}
+                {activeSection === 'company' ? <ChevronUp className="w-5 h-5 text-muted-foreground" /> : <ChevronDown className="w-5 h-5 text-muted-foreground" />}
               </button>
 
               {activeSection === 'company' && (
-                <div className="p-6 space-y-4 border-t border-gray-200 animate-in slide-in-from-top-2 duration-200">
+                <div className="p-6 space-y-4 border-t border-border animate-in slide-in-from-top-2 duration-200">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Company Name</label>
+                    <label className="block text-sm font-medium mb-1">Company Name</label>
                     <input
                       value={companyName}
                       onChange={(e) => setCompanyName(e.target.value)}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                      className="w-full px-4 py-2 bg-background border border-input rounded-lg focus:ring-2 focus:ring-ring outline-none"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Company Logo</label>
+                    <label className="block text-sm font-medium mb-2">Company Logo</label>
                     <div className="flex items-center gap-4">
                       {companyLogo && (
-                        <div className="relative w-20 h-20 border-2 border-gray-200 rounded-lg overflow-hidden">
+                        <div className="relative w-20 h-20 border-2 border-border rounded-lg overflow-hidden bg-background">
                           <img src={companyLogo} alt="Company logo" className="w-full h-full object-contain" />
                           <button
                             onClick={() => setCompanyLogo(null)}
-                            className="absolute top-0 right-0 p-1 bg-red-500 text-white rounded-bl-lg hover:bg-red-600 transition"
+                            className="absolute top-0 right-0 p-1 bg-destructive text-destructive-foreground rounded-bl-lg hover:bg-destructive/90 transition"
                             type="button"
                           >
                             <Trash2 className="w-3 h-3" />
@@ -288,9 +292,9 @@ export default function QuoteEditor() {
                         </div>
                       )}
                       <label className="flex-1 cursor-pointer">
-                        <div className="flex items-center justify-center gap-2 px-4 py-2 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-400 hover:bg-blue-50 transition">
-                          <Building className="w-4 h-4 text-gray-500" />
-                          <span className="text-sm text-gray-600">
+                        <div className="flex items-center justify-center gap-2 px-4 py-2 border-2 border-dashed border-border rounded-lg hover:border-primary/50 hover:bg-accent transition">
+                          <Building className="w-4 h-4 text-muted-foreground" />
+                          <span className="text-sm text-muted-foreground">
                             {companyLogo ? 'Change Logo' : 'Upload Logo'}
                           </span>
                         </div>
@@ -302,85 +306,85 @@ export default function QuoteEditor() {
                         />
                       </label>
                     </div>
-                    <p className="text-xs text-gray-500 mt-1">PNG, JPG or SVG. Max 2MB.</p>
+                    <p className="text-xs text-muted-foreground mt-1">PNG, JPG or SVG. Max 2MB.</p>
                   </div>
                 </div>
               )}
             </div>
 
             {/* Section: Client Details */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            <div className="bg-card text-card-foreground rounded-xl shadow-sm border border-border overflow-hidden">
               <button
                 onClick={() => toggleSection('client')}
-                className="w-full flex items-center justify-between p-6 bg-gray-50 hover:bg-gray-100 transition text-left"
+                className="w-full flex items-center justify-between p-6 hover:bg-accent/50 transition text-left"
               >
                 <div className="flex items-center gap-3">
-                  <div className="p-2 bg-blue-100 text-blue-600 rounded-lg">
+                  <div className="p-2 bg-primary/10 text-primary rounded-lg">
                     <Settings className="w-5 h-5" />
                   </div>
                   <div>
-                    <h3 className="font-semibold text-gray-900">Client & Settings</h3>
-                    <p className="text-sm text-gray-500">Who is this quote for?</p>
+                    <h3 className="font-semibold">Client & Settings</h3>
+                    <p className="text-sm text-muted-foreground">Who is this quote for?</p>
                   </div>
                 </div>
-                {activeSection === 'client' ? <ChevronUp className="w-5 h-5 text-gray-400" /> : <ChevronDown className="w-5 h-5 text-gray-400" />}
+                {activeSection === 'client' ? <ChevronUp className="w-5 h-5 text-muted-foreground" /> : <ChevronDown className="w-5 h-5 text-muted-foreground" />}
               </button>
 
               {activeSection === 'client' && (
-                <div className="p-6 space-y-6 border-t border-gray-200 animate-in slide-in-from-top-2 duration-200">
+                <div className="p-6 space-y-6 border-t border-border animate-in slide-in-from-top-2 duration-200">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Client Name</label>
+                      <label className="block text-sm font-medium mb-1">Client Name</label>
                       <input
                         value={clientName}
                         onChange={(e) => setClientName(e.target.value)}
                         placeholder="e.g. Acme Corp"
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                        className="w-full px-4 py-2 bg-background border border-input rounded-lg focus:ring-2 focus:ring-ring outline-none"
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Email (Optional)</label>
+                      <label className="block text-sm font-medium mb-1">Email (Optional)</label>
                       <input
                         value={clientEmail}
                         onChange={(e) => setClientEmail(e.target.value)}
                         placeholder="client@example.com"
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                        className="w-full px-4 py-2 bg-background border border-input rounded-lg focus:ring-2 focus:ring-ring outline-none"
                       />
                     </div>
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Address (Optional)</label>
+                    <label className="block text-sm font-medium mb-1">Address (Optional)</label>
                     <input
                       value={clientAddress}
                       onChange={(e) => setClientAddress(e.target.value)}
                       placeholder="123 Business St, City, Country"
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                      className="w-full px-4 py-2 bg-background border border-input rounded-lg focus:ring-2 focus:ring-ring outline-none"
                     />
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Issue Date</label>
+                      <label className="block text-sm font-medium mb-1">Issue Date</label>
                       <div className="relative">
-                        <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                        <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                         <input
                           type="date"
                           value={issueDate}
                           onChange={(e) => setIssueDate(e.target.value)}
-                          className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                          className="w-full pl-10 pr-4 py-2 bg-background border border-input rounded-lg focus:ring-2 focus:ring-ring outline-none"
                         />
                       </div>
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Due Date</label>
+                      <label className="block text-sm font-medium mb-1">Due Date</label>
                       <div className="relative">
-                        <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                        <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                         <input
                           type="date"
                           value={dueDate}
                           onChange={(e) => setDueDate(e.target.value)}
-                          className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                          className="w-full pl-10 pr-4 py-2 bg-background border border-input rounded-lg focus:ring-2 focus:ring-ring outline-none"
                         />
                       </div>
                     </div>
@@ -388,11 +392,11 @@ export default function QuoteEditor() {
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Currency</label>
+                      <label className="block text-sm font-medium mb-1">Currency</label>
                       <select
                         value={currency}
                         onChange={(e) => setCurrency(e.target.value)}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white"
+                        className="w-full px-4 py-2 bg-background border border-input rounded-lg focus:ring-2 focus:ring-ring outline-none"
                       >
                         <option value="USD">USD ($)</option>
                         <option value="EUR">EUR (€)</option>
@@ -401,12 +405,12 @@ export default function QuoteEditor() {
                       </select>
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Tax Rate (%)</label>
+                      <label className="block text-sm font-medium mb-1">Tax Rate (%)</label>
                       <input
                         type="number"
                         value={taxRate}
                         onChange={(e) => setTaxRate(Number(e.target.value))}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                        className="w-full px-4 py-2 bg-background border border-input rounded-lg focus:ring-2 focus:ring-ring outline-none"
                       />
                     </div>
                   </div>
@@ -415,58 +419,58 @@ export default function QuoteEditor() {
             </div>
 
             {/* Section: Items */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            <div className="bg-card text-card-foreground rounded-xl shadow-sm border border-border overflow-hidden">
               <button
                 onClick={() => toggleSection('items')}
-                className="w-full flex items-center justify-between p-6 bg-gray-50 hover:bg-gray-100 transition text-left"
+                className="w-full flex items-center justify-between p-6 hover:bg-accent/50 transition text-left"
               >
                 <div className="flex items-center gap-3">
-                  <div className="p-2 bg-blue-100 text-blue-600 rounded-lg">
+                  <div className="p-2 bg-primary/10 text-primary rounded-lg">
                     <CreditCard className="w-5 h-5" />
                   </div>
                   <div>
-                    <h3 className="font-semibold text-gray-900">Line Items</h3>
-                    <p className="text-sm text-gray-500">Products and services</p>
+                    <h3 className="font-semibold">Line Items</h3>
+                    <p className="text-sm text-muted-foreground">Products and services</p>
                   </div>
                 </div>
-                {activeSection === 'items' ? <ChevronUp className="w-5 h-5 text-gray-400" /> : <ChevronDown className="w-5 h-5 text-gray-400" />}
+                {activeSection === 'items' ? <ChevronUp className="w-5 h-5 text-muted-foreground" /> : <ChevronDown className="w-5 h-5 text-muted-foreground" />}
               </button>
 
               {activeSection === 'items' && (
-                <div className="p-6 space-y-4 border-t border-gray-200">
+                <div className="p-6 space-y-4 border-t border-border">
                   {items.map((it, i) => (
-                    <div key={it.id} className="p-4 bg-gray-50 rounded-xl border border-gray-100 group relative hover:shadow-sm transition">
+                    <div key={it.id} className="p-4 bg-accent/50 rounded-xl border border-border group relative hover:shadow-sm transition">
                       <div className="grid grid-cols-12 gap-4">
                         <div className="col-span-12 sm:col-span-6">
-                          <label className="text-xs font-medium text-gray-500 mb-1 block">Item Name</label>
+                          <label className="text-xs font-medium text-muted-foreground mb-1 block">Item Name</label>
                           <input
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 outline-none bg-white"
+                            className="w-full px-3 py-2 bg-background border border-input rounded-md focus:ring-2 focus:ring-ring outline-none"
                             value={it.name}
                             placeholder="e.g. Web Design"
                             onChange={(e) => handleItemChange(i, { name: e.target.value })}
                           />
                         </div>
                         <div className="col-span-6 sm:col-span-3">
-                          <label className="text-xs font-medium text-gray-500 mb-1 block">Qty</label>
+                          <label className="text-xs font-medium text-muted-foreground mb-1 block">Qty</label>
                           <input
                             type="number"
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 outline-none bg-white"
+                            className="w-full px-3 py-2 bg-background border border-input rounded-md focus:ring-2 focus:ring-ring outline-none"
                             value={it.qty}
                             onChange={(e) => handleItemChange(i, { qty: Number(e.target.value) })}
                           />
                         </div>
                         <div className="col-span-6 sm:col-span-3">
-                          <label className="text-xs font-medium text-gray-500 mb-1 block">Price</label>
+                          <label className="text-xs font-medium text-muted-foreground mb-1 block">Price</label>
                           <input
                             type="number"
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 outline-none bg-white"
+                            className="w-full px-3 py-2 bg-background border border-input rounded-md focus:ring-2 focus:ring-ring outline-none"
                             value={it.price}
                             onChange={(e) => handleItemChange(i, { price: Number(e.target.value) })}
                           />
                         </div>
                         <div className="col-span-12">
                           <input
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 outline-none bg-white text-sm"
+                            className="w-full px-3 py-2 bg-background border border-input rounded-md focus:ring-2 focus:ring-ring outline-none text-sm"
                             value={it.desc}
                             placeholder="Description (optional)"
                             onChange={(e) => handleItemChange(i, { desc: e.target.value })}
@@ -475,7 +479,7 @@ export default function QuoteEditor() {
                       </div>
                       <button
                         onClick={() => handleRemoveItem(i)}
-                        className="absolute -top-2 -right-2 p-1.5 bg-white text-gray-400 hover:text-red-500 shadow-sm rounded-full border border-gray-200 opacity-0 group-hover:opacity-100 transition"
+                        className="absolute -top-2 -right-2 p-1.5 bg-destructive text-destructive-foreground shadow-sm rounded-full border border-border opacity-0 group-hover:opacity-100 transition hover:bg-destructive/90"
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
@@ -483,7 +487,7 @@ export default function QuoteEditor() {
                   ))}
                   <button
                     onClick={handleAddItem}
-                    className="w-full py-3 border-2 border-dashed border-blue-200 text-blue-600 rounded-xl hover:bg-blue-50 hover:border-blue-300 transition font-medium flex items-center justify-center gap-2"
+                    className="w-full py-3 border-2 border-dashed border-primary/30 text-primary rounded-xl hover:bg-primary/5 hover:border-primary/50 transition font-medium flex items-center justify-center gap-2"
                   >
                     <Plus className="w-4 h-4" />
                     Add Line Item
@@ -493,18 +497,18 @@ export default function QuoteEditor() {
             </div>
 
             {/* Section: Notes */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-              <label className="block text-sm font-medium text-gray-700 mb-2">Notes & Terms</label>
+            <div className="bg-card text-card-foreground rounded-xl shadow-sm border border-border p-6">
+              <label className="block text-sm font-medium mb-2">Notes & Terms</label>
               <textarea
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none min-h-[100px] mb-4"
+                className="w-full px-4 py-2 bg-background border border-input rounded-lg focus:ring-2 focus:ring-ring outline-none min-h-[100px] mb-4"
                 placeholder="Thank you for your business..."
               />
               <textarea
                 value={terms}
                 onChange={(e) => setTerms(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none min-h-[80px] text-sm"
+                className="w-full px-4 py-2 bg-background border border-input rounded-lg focus:ring-2 focus:ring-ring outline-none min-h-[80px] text-sm"
                 placeholder="Terms and conditions..."
               />
             </div>
@@ -512,9 +516,10 @@ export default function QuoteEditor() {
 
           {/* Right Panel: Live Preview */}
           <div className="lg:sticky lg:top-24 space-y-6">
-            <div className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
-              <div className="bg-gray-50 px-6 py-4 border-b border-gray-200 flex justify-between items-center">
-                <h2 className="font-semibold text-gray-700 flex items-center gap-2">
+            <div className="bg-white text-slate-900 rounded-xl shadow-lg border border-slate-200 overflow-hidden">
+              {/* Note: We force light mode colors here for the preview to look like a printed paper */}
+              <div className="bg-slate-50 px-6 py-4 border-b border-slate-200 flex justify-between items-center">
+                <h2 className="font-semibold text-slate-700 flex items-center gap-2">
                   <FileDown className="w-4 h-4" /> Live Preview
                 </h2>
                 <span className="text-xs font-medium px-2 py-1 bg-blue-100 text-blue-700 rounded">DRAFT</span>
@@ -525,47 +530,47 @@ export default function QuoteEditor() {
                 <div className="flex justify-between items-start mb-8">
                   <div>
                     {companyLogo ? (
-                      <img src={companyLogo} alt="Company logo" className="h-16 w-16 object-contain mb-2 border border-gray-200 rounded-lg p-1" />
+                      <img src={companyLogo} alt="Company logo" className="h-16 w-16 object-contain mb-2 border border-slate-200 rounded-lg p-1" />
                     ) : (
-                      <div className="w-16 h-16 bg-gray-100 rounded-lg flex items-center justify-center text-xs text-gray-500 mb-2">Logo</div>
+                      <div className="w-16 h-16 bg-slate-100 rounded-lg flex items-center justify-center text-xs text-slate-500 mb-2">Logo</div>
                     )}
-                    <h3 className="font-bold text-lg text-gray-900">{companyName}</h3>
+                    <h3 className="font-bold text-lg text-slate-900">{companyName}</h3>
                   </div>
                   <div className="text-right">
-                    <h1 className="text-3xl font-light text-gray-900 mb-2">QUOTATION</h1>
-                    <p className="text-gray-500"># {id ? "Q-EDIT" : "Q-NEW"}</p>
-                    <p className="text-gray-500">Date: {issueDate}</p>
+                    <h1 className="text-3xl font-light text-slate-900 mb-2">QUOTATION</h1>
+                    <p className="text-slate-500"># {id ? "Q-EDIT" : "Q-NEW"}</p>
+                    <p className="text-slate-500">Date: {issueDate}</p>
                   </div>
                 </div>
 
                 {/* Bill To */}
-                <div className="mb-8 p-4 bg-gray-50 rounded-lg">
-                  <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Bill To</p>
-                  <p className="font-bold text-gray-900 text-lg">{clientName || "Client Name"}</p>
-                  {clientEmail && <p className="text-gray-600">{clientEmail}</p>}
-                  {clientAddress && <p className="text-gray-600">{clientAddress}</p>}
+                <div className="mb-8 p-4 bg-slate-50 rounded-lg">
+                  <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Bill To</p>
+                  <p className="font-bold text-slate-900 text-lg">{clientName || "Client Name"}</p>
+                  {clientEmail && <p className="text-slate-600">{clientEmail}</p>}
+                  {clientAddress && <p className="text-slate-600">{clientAddress}</p>}
                 </div>
 
                 {/* Items Table */}
                 <table className="w-full mb-8">
                   <thead>
-                    <tr className="border-b-2 border-gray-100">
-                      <th className="text-left py-3 font-bold text-gray-600">Description</th>
-                      <th className="text-right py-3 font-bold text-gray-600 w-20">Qty</th>
-                      <th className="text-right py-3 font-bold text-gray-600 w-24">Price</th>
-                      <th className="text-right py-3 font-bold text-gray-600 w-24">Total</th>
+                    <tr className="border-b-2 border-slate-100">
+                      <th className="text-left py-3 font-bold text-slate-600">Description</th>
+                      <th className="text-right py-3 font-bold text-slate-600 w-20">Qty</th>
+                      <th className="text-right py-3 font-bold text-slate-600 w-24">Price</th>
+                      <th className="text-right py-3 font-bold text-slate-600 w-24">Total</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-50">
+                  <tbody className="divide-y divide-slate-50">
                     {items.map(it => (
                       <tr key={it.id}>
                         <td className="py-3">
-                          <p className="font-medium text-gray-900">{it.name || "Item Name"}</p>
-                          {it.desc && <p className="text-gray-500 text-xs mt-0.5">{it.desc}</p>}
+                          <p className="font-medium text-slate-900">{it.name || "Item Name"}</p>
+                          {it.desc && <p className="text-slate-500 text-xs mt-0.5">{it.desc}</p>}
                         </td>
-                        <td className="text-right py-3 text-gray-600">{it.qty}</td>
-                        <td className="text-right py-3 text-gray-600">{currency} {it.price.toFixed(2)}</td>
-                        <td className="text-right py-3 font-medium text-gray-900">{currency} {(it.qty * it.price).toFixed(2)}</td>
+                        <td className="text-right py-3 text-slate-600">{it.qty}</td>
+                        <td className="text-right py-3 text-slate-600">{currency} {it.price.toFixed(2)}</td>
+                        <td className="text-right py-3 font-medium text-slate-900">{currency} {(it.qty * it.price).toFixed(2)}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -574,17 +579,17 @@ export default function QuoteEditor() {
                 {/* Totals */}
                 <div className="flex justify-end mb-8">
                   <div className="w-64 space-y-2">
-                    <div className="flex justify-between text-gray-600">
+                    <div className="flex justify-between text-slate-600">
                       <span>Subtotal</span>
                       <span>{currency} {calcSubtotal().toFixed(2)}</span>
                     </div>
                     {taxRate > 0 && (
-                      <div className="flex justify-between text-gray-600">
+                      <div className="flex justify-between text-slate-600">
                         <span>Tax ({taxRate}%)</span>
                         <span>{currency} {calcTax().toFixed(2)}</span>
                       </div>
                     )}
-                    <div className="flex justify-between text-lg font-bold text-gray-900 border-t-2 border-gray-100 pt-2">
+                    <div className="flex justify-between text-lg font-bold text-slate-900 border-t-2 border-slate-100 pt-2">
                       <span>Total</span>
                       <span>{currency} {calcTotal().toFixed(2)}</span>
                     </div>
@@ -593,17 +598,17 @@ export default function QuoteEditor() {
 
                 {/* Notes */}
                 {(notes || terms) && (
-                  <div className="border-t border-gray-100 pt-6 space-y-4">
+                  <div className="border-t border-slate-100 pt-6 space-y-4">
                     {notes && (
                       <div>
-                        <p className="font-bold text-gray-900 mb-1">Notes</p>
-                        <p className="text-gray-600 text-sm whitespace-pre-wrap">{notes}</p>
+                        <p className="font-bold text-slate-900 mb-1">Notes</p>
+                        <p className="text-slate-600 text-sm whitespace-pre-wrap">{notes}</p>
                       </div>
                     )}
                     {terms && (
                       <div>
-                        <p className="font-bold text-gray-900 mb-1">Terms & Conditions</p>
-                        <p className="text-gray-600 text-xs whitespace-pre-wrap">{terms}</p>
+                        <p className="font-bold text-slate-900 mb-1">Terms & Conditions</p>
+                        <p className="text-slate-600 text-xs whitespace-pre-wrap">{terms}</p>
                       </div>
                     )}
                   </div>

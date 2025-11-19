@@ -24,103 +24,112 @@ function PrivateRoute({ children }: { children: React.ReactNode }) {
   return token ? <>{children}</> : <Navigate to="/login" />;
 }
 
+import { TrialBanner } from './components/TrialBanner';
+import { ThemeToggle } from './components/ThemeToggle';
+
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
-        <Routes>
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
-          <Route
-            path="/"
-            element={
-              <PrivateRoute>
-                <Dashboard />
-              </PrivateRoute>
-            }
-          />
-          <Route
-            path="/companies"
-            element={
-              <PrivateRoute>
-                <Companies />
-              </PrivateRoute>
-            }
-          />
-          <Route
-            path="/companies/setup"
-            element={
-              <PrivateRoute>
-                <CompanySetup />
-              </PrivateRoute>
-            }
-          />
-          <Route
-            path="/clients"
-            element={
-              <PrivateRoute>
-                <Clients />
-              </PrivateRoute>
-            }
-          />
-          <Route
-            path="/documents"
-            element={
-              <PrivateRoute>
-                <Documents />
-              </PrivateRoute>
-            }
-          />
-          <Route
-            path="/documents/create"
-            element={
-              <PrivateRoute>
-                <DocumentCreate />
-              </PrivateRoute>
-            }
-          />
-          <Route
-            path="/documents/:id"
-            element={
-              <PrivateRoute>
-                <DocumentView />
-              </PrivateRoute>
-            }
-          />
-          <Route
-            path="/settings"
-            element={
-              <PrivateRoute>
-                <Settings />
-              </PrivateRoute>
-            }
-          />
-          <Route
-            path="/quotes"
-            element={
-              <PrivateRoute>
-                <QuotesPage />
-              </PrivateRoute>
-            }
-          />
-          <Route
-            path="/quotes/new"
-            element={
-              <PrivateRoute>
-                <QuoteEditor />
-              </PrivateRoute>
-            }
-          />
-          <Route
-            path="/quotes/:id"
-            element={
-              <PrivateRoute>
-                <QuoteEditor />
-              </PrivateRoute>
-            }
-          />
-        </Routes>
-        <Toaster position="top-right" />
+        <div className="min-h-screen bg-background text-foreground transition-colors duration-300">
+          <TrialBanner />
+          <div className="fixed top-4 right-4 z-50">
+            <ThemeToggle />
+          </div>
+          <Routes>
+            <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
+            <Route
+              path="/"
+              element={
+                <PrivateRoute>
+                  <Dashboard />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/companies"
+              element={
+                <PrivateRoute>
+                  <Companies />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/companies/setup"
+              element={
+                <PrivateRoute>
+                  <CompanySetup />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/clients"
+              element={
+                <PrivateRoute>
+                  <Clients />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/documents"
+              element={
+                <PrivateRoute>
+                  <Documents />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/documents/create"
+              element={
+                <PrivateRoute>
+                  <DocumentCreate />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/documents/:id"
+              element={
+                <PrivateRoute>
+                  <DocumentView />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/settings"
+              element={
+                <PrivateRoute>
+                  <Settings />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/quotes"
+              element={
+                <PrivateRoute>
+                  <QuotesPage />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/quotes/new"
+              element={
+                <PrivateRoute>
+                  <QuoteEditor />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/quotes/:id"
+              element={
+                <PrivateRoute>
+                  <QuoteEditor />
+                </PrivateRoute>
+              }
+            />
+          </Routes>
+          <Toaster position="top-right" />
+        </div>
       </BrowserRouter>
     </QueryClientProvider>
   );

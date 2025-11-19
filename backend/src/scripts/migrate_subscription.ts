@@ -24,7 +24,7 @@ async function migrate() {
     `);
 
         // Update existing users to have a trial ending 30 days from now (or based on creation if we wanted to be strict, but let's give them a fresh trial)
-        const futureDate = newjh Date();
+        const futureDate = new Date();
         futureDate.setDate(futureDate.getDate() + 30);
 
         await client.query(`
