@@ -87,26 +87,37 @@ export default function Dashboard() {
           <h2 className="text-xl font-semibold mb-4">Recent Activity</h2>
           <div className="space-y-3">
             {stats?.recentActivity?.length > 0 ? (
-              stats.recentActivity.map((doc: any) => (
-                <Link
-                  key={doc.id}
-                  to={`/documents/${doc.id}`}
-                  className="flex items-center justify-between p-4 border border-border rounded-lg hover:bg-accent/50 transition"
-                >
-                  <div>
-                    <p className="font-medium">{doc.document_number}</p>
-                    <p className="text-sm text-muted-foreground">
-                      {doc.client_name || 'No client'} • {doc.type}
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <p className="font-semibold">
-                      {doc.currency} {parseFloat(doc.total).toFixed(2)}
-                    </p>
-                    <p className="text-sm text-muted-foreground">{doc.status}</p>
-                  </div>
-                </Link>
-              ))
+              stats.recentActivity.map((doc: any) => {
+                const routeMap: Record<string, string> = {
+                  'quotation': '/quotes',
+                  'invoice': '/invoices',
+                  'proforma': '/proforma',
+                  'delivery_note': '/delivery-notes',
+                  'receipt': '/receipts'
+                };
+                const baseRoute = routeMap[doc.type] || '/quotes';
+
+                return (
+                  <Link
+                    key={doc.id}
+                    to={`${baseRoute}/${doc.id}`}
+                    className="flex items-center justify-between p-4 border border-border rounded-lg hover:bg-accent/50 transition"
+                  >
+                    <div>
+                      <p className="font-medium">{doc.document_number}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {doc.client_name || 'No client'} • {doc.type}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-semibold">
+                        {doc.currency} {parseFloat(doc.total).toFixed(2)}
+                      </p>
+                      <p className="text-sm text-muted-foreground">{doc.status}</p>
+                    </div>
+                  </Link>
+                );
+              })
             ) : (
               <p className="text-muted-foreground text-center py-8">No recent activity</p>
             )}
@@ -118,14 +129,14 @@ export default function Dashboard() {
           <h2 className="text-xl font-semibold mb-4">Quick Actions</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <Link
-              to="/documents/create?type=quotation"
+              to="/quotes/new"
               className="p-4 border-2 border-dashed border-border rounded-lg hover:border-primary hover:bg-primary/5 transition text-center"
             >
               <FileText className="w-8 h-8 mx-auto mb-2 text-muted-foreground" />
               <p className="font-medium">Create Quotation</p>
             </Link>
             <Link
-              to="/documents/create?type=invoice"
+              to="/invoices/new"
               className="p-4 border-2 border-dashed border-border rounded-lg hover:border-primary hover:bg-primary/5 transition text-center"
             >
               <DollarSign className="w-8 h-8 mx-auto mb-2 text-muted-foreground" />

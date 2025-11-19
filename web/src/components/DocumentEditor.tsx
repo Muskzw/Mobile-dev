@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate, useParams, useLocation } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import Layout from "../components/Layout";
-import { Save, ArrowLeft, Plus, Trash2, FileDown, Calendar, CreditCard, Settings, ChevronDown, ChevronUp, Building, Copy, Mail, RefreshCw, MoreVertical } from "lucide-react";
+import { Save, ArrowLeft, Plus, Trash2, FileDown, Calendar, CreditCard, Settings, ChevronDown, ChevronUp, Building, Copy, Mail, RefreshCw } from "lucide-react";
 import api from "../api/client";
 import toast from "react-hot-toast";
 
@@ -16,7 +16,7 @@ interface DocumentEditorProps {
 export default function DocumentEditor({ documentType, title, baseRoute }: DocumentEditorProps) {
     const navigate = useNavigate();
     const { id } = useParams();
-    const location = useLocation();
+
 
     // Form State
     const [companyLogo, setCompanyLogo] = useState<string | null>(null);
@@ -193,77 +193,77 @@ export default function DocumentEditor({ documentType, title, baseRoute }: Docum
             console.error("Failed to export PDF", error);
             alert("Failed to export PDF");
         }
-
-        async function handleDuplicate() {
-            if (!id) {
-                toast.error("Please save the document first");
-                return;
-            }
-            try {
-                const res = await api.post(`/documents/${id}/duplicate`);
-                toast.success("Document duplicated!");
-                navigate(`${baseRoute}/${res.data.id}`);
-            } catch (error) {
-                console.error("Failed to duplicate", error);
-                toast.error("Failed to duplicate document");
-            }
-        }
-
-        async function handleConvert(targetType: string) {
-            if (!id) {
-                toast.error("Please save the document first");
-                return;
-            }
-            try {
-                const res = await api.post(`/documents/${id}/convert`, { targetType });
-                toast.success(`Converted to ${targetType}!`);
-
-                // Navigate to the appropriate route
-                const routeMap: Record<string, string> = {
-                    'quotation': '/quotes',
-                    'invoice': '/invoices',
-                    'proforma': '/proforma',
-                    'delivery_note': '/delivery-notes',
-                    'receipt': '/receipts'
-                };
-
-                navigate(`${routeMap[targetType]}/${res.data.id}`);
-            } catch (error) {
-                console.error("Failed to convert", error);
-                toast.error("Failed to convert document");
-            }
-        }
-
-        async function handleSendEmail() {
-            if (!id) {
-                toast.error("Please save the document first");
-                return;
-            }
-
-            const email = clientEmail || prompt("Enter client email:");
-            if (!email) return;
-
-            try {
-                await api.post(`/documents/${id}/send-email`, { email });
-                toast.success(`${title} sent to ${email}!`);
-            } catch (error) {
-                console.error("Failed to send email", error);
-                toast.error("Failed to send email");
-            }
-        }
-
-        // Get available conversion options based on current type
-        const getConversionOptions = () => {
-            const allTypes = [
-                { value: 'quotation', label: 'Quote' },
-                { value: 'invoice', label: 'Invoice' },
-                { value: 'proforma', label: 'Proforma' },
-                { value: 'delivery_note', label: 'Delivery Note' },
-                { value: 'receipt', label: 'Receipt' }
-            ];
-            return allTypes.filter(t => t.value !== documentType);
-        };
     }
+
+    async function handleDuplicate() {
+        if (!id) {
+            toast.error("Please save the document first");
+            return;
+        }
+        try {
+            const res = await api.post(`/documents/${id}/duplicate`);
+            toast.success("Document duplicated!");
+            navigate(`${baseRoute}/${res.data.id}`);
+        } catch (error) {
+            console.error("Failed to duplicate", error);
+            toast.error("Failed to duplicate document");
+        }
+    }
+
+    async function handleConvert(targetType: string) {
+        if (!id) {
+            toast.error("Please save the document first");
+            return;
+        }
+        try {
+            const res = await api.post(`/documents/${id}/convert`, { targetType });
+            toast.success(`Converted to ${targetType}!`);
+
+            // Navigate to the appropriate route
+            const routeMap: Record<string, string> = {
+                'quotation': '/quotes',
+                'invoice': '/invoices',
+                'proforma': '/proforma',
+                'delivery_note': '/delivery-notes',
+                'receipt': '/receipts'
+            };
+
+            navigate(`${routeMap[targetType]}/${res.data.id}`);
+        } catch (error) {
+            console.error("Failed to convert", error);
+            toast.error("Failed to convert document");
+        }
+    }
+
+    async function handleSendEmail() {
+        if (!id) {
+            toast.error("Please save the document first");
+            return;
+        }
+
+        const email = clientEmail || prompt("Enter client email:");
+        if (!email) return;
+
+        try {
+            await api.post(`/documents/${id}/send-email`, { email });
+            toast.success(`${title} sent to ${email}!`);
+        } catch (error) {
+            console.error("Failed to send email", error);
+            toast.error("Failed to send email");
+        }
+    }
+
+    // Get available conversion options based on current type
+    const getConversionOptions = () => {
+        const allTypes = [
+            { value: 'quotation', label: 'Quote' },
+            { value: 'invoice', label: 'Invoice' },
+            { value: 'proforma', label: 'Proforma' },
+            { value: 'delivery_note', label: 'Delivery Note' },
+            { value: 'receipt', label: 'Receipt' }
+        ];
+        return allTypes.filter(t => t.value !== documentType);
+    };
 
     if (isLoading) {
         return (
