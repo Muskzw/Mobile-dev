@@ -1,82 +1,133 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import QuoteCard from "../../components/QuoteCard";
+import { useQuery } from "@tanstack/react-query";
 import Layout from "../../components/Layout";
-import { Plus, Search } from "lucide-react";
-
-type Quote = {
-  id: string;
-  number: string;
-  clientName: string;
-  total: number;
-  status: "Draft" | "Sent" | "Accepted" | "Rejected";
-  createdAt: string;
-};
+import { Plus, Search, FileText, Filter, MoreHorizontal } from "lucide-react";
+import api from "../../api/client";
 
 export default function QuotesPage() {
-  const [quotes, setQuotes] = useState<Quote[]>([]);
-  const [q, setQ] = useState("");
   const navigate = useNavigate();
+  const [statusFilter, setStatusFilter] = useState("all");
 
-  useEffect(() => {
-    // TODO: replace with API call to /api/quotes
-    setQuotes([
-      { id: "1", number: "Q-0001", clientName: "Acme Ltd", total: 1250, status: "Sent", createdAt: "2025-11-01" },
-      { id: "2", number: "Q-0002", clientName: "Beta Inc", total: 340, status: "Draft", createdAt: "2025-10-28" },
-    ]);
-  }, []);
+  const { data: quotes, isLoading } = useQuery({
+    queryKey: ["quotes"],
+    queryFn: async () => {
+      const res = await api.get("/documents?type=quotation");
+      return res.data;
+    },
+  });
 
-  function handleCreate() {
-    navigate("/quotes/new");
-  }
-
-  const filtered = quotes.filter(
-    (x) =>
-      x.number.toLowerCase().includes(q.toLowerCase()) ||
-      x.clientName.toLowerCase().includes(q.toLowerCase())
+  const filteredQuotes = quotes?.filter((q: any) =>
+    statusFilter === "all" ? true : (q.status || 'draft').toLowerCase() === statusFilter
   );
+
+  const getStatusColor = (status: string) => {
+    switch (status.toLowerCase()) {
+      case 'sent': return 'bg-blue-100 text-blue-700';
+      case 'accepted': return 'bg-green-100 text-green-700';
+      case 'rejected': return 'bg-red-100 text-red-700';
+      case 'draft':
+      default: return 'bg-gray-100 text-gray-700';
+    }
+  };
 
   return (
     <Layout>
-      <div className="space-y-6">
+      <div className="max-w-7xl mx-auto space-y-8 pb-20">
+        {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <h1 className="text-3xl font-bold text-gray-900">Quotes</h1>
-            <p className="text-gray-600 mt-1">Create and manage business quotations</p>
+            <p className="text-gray-500 mt-1">Manage and track your client proposals</p>
           </div>
-          <div className="flex items-center gap-3">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <input
-                className="pl-9 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none w-full sm:w-64"
-                value={q}
-                onChange={(e) => setQ(e.target.value)}
-                placeholder="Search quotes..."
-              />
-            </div>
-            <button
-              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium"
-              onClick={handleCreate}
-            >
-              <Plus className="w-4 h-4" />
-              New Quote
-            </button>
+          <button
+            onClick={() => navigate("/quotes/new")}
+            className="flex items-center gap-2 bg-blue-600 text-white px-5 py-2.5 rounded-xl hover:bg-blue-700 transition shadow-sm font-medium"
+          >
+            <Plus className="w-5 h-5" />
+            Create Quote
+          </button>
+        </div>
+
+        {/* Filters & Search */}
+        <div className="flex flex-col sm:flex-row gap-4 items-center justify-between bg-white p-2 rounded-xl border border-gray-200 shadow-sm">
+          <div className="flex p-1 bg-gray-100 rounded-lg">
+            {['all', 'draft', 'sent', 'accepted'].map((status) => (
+              <button
+                key={status}
+                onClick={() => setStatusFilter(status)}
+                className={`px-4 py-1.5 rounded-md text-sm font-medium capitalize transition ${statusFilter === status
+                    ? 'bg-white text-gray-900 shadow-sm'
+                    : 'text-gray-500 hover:text-gray-700'
+                  }`}
+              >
+                {status}
+              </button>
+            ))}
+          </div>
+
+          <div className="relative w-full sm:w-64">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <input
+              placeholder="Search quotes..."
+              className="w-full pl-9 pr-4 py-2 bg-gray-50 border-transparent focus:bg-white border focus:border-blue-500 rounded-lg outline-none transition text-sm"
+            />
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filtered.map((quote) => (
-            <QuoteCard key={quote.id} quote={quote} />
-          ))}
-          {filtered.length === 0 && (
-            <div className="col-span-full text-center py-12 bg-gray-50 rounded-lg border-2 border-dashed border-gray-200">
-              <p className="text-gray-500">No quotes found</p>
-              <button onClick={handleCreate} className="text-blue-600 font-medium mt-2 hover:underline">
-                Create your first quote
-              </button>
+        {/* Quotes List */}
+        {isLoading ? (
+          <div className="text-center py-20">
+            <div className="animate-spin w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full mx-auto mb-4"></div>
+            <p className="text-gray-500">Loading quotes...</p>
+          </div>
+        ) : filteredQuotes?.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredQuotes.map((quote: any) => (
+              <div
+                key={quote.id}
+                onClick={() => navigate(`/quotes/${quote.id}`)}
+                className="group bg-white p-6 rounded-xl border border-gray-200 hover:border-blue-300 hover:shadow-md transition cursor-pointer relative"
+              >
+                <div className="flex justify-between items-start mb-4">
+                  <div className="p-3 bg-blue-50 text-blue-600 rounded-lg group-hover:bg-blue-100 transition">
+                    <FileText className="w-6 h-6" />
+                  </div>
+                  <span className={`px-2.5 py-1 rounded-full text-xs font-medium capitalize ${getStatusColor(quote.status || 'draft')}`}>
+                    {quote.status || 'Draft'}
+                  </span>
+                </div>
+
+                <h3 className="font-bold text-gray-900 text-lg mb-1">{quote.client_name || "Untitled Client"}</h3>
+                <p className="text-sm text-gray-500 mb-4">#{quote.document_number}</p>
+
+                <div className="flex items-center justify-between pt-4 border-t border-gray-100">
+                  <div className="text-sm text-gray-500">
+                    {new Date(quote.created_at).toLocaleDateString()}
+                  </div>
+                  <div className="font-bold text-gray-900">
+                    {quote.currency} {Number(quote.total).toFixed(2)}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-20 bg-white rounded-xl border border-dashed border-gray-300">
+            <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4">
+              <FileText className="w-8 h-8 text-gray-400" />
             </div>
-          )}
-        </div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-1">No quotes found</h3>
+            <p className="text-gray-500 mb-6">Get started by creating your first professional quote.</p>
+            <button
+              onClick={() => navigate("/quotes/new")}
+              className="inline-flex items-center gap-2 bg-blue-600 text-white px-5 py-2.5 rounded-xl hover:bg-blue-700 transition font-medium"
+            >
+              <Plus className="w-5 h-5" />
+              Create New Quote
+            </button>
+          </div>
+        )}
       </div>
     </Layout>
   );
