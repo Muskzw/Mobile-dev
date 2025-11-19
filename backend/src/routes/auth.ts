@@ -31,9 +31,12 @@ router.post('/register', [
     const passwordHash = await bcrypt.hash(password, 10);
 
     // Create user
+    const trialEndsAt = new Date();
+    trialEndsAt.setDate(trialEndsAt.getDate() + 30);
+
     const userResult = await pool.query(
-      'INSERT INTO users (email, password_hash, full_name) VALUES ($1, $2, $3) RETURNING id, email, full_name, created_at',
-      [email, passwordHash, fullName || null]
+      'INSERT INTO users (email, password_hash, full_name, subscription_status, trial_ends_at) VALUES ($1, $2, $3, $4, $5) RETURNING id, email, full_name, subscription_status, trial_ends_at, created_at',
+      [email, passwordHash, fullName || null, 'trial', trialEndsAt]
     );
 
     const user = userResult.rows[0];
@@ -51,7 +54,9 @@ router.post('/register', [
       user: {
         id: user.id,
         email: user.email,
-        fullName: user.full_name
+        fullName: user.full_name,
+        subscriptionStatus: user.subscription_status,
+        trialEndsAt: user.trial_ends_at
       }
     });
   } catch (error) {
@@ -120,7 +125,7 @@ router.post('/login', [
 router.get('/me', authenticate, async (req: AuthRequest, res: Response) => {
   try {
     const userResult = await pool.query('SELECT id, email, full_name, created_at FROM users WHERE id = $1', [req.userId]);
-    
+
     if (userResult.rows.length === 0) {
       return res.status(404).json({ error: 'User not found' });
     }
