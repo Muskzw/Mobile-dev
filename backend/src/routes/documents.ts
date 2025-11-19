@@ -11,11 +11,35 @@ const router = express.Router();
 router.use(authenticate);
 router.use(requireCompany);
 
-// Generate document number
-function generateDocumentNumber(type: string, companyId: string): string {
-  const prefix = type.substring(0, 3).toUpperCase();
-  const timestamp = Date.now().toString().slice(-6);
-  return `${prefix}-${timestamp}`;
+// Generate document number with proper prefix and sequential numbering
+async function generateDocumentNumber(type: string, companyId: string): Promise<string> {
+  const prefixMap: Record<string, string> = {
+    'quotation': 'QTE',
+    'invoice': 'INV',
+    'proforma': 'PRO',
+    'delivery_note': 'DN',
+    'receipt': 'RCT'
+  };
+
+  const prefix = prefixMap[type] || 'DOC';
+  const year = new Date().getFullYear();
+
+  // Get the last document number for this type and year
+  const result = await pool.query(
+    `SELECT document_number FROM documents 
+     WHERE company_id = $1 AND type = $2 AND document_number LIKE $3
+     ORDER BY created_at DESC LIMIT 1`,
+    [companyId, type, `${prefix}-${year}-%`]
+  );
+
+  let sequence = 1;
+  if (result.rows.length > 0) {
+    const lastNumber = result.rows[0].document_number;
+    const lastSeq = parseInt(lastNumber.split('-')[2], 10);
+    sequence = isNaN(lastSeq) ? 1 : lastSeq + 1;
+  }
+
+  return `${prefix}-${year}-${sequence.toString().padStart(4, '0')}`;
 }
 
 // Create document
@@ -55,7 +79,7 @@ router.post('/', [
     const companyResult = await pool.query('SELECT currency FROM companies WHERE id = $1', [req.companyId]);
     const currency = companyResult.rows[0]?.currency || 'USD';
 
-    const documentNumber = generateDocumentNumber(type, req.companyId!);
+    const documentNumber = await generateDocumentNumber(type, req.companyId!);
 
     // Create document
     const docResult = await pool.query(
@@ -342,7 +366,7 @@ router.post('/:id/duplicate', async (req: AuthRequest, res: Response) => {
     }
 
     // Create new document with same data
-    const newDocNumber = generateDocumentNumber(original.type, req.companyId!);
+    const newDocNumber = await generateDocumentNumber(original.type, req.companyId!);
 
     const docResult = await pool.query(
       `INSERT INTO documents (
@@ -392,6 +416,117 @@ router.post('/:id/duplicate', async (req: AuthRequest, res: Response) => {
     res.status(201).json(duplicatedDoc);
   } catch (error) {
     console.error('Duplicate document error:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Convert document to different type
+router.post('/:id/convert', [
+  body('targetType').isIn(['quotation', 'invoice', 'proforma', 'receipt', 'delivery_note'])
+], async (req: AuthRequest, res: Response) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+
+    const { targetType } = req.body;
+    const original = await getDocumentWithItems(req.params.id);
+
+    if (!original || original.company_id !== req.companyId) {
+      return res.status(404).json({ error: 'Document not found' });
+    }
+
+    // Prevent converting to the same type
+    if (original.type === targetType) {
+      return res.status(400).json({ error: 'Document is already of this type' });
+    }
+
+    // Generate new document number for the target type
+    const newDocNumber = await generateDocumentNumber(targetType, req.companyId!);
+
+    // Determine appropriate status for the new document type
+    let newStatus = 'draft';
+    if (targetType === 'invoice' && original.type === 'quotation' && original.status === 'accepted') {
+      newStatus = 'draft'; // Invoice starts as draft even if quote was accepted
+    }
+
+    // Create converted document
+    const docResult = await pool.query(
+      `INSERT INTO documents (
+        company_id, client_id, type, document_number, issue_date, due_date,
+        subtotal, tax_rate, tax_amount, total, currency, notes, terms, status, metadata
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+      RETURNING *`,
+      [
+        original.company_id,
+        original.client_id,
+        targetType,
+        newDocNumber,
+        new Date().toISOString().split('T')[0], // New issue date
+        original.due_date,
+        original.subtotal,
+        original.tax_rate,
+        original.tax_amount,
+        original.total,
+        original.currency,
+        original.notes,
+        original.terms,
+        newStatus,
+        {
+          ...original.metadata,
+          convertedFrom: original.id,
+          convertedFromType: original.type,
+          convertedFromNumber: original.document_number
+        }
+      ]
+    );
+
+    const newDoc = docResult.rows[0];
+
+    // Copy items
+    for (const item of original.items) {
+      await pool.query(
+        `INSERT INTO document_items (
+          document_id, name, description, quantity, unit_price, tax_rate, total, sort_order
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+        [
+          newDoc.id,
+          item.name,
+          item.description,
+          item.quantity,
+          item.unit_price,
+          item.tax_rate,
+          item.total,
+          item.sort_order
+        ]
+      );
+    }
+
+    // Update original document metadata to track conversion
+    await pool.query(
+      `UPDATE documents 
+       SET metadata = jsonb_set(
+         COALESCE(metadata, '{}'::jsonb),
+         '{convertedTo}',
+         $1::jsonb
+       )
+       WHERE id = $2`,
+      [
+        JSON.stringify([{
+          id: newDoc.id,
+          type: targetType,
+          number: newDocNumber,
+          convertedAt: new Date().toISOString()
+        }]),
+        original.id
+      ]
+    );
+
+    const convertedDoc = await getDocumentWithItems(newDoc.id);
+    res.status(201).json(convertedDoc);
+  } catch (error) {
+    console.error('Convert document error:', error);
     res.status(500).json({ error: 'Server error' });
   }
 });

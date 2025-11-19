@@ -8,7 +8,8 @@ import {
   Settings,
   LogOut,
   Menu,
-  X
+  X,
+  CreditCard
 } from 'lucide-react';
 import { useState } from 'react';
 
@@ -29,22 +30,27 @@ export default function Layout({ children }: LayoutProps) {
 
   const navItems = [
     { path: '/', icon: LayoutDashboard, label: 'Dashboard' },
-    { path: '/documents', icon: FileText, label: 'Documents' },
+    { path: '/quotes', icon: FileText, label: 'Quotes' },
+    { path: '/invoices', icon: FileText, label: 'Invoices' },
+    { path: '/proforma', icon: FileText, label: 'Proforma' },
+    { path: '/delivery-notes', icon: FileText, label: 'Delivery Notes' },
+    { path: '/receipts', icon: FileText, label: 'Receipts' },
     { path: '/clients', icon: Users, label: 'Clients' },
     { path: '/companies', icon: Building2, label: 'Companies' },
+    { path: '/subscription', icon: CreditCard, label: 'Subscription' },
     { path: '/settings', icon: Settings, label: 'Settings' }
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen">
       {/* Sidebar */}
-      <aside className="fixed inset-y-0 left-0 w-64 bg-white shadow-lg z-50">
+      <aside className="fixed inset-y-0 left-0 w-64 bg-card/50 backdrop-blur-xl border-r border-border z-50">
         <div className="flex flex-col h-full">
           {/* Logo */}
-          <div className="p-6 border-b">
-            <h1 className="text-xl font-bold text-gray-900">Quotation Maker</h1>
+          <div className="p-6 border-b border-border">
+            <h1 className="text-xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">Quotation Maker</h1>
             {currentCompany && (
-              <p className="text-sm text-gray-600 mt-1">{currentCompany.name}</p>
+              <p className="text-sm text-muted-foreground mt-1">{currentCompany.name}</p>
             )}
           </div>
 
@@ -57,11 +63,10 @@ export default function Layout({ children }: LayoutProps) {
                 <Link
                   key={item.path}
                   to={item.path}
-                  className={`flex items-center space-x-3 px-4 py-3 rounded-lg transition ${
-                    isActive
-                      ? 'bg-blue-50 text-blue-600'
-                      : 'text-gray-700 hover:bg-gray-100'
-                  }`}
+                  className={`flex items-center space-x-3 px-4 py-3 rounded-xl transition duration-200 ${isActive
+                    ? 'bg-primary/10 text-primary shadow-sm'
+                    : 'text-muted-foreground hover:bg-primary/5 hover:text-foreground'
+                    }`}
                 >
                   <Icon className="w-5 h-5" />
                   <span className="font-medium">{item.label}</span>
@@ -71,12 +76,12 @@ export default function Layout({ children }: LayoutProps) {
           </nav>
 
           {/* User section */}
-          <div className="p-4 border-t">
-            <div className="mb-4">
-              <p className="text-sm font-medium text-gray-900">{user?.email}</p>
-              <p className="text-xs text-gray-500">{user?.fullName}</p>
+          <div className="p-4 border-t border-border bg-card/30">
+            <div className="mb-4 px-2">
+              <p className="text-sm font-medium truncate">{user?.email}</p>
+              <p className="text-xs text-muted-foreground truncate">{user?.fullName}</p>
             </div>
-            
+
             {companies.length > 1 && (
               <select
                 value={currentCompany?.id || ''}
@@ -84,7 +89,7 @@ export default function Layout({ children }: LayoutProps) {
                   const company = companies.find(c => c.id === e.target.value);
                   if (company) setCurrentCompany(company);
                 }}
-                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg mb-4"
+                className="w-full px-3 py-2 text-sm rounded-lg mb-4 glass-input outline-none focus:ring-2 focus:ring-primary/50"
               >
                 {companies.map((company) => (
                   <option key={company.id} value={company.id}>
@@ -96,7 +101,7 @@ export default function Layout({ children }: LayoutProps) {
 
             <button
               onClick={handleLogout}
-              className="w-full flex items-center space-x-2 px-4 py-2 text-red-600 hover:bg-red-50 rounded-lg transition"
+              className="w-full flex items-center space-x-2 px-4 py-2 text-destructive hover:bg-destructive/10 rounded-lg transition"
             >
               <LogOut className="w-4 h-4" />
               <span className="text-sm font-medium">Logout</span>
@@ -108,20 +113,20 @@ export default function Layout({ children }: LayoutProps) {
       {/* Mobile menu button */}
       <button
         onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-        className="fixed top-4 left-4 z-50 lg:hidden bg-white p-2 rounded-lg shadow-lg"
+        className="fixed top-4 left-4 z-50 lg:hidden glass-card p-2 rounded-lg shadow-lg border border-border"
       >
         {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
       </button>
 
       {/* Mobile sidebar */}
       {mobileMenuOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden" onClick={() => setMobileMenuOpen(false)}>
-          <aside className="fixed inset-y-0 left-0 w-64 bg-white shadow-xl z-50" onClick={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 lg:hidden" onClick={() => setMobileMenuOpen(false)}>
+          <aside className="fixed inset-y-0 left-0 w-64 bg-background/95 backdrop-blur-xl shadow-2xl z-50 border-r border-border" onClick={(e) => e.stopPropagation()}>
             <div className="flex flex-col h-full">
-              <div className="p-6 border-b flex justify-between items-center">
-                <h1 className="text-xl font-bold">Quotation Maker</h1>
+              <div className="p-6 border-b border-border flex justify-between items-center">
+                <h1 className="text-xl font-bold text-primary">Quotation Maker</h1>
                 <button onClick={() => setMobileMenuOpen(false)}>
-                  <X className="w-6 h-6" />
+                  <X className="w-6 h-6 text-muted-foreground" />
                 </button>
               </div>
               <nav className="flex-1 p-4 space-y-2">
@@ -133,9 +138,8 @@ export default function Layout({ children }: LayoutProps) {
                       key={item.path}
                       to={item.path}
                       onClick={() => setMobileMenuOpen(false)}
-                      className={`flex items-center space-x-3 px-4 py-3 rounded-lg transition ${
-                        isActive ? 'bg-blue-50 text-blue-600' : 'text-gray-700 hover:bg-gray-100'
-                      }`}
+                      className={`flex items-center space-x-3 px-4 py-3 rounded-xl transition ${isActive ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:bg-primary/5'
+                        }`}
                     >
                       <Icon className="w-5 h-5" />
                       <span className="font-medium">{item.label}</span>

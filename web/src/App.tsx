@@ -10,12 +10,17 @@ import Dashboard from './pages/Dashboard';
 import Companies from './pages/Companies';
 import CompanySetup from './pages/CompanySetup';
 import Clients from './pages/Clients';
-import Documents from './pages/Documents';
-import DocumentCreate from './pages/DocumentCreate';
-import DocumentView from './pages/DocumentView';
 import Settings from './pages/Settings';
 import QuotesPage from './pages/quotes/QuotesPage';
 import QuoteEditor from './pages/quotes/QuoteEditor';
+import InvoicesPage from './pages/invoices/InvoicesPage';
+import InvoiceEditor from './pages/invoices/InvoiceEditor';
+import ProformaPage from './pages/proforma/ProformaPage';
+import ProformaEditor from './pages/proforma/ProformaEditor';
+import DeliveryNotesPage from './pages/delivery-notes/DeliveryNotesPage';
+import DeliveryNoteEditor from './pages/delivery-notes/DeliveryNoteEditor';
+import ReceiptsPage from './pages/receipts/ReceiptsPage';
+import ReceiptEditor from './pages/receipts/ReceiptEditor';
 import SubscriptionPage from './pages/SubscriptionPage';
 
 // Components
@@ -62,26 +67,13 @@ function App() {
                 <Clients />
               </PrivateRoute>
             } />
-            <Route path="/documents" element={
-              <PrivateRoute>
-                <Documents />
-              </PrivateRoute>
-            } />
-            <Route path="/documents/create" element={
-              <PrivateRoute>
-                <DocumentCreate />
-              </PrivateRoute>
-            } />
-            <Route path="/documents/:id" element={
-              <PrivateRoute>
-                <DocumentView />
-              </PrivateRoute>
-            } />
             <Route path="/settings" element={
               <PrivateRoute>
                 <Settings />
               </PrivateRoute>
             } />
+
+            {/* Quotes */}
             <Route path="/quotes" element={
               <PrivateRoute>
                 <QuotesPage />
@@ -97,6 +89,76 @@ function App() {
                 <QuoteEditor />
               </PrivateRoute>
             } />
+
+            {/* Invoices */}
+            <Route path="/invoices" element={
+              <PrivateRoute>
+                <InvoicesPage />
+              </PrivateRoute>
+            } />
+            <Route path="/invoices/new" element={
+              <PrivateRoute>
+                <InvoiceEditor />
+              </PrivateRoute>
+            } />
+            <Route path="/invoices/:id" element={
+              <PrivateRoute>
+                <InvoiceEditor />
+              </PrivateRoute>
+            } />
+
+            {/* Proforma */}
+            <Route path="/proforma" element={
+              <PrivateRoute>
+                <ProformaPage />
+              </PrivateRoute>
+            } />
+            <Route path="/proforma/new" element={
+              <PrivateRoute>
+                <ProformaEditor />
+              </PrivateRoute>
+            } />
+            <Route path="/proforma/:id" element={
+              <PrivateRoute>
+                <ProformaEditor />
+              </PrivateRoute>
+            } />
+
+            {/* Delivery Notes */}
+            <Route path="/delivery-notes" element={
+              <PrivateRoute>
+                <DeliveryNotesPage />
+              </PrivateRoute>
+            } />
+            <Route path="/delivery-notes/new" element={
+              <PrivateRoute>
+                <DeliveryNoteEditor />
+              </PrivateRoute>
+            } />
+            <Route path="/delivery-notes/:id" element={
+              <PrivateRoute>
+                <DeliveryNoteEditor />
+              </PrivateRoute>
+            } />
+
+            {/* Receipts */}
+            <Route path="/receipts" element={
+              <PrivateRoute>
+                <ReceiptsPage />
+              </PrivateRoute>
+            } />
+            <Route path="/receipts/new" element={
+              <PrivateRoute>
+                <ReceiptEditor />
+              </PrivateRoute>
+            } />
+            <Route path="/receipts/:id" element={
+              <PrivateRoute>
+                <ReceiptEditor />
+              </PrivateRoute>
+            } />
+
+            {/* Subscription */}
             <Route path="/subscription" element={
               <PrivateRoute>
                 <SubscriptionPage />

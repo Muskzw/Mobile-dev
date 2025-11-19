@@ -50,7 +50,7 @@ export default function QuotesPage() {
         </div>
 
         {/* Filters & Search */}
-        <div className="flex flex-col sm:flex-row gap-4 items-center justify-between bg-card text-card-foreground p-2 rounded-xl border border-border shadow-sm">
+        <div className="flex flex-col sm:flex-row gap-4 items-center justify-between glass-card p-2 rounded-xl">
           <div className="flex p-1 bg-muted rounded-lg">
             {['all', 'draft', 'sent', 'accepted'].map((status) => (
               <button
@@ -70,7 +70,7 @@ export default function QuotesPage() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <input
               placeholder="Search quotes..."
-              className="w-full pl-9 pr-4 py-2 bg-background border-transparent focus:bg-background border focus:border-ring rounded-lg outline-none transition text-sm"
+              className="w-full pl-9 pr-4 py-2 glass-input rounded-lg outline-none focus:ring-2 focus:ring-primary/50 transition text-sm"
             />
           </div>
         </div>
@@ -87,7 +87,7 @@ export default function QuotesPage() {
               <div
                 key={quote.id}
                 onClick={() => navigate(`/quotes/${quote.id}`)}
-                className="group bg-card text-card-foreground p-6 rounded-xl border border-border hover:border-primary/50 hover:shadow-md transition cursor-pointer relative"
+                className="group glass-card p-6 rounded-xl border border-border hover:border-primary/50 hover:shadow-md transition cursor-pointer relative"
               >
                 <div className="flex justify-between items-start mb-4">
                   <div className="p-3 bg-primary/10 text-primary rounded-lg group-hover:bg-primary/20 transition">
@@ -113,7 +113,7 @@ export default function QuotesPage() {
             ))}
           </div>
         ) : (
-          <div className="text-center py-20 bg-card text-card-foreground rounded-xl border border-dashed border-border">
+          <div className="text-center py-20 glass-card rounded-xl border border-dashed border-border">
             <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
               <FileText className="w-8 h-8 text-muted-foreground" />
             </div>
@@ -121,7 +121,7 @@ export default function QuotesPage() {
             <p className="text-muted-foreground mb-6">Get started by creating your first professional quote.</p>
             <button
               onClick={() => navigate("/quotes/new")}
-              className="inline-flex items-center gap-2 bg-primary text-primary-foreground px-5 py-2.5 rounded-xl hover:bg-primary/90 transition font-medium"
+              className="inline-flex items-center gap-2 bg-primary text-primary-foreground px-5 py-2.5 rounded-xl hover:bg-primary/90 transition font-medium shadow-lg shadow-primary/25"
             >
               <Plus className="w-5 h-5" />
               Create New Quote

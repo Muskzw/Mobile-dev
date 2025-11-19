@@ -209,7 +209,7 @@ export default function QuoteEditor() {
     <Layout>
       <div className="max-w-7xl mx-auto space-y-6 pb-20">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-card text-card-foreground p-4 rounded-xl shadow-sm border border-border sticky top-0 z-10">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 glass-card p-4 rounded-xl sticky top-0 z-10">
           <div className="flex items-center gap-4">
             <button onClick={() => navigate("/quotes")} className="p-2 hover:bg-accent hover:text-accent-foreground rounded-full transition">
               <ArrowLeft className="w-6 h-6" />
@@ -249,10 +249,10 @@ export default function QuoteEditor() {
           <div className="space-y-6">
 
             {/* Section: Company Settings */}
-            <div className="bg-card text-card-foreground rounded-xl shadow-sm border border-border overflow-hidden">
+            <div className="glass-card rounded-xl overflow-hidden">
               <button
                 onClick={() => toggleSection('company')}
-                className="w-full flex items-center justify-between p-6 hover:bg-accent/50 transition text-left"
+                className="w-full flex items-center justify-between p-6 hover:bg-primary/5 transition text-left"
               >
                 <div className="flex items-center gap-3">
                   <div className="p-2 bg-primary/10 text-primary rounded-lg">
@@ -273,14 +273,14 @@ export default function QuoteEditor() {
                     <input
                       value={companyName}
                       onChange={(e) => setCompanyName(e.target.value)}
-                      className="w-full px-4 py-2 bg-background border border-input rounded-lg focus:ring-2 focus:ring-ring outline-none"
+                      className="w-full px-4 py-2.5 rounded-lg glass-input outline-none focus:ring-2 focus:ring-primary/50"
                     />
                   </div>
                   <div>
                     <label className="block text-sm font-medium mb-2">Company Logo</label>
                     <div className="flex items-center gap-4">
                       {companyLogo && (
-                        <div className="relative w-20 h-20 border-2 border-border rounded-lg overflow-hidden bg-background">
+                        <div className="relative w-20 h-20 border-2 border-border rounded-lg overflow-hidden bg-background/50">
                           <img src={companyLogo} alt="Company logo" className="w-full h-full object-contain" />
                           <button
                             onClick={() => setCompanyLogo(null)}
@@ -292,7 +292,7 @@ export default function QuoteEditor() {
                         </div>
                       )}
                       <label className="flex-1 cursor-pointer">
-                        <div className="flex items-center justify-center gap-2 px-4 py-2 border-2 border-dashed border-border rounded-lg hover:border-primary/50 hover:bg-accent transition">
+                        <div className="flex items-center justify-center gap-2 px-4 py-2 border-2 border-dashed border-border rounded-lg hover:border-primary/50 hover:bg-primary/5 transition">
                           <Building className="w-4 h-4 text-muted-foreground" />
                           <span className="text-sm text-muted-foreground">
                             {companyLogo ? 'Change Logo' : 'Upload Logo'}
@@ -313,10 +313,10 @@ export default function QuoteEditor() {
             </div>
 
             {/* Section: Client Details */}
-            <div className="bg-card text-card-foreground rounded-xl shadow-sm border border-border overflow-hidden">
+            <div className="glass-card rounded-xl overflow-hidden">
               <button
                 onClick={() => toggleSection('client')}
-                className="w-full flex items-center justify-between p-6 hover:bg-accent/50 transition text-left"
+                className="w-full flex items-center justify-between p-6 hover:bg-primary/5 transition text-left"
               >
                 <div className="flex items-center gap-3">
                   <div className="p-2 bg-primary/10 text-primary rounded-lg">
@@ -339,7 +339,7 @@ export default function QuoteEditor() {
                         value={clientName}
                         onChange={(e) => setClientName(e.target.value)}
                         placeholder="e.g. Acme Corp"
-                        className="w-full px-4 py-2 bg-background border border-input rounded-lg focus:ring-2 focus:ring-ring outline-none"
+                        className="w-full px-4 py-2.5 rounded-lg glass-input outline-none focus:ring-2 focus:ring-primary/50"
                       />
                     </div>
                     <div>
@@ -348,7 +348,7 @@ export default function QuoteEditor() {
                         value={clientEmail}
                         onChange={(e) => setClientEmail(e.target.value)}
                         placeholder="client@example.com"
-                        className="w-full px-4 py-2 bg-background border border-input rounded-lg focus:ring-2 focus:ring-ring outline-none"
+                        className="w-full px-4 py-2.5 rounded-lg glass-input outline-none focus:ring-2 focus:ring-primary/50"
                       />
                     </div>
                   </div>
@@ -359,7 +359,7 @@ export default function QuoteEditor() {
                       value={clientAddress}
                       onChange={(e) => setClientAddress(e.target.value)}
                       placeholder="123 Business St, City, Country"
-                      className="w-full px-4 py-2 bg-background border border-input rounded-lg focus:ring-2 focus:ring-ring outline-none"
+                      className="w-full px-4 py-2.5 rounded-lg glass-input outline-none focus:ring-2 focus:ring-primary/50"
                     />
                   </div>
 
@@ -372,7 +372,7 @@ export default function QuoteEditor() {
                           type="date"
                           value={issueDate}
                           onChange={(e) => setIssueDate(e.target.value)}
-                          className="w-full pl-10 pr-4 py-2 bg-background border border-input rounded-lg focus:ring-2 focus:ring-ring outline-none"
+                          className="w-full pl-10 pr-4 py-2.5 rounded-lg glass-input outline-none focus:ring-2 focus:ring-primary/50"
                         />
                       </div>
                     </div>
@@ -384,7 +384,7 @@ export default function QuoteEditor() {
                           type="date"
                           value={dueDate}
                           onChange={(e) => setDueDate(e.target.value)}
-                          className="w-full pl-10 pr-4 py-2 bg-background border border-input rounded-lg focus:ring-2 focus:ring-ring outline-none"
+                          className="w-full pl-10 pr-4 py-2.5 rounded-lg glass-input outline-none focus:ring-2 focus:ring-primary/50"
                         />
                       </div>
                     </div>
@@ -396,7 +396,7 @@ export default function QuoteEditor() {
                       <select
                         value={currency}
                         onChange={(e) => setCurrency(e.target.value)}
-                        className="w-full px-4 py-2 bg-background border border-input rounded-lg focus:ring-2 focus:ring-ring outline-none"
+                        className="w-full px-4 py-2.5 rounded-lg glass-input outline-none focus:ring-2 focus:ring-primary/50"
                       >
                         <option value="USD">USD ($)</option>
                         <option value="EUR">EUR (€)</option>
@@ -410,7 +410,7 @@ export default function QuoteEditor() {
                         type="number"
                         value={taxRate}
                         onChange={(e) => setTaxRate(Number(e.target.value))}
-                        className="w-full px-4 py-2 bg-background border border-input rounded-lg focus:ring-2 focus:ring-ring outline-none"
+                        className="w-full px-4 py-2.5 rounded-lg glass-input outline-none focus:ring-2 focus:ring-primary/50"
                       />
                     </div>
                   </div>
@@ -419,10 +419,10 @@ export default function QuoteEditor() {
             </div>
 
             {/* Section: Items */}
-            <div className="bg-card text-card-foreground rounded-xl shadow-sm border border-border overflow-hidden">
+            <div className="glass-card rounded-xl overflow-hidden">
               <button
                 onClick={() => toggleSection('items')}
-                className="w-full flex items-center justify-between p-6 hover:bg-accent/50 transition text-left"
+                className="w-full flex items-center justify-between p-6 hover:bg-primary/5 transition text-left"
               >
                 <div className="flex items-center gap-3">
                   <div className="p-2 bg-primary/10 text-primary rounded-lg">
@@ -439,12 +439,12 @@ export default function QuoteEditor() {
               {activeSection === 'items' && (
                 <div className="p-6 space-y-4 border-t border-border">
                   {items.map((it, i) => (
-                    <div key={it.id} className="p-4 bg-accent/50 rounded-xl border border-border group relative hover:shadow-sm transition">
+                    <div key={it.id} className="p-4 bg-primary/5 rounded-xl border border-border group relative hover:shadow-sm transition">
                       <div className="grid grid-cols-12 gap-4">
                         <div className="col-span-12 sm:col-span-6">
                           <label className="text-xs font-medium text-muted-foreground mb-1 block">Item Name</label>
                           <input
-                            className="w-full px-3 py-2 bg-background border border-input rounded-md focus:ring-2 focus:ring-ring outline-none"
+                            className="w-full px-3 py-2 rounded-lg glass-input outline-none focus:ring-2 focus:ring-primary/50"
                             value={it.name}
                             placeholder="e.g. Web Design"
                             onChange={(e) => handleItemChange(i, { name: e.target.value })}
@@ -454,7 +454,7 @@ export default function QuoteEditor() {
                           <label className="text-xs font-medium text-muted-foreground mb-1 block">Qty</label>
                           <input
                             type="number"
-                            className="w-full px-3 py-2 bg-background border border-input rounded-md focus:ring-2 focus:ring-ring outline-none"
+                            className="w-full px-3 py-2 rounded-lg glass-input outline-none focus:ring-2 focus:ring-primary/50"
                             value={it.qty}
                             onChange={(e) => handleItemChange(i, { qty: Number(e.target.value) })}
                           />
@@ -463,14 +463,14 @@ export default function QuoteEditor() {
                           <label className="text-xs font-medium text-muted-foreground mb-1 block">Price</label>
                           <input
                             type="number"
-                            className="w-full px-3 py-2 bg-background border border-input rounded-md focus:ring-2 focus:ring-ring outline-none"
+                            className="w-full px-3 py-2 rounded-lg glass-input outline-none focus:ring-2 focus:ring-primary/50"
                             value={it.price}
                             onChange={(e) => handleItemChange(i, { price: Number(e.target.value) })}
                           />
                         </div>
                         <div className="col-span-12">
                           <input
-                            className="w-full px-3 py-2 bg-background border border-input rounded-md focus:ring-2 focus:ring-ring outline-none text-sm"
+                            className="w-full px-3 py-2 rounded-lg glass-input outline-none focus:ring-2 focus:ring-primary/50 text-sm"
                             value={it.desc}
                             placeholder="Description (optional)"
                             onChange={(e) => handleItemChange(i, { desc: e.target.value })}
@@ -497,18 +497,18 @@ export default function QuoteEditor() {
             </div>
 
             {/* Section: Notes */}
-            <div className="bg-card text-card-foreground rounded-xl shadow-sm border border-border p-6">
+            <div className="glass-card rounded-xl p-6">
               <label className="block text-sm font-medium mb-2">Notes & Terms</label>
               <textarea
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
-                className="w-full px-4 py-2 bg-background border border-input rounded-lg focus:ring-2 focus:ring-ring outline-none min-h-[100px] mb-4"
+                className="w-full px-4 py-2.5 rounded-lg glass-input outline-none focus:ring-2 focus:ring-primary/50 min-h-[100px] mb-4"
                 placeholder="Thank you for your business..."
               />
               <textarea
                 value={terms}
                 onChange={(e) => setTerms(e.target.value)}
-                className="w-full px-4 py-2 bg-background border border-input rounded-lg focus:ring-2 focus:ring-ring outline-none min-h-[80px] text-sm"
+                className="w-full px-4 py-2.5 rounded-lg glass-input outline-none focus:ring-2 focus:ring-primary/50 min-h-[80px] text-sm"
                 placeholder="Terms and conditions..."
               />
             </div>
