@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import QuoteCard from "../../components/QuoteCard";
-import "./quotes.css";
+import "./index.css";
 
 type Quote = {
   id: string;
