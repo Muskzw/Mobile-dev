@@ -37,12 +37,12 @@ export default function QuotesPage() {
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Quotes</h1>
-            <p className="text-gray-500 mt-1">Manage and track your client proposals</p>
+            <h1 className="text-3xl font-bold">Quotes</h1>
+            <p className="text-muted-foreground mt-1">Manage and track your client proposals</p>
           </div>
           <button
             onClick={() => navigate("/quotes/new")}
-            className="flex items-center gap-2 bg-blue-600 text-white px-5 py-2.5 rounded-xl hover:bg-blue-700 transition shadow-sm font-medium"
+            className="flex items-center gap-2 bg-primary text-primary-foreground px-5 py-2.5 rounded-xl hover:bg-primary/90 transition shadow-sm font-medium"
           >
             <Plus className="w-5 h-5" />
             Create Quote
@@ -50,15 +50,15 @@ export default function QuotesPage() {
         </div>
 
         {/* Filters & Search */}
-        <div className="flex flex-col sm:flex-row gap-4 items-center justify-between bg-white p-2 rounded-xl border border-gray-200 shadow-sm">
-          <div className="flex p-1 bg-gray-100 rounded-lg">
+        <div className="flex flex-col sm:flex-row gap-4 items-center justify-between bg-card text-card-foreground p-2 rounded-xl border border-border shadow-sm">
+          <div className="flex p-1 bg-muted rounded-lg">
             {['all', 'draft', 'sent', 'accepted'].map((status) => (
               <button
                 key={status}
                 onClick={() => setStatusFilter(status)}
                 className={`px-4 py-1.5 rounded-md text-sm font-medium capitalize transition ${statusFilter === status
-                  ? 'bg-white text-gray-900 shadow-sm'
-                  : 'text-gray-500 hover:text-gray-700'
+                  ? 'bg-background text-foreground shadow-sm'
+                  : 'text-muted-foreground hover:text-foreground'
                   }`}
               >
                 {status}
@@ -67,10 +67,10 @@ export default function QuotesPage() {
           </div>
 
           <div className="relative w-full sm:w-64">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <input
               placeholder="Search quotes..."
-              className="w-full pl-9 pr-4 py-2 bg-gray-50 border-transparent focus:bg-white border focus:border-blue-500 rounded-lg outline-none transition text-sm"
+              className="w-full pl-9 pr-4 py-2 bg-background border-transparent focus:bg-background border focus:border-ring rounded-lg outline-none transition text-sm"
             />
           </div>
         </div>
@@ -78,8 +78,8 @@ export default function QuotesPage() {
         {/* Quotes List */}
         {isLoading ? (
           <div className="text-center py-20">
-            <div className="animate-spin w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full mx-auto mb-4"></div>
-            <p className="text-gray-500">Loading quotes...</p>
+            <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full mx-auto mb-4"></div>
+            <p className="text-muted-foreground">Loading quotes...</p>
           </div>
         ) : filteredQuotes?.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -87,10 +87,10 @@ export default function QuotesPage() {
               <div
                 key={quote.id}
                 onClick={() => navigate(`/quotes/${quote.id}`)}
-                className="group bg-white p-6 rounded-xl border border-gray-200 hover:border-blue-300 hover:shadow-md transition cursor-pointer relative"
+                className="group bg-card text-card-foreground p-6 rounded-xl border border-border hover:border-primary/50 hover:shadow-md transition cursor-pointer relative"
               >
                 <div className="flex justify-between items-start mb-4">
-                  <div className="p-3 bg-blue-50 text-blue-600 rounded-lg group-hover:bg-blue-100 transition">
+                  <div className="p-3 bg-primary/10 text-primary rounded-lg group-hover:bg-primary/20 transition">
                     <FileText className="w-6 h-6" />
                   </div>
                   <span className={`px-2.5 py-1 rounded-full text-xs font-medium capitalize ${getStatusColor(quote.status || 'draft')}`}>
@@ -98,14 +98,14 @@ export default function QuotesPage() {
                   </span>
                 </div>
 
-                <h3 className="font-bold text-gray-900 text-lg mb-1">{quote.client_name || "Untitled Client"}</h3>
-                <p className="text-sm text-gray-500 mb-4">#{quote.document_number}</p>
+                <h3 className="font-bold text-lg mb-1">{quote.client_name || "Untitled Client"}</h3>
+                <p className="text-sm text-muted-foreground mb-4">#{quote.document_number}</p>
 
-                <div className="flex items-center justify-between pt-4 border-t border-gray-100">
-                  <div className="text-sm text-gray-500">
+                <div className="flex items-center justify-between pt-4 border-t border-border">
+                  <div className="text-sm text-muted-foreground">
                     {new Date(quote.created_at).toLocaleDateString()}
                   </div>
-                  <div className="font-bold text-gray-900">
+                  <div className="font-bold">
                     {quote.currency} {Number(quote.total).toFixed(2)}
                   </div>
                 </div>
@@ -113,15 +113,15 @@ export default function QuotesPage() {
             ))}
           </div>
         ) : (
-          <div className="text-center py-20 bg-white rounded-xl border border-dashed border-gray-300">
-            <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4">
-              <FileText className="w-8 h-8 text-gray-400" />
+          <div className="text-center py-20 bg-card text-card-foreground rounded-xl border border-dashed border-border">
+            <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
+              <FileText className="w-8 h-8 text-muted-foreground" />
             </div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-1">No quotes found</h3>
-            <p className="text-gray-500 mb-6">Get started by creating your first professional quote.</p>
+            <h3 className="text-lg font-semibold mb-1">No quotes found</h3>
+            <p className="text-muted-foreground mb-6">Get started by creating your first professional quote.</p>
             <button
               onClick={() => navigate("/quotes/new")}
-              className="inline-flex items-center gap-2 bg-blue-600 text-white px-5 py-2.5 rounded-xl hover:bg-blue-700 transition font-medium"
+              className="inline-flex items-center gap-2 bg-primary text-primary-foreground px-5 py-2.5 rounded-xl hover:bg-primary/90 transition font-medium"
             >
               <Plus className="w-5 h-5" />
               Create New Quote
