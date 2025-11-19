@@ -1,0 +1,218 @@
+.quote-editor {
+  padding: 2rem;
+}
+
+.editor-columns {
+  display: flex;
+  gap: 2rem;
+  align-items: flex-start;
+}
+
+.editor-left {
+  flex: 1;
+}
+
+.editor-right {
+  width: 400px;
+  position: sticky;
+  top: 2rem;
+}
+
+.card {
+  background: white;
+  padding: 1.5rem;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+  border: 1px solid #eee;
+}
+
+.form-group {
+  margin-bottom: 1.5rem;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+  color: #333;
+}
+
+.form-group input,
+.form-group textarea {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 1rem;
+}
+
+.form-group textarea {
+  min-height: 100px;
+  resize: vertical;
+}
+
+.logo-input {
+  display: inline-block;
+  margin-bottom: 1.5rem;
+  cursor: pointer;
+  color: #007bff;
+}
+
+.logo-input input {
+  display: none;
+}
+
+h3 {
+  margin-bottom: 1rem;
+  font-size: 1.1rem;
+  color: #444;
+}
+
+.item-row {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+  align-items: center;
+}
+
+.item-row input {
+  padding: 0.5rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.item-name { flex: 2; }
+.item-desc { flex: 2; }
+.item-qty { width: 70px; }
+.item-price { width: 90px; }
+.item-total { 
+  width: 90px; 
+  text-align: right; 
+  font-weight: 500;
+}
+
+.btn {
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.btn.primary {
+  background: #007bff;
+  color: white;
+}
+
+.btn.primary:hover {
+  background: #0056b3;
+}
+
+.btn.ghost {
+  background: transparent;
+  border: 1px dashed #ccc;
+  color: #666;
+  width: 100%;
+  margin-top: 0.5rem;
+}
+
+.btn.ghost:hover {
+  border-color: #007bff;
+  color: #007bff;
+  background: #f8f9fa;
+}
+
+.editor-actions {
+  margin-top: 2rem;
+  display: flex;
+  gap: 1rem;
+  justify-content: flex-end;
+  padding-top: 1rem;
+  border-top: 1px solid #eee;
+}
+
+/* Preview Styles */
+.preview-header {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 2rem;
+  align-items: center;
+  border-bottom: 1px solid #eee;
+  padding-bottom: 1.5rem;
+}
+
+.logo-preview img {
+  max-width: 80px;
+  max-height: 80px;
+  object-fit: contain;
+}
+
+.logo-placeholder {
+  width: 64px;
+  height: 64px;
+  background: #f0f0f0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  color: #999;
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+.muted {
+  color: #888;
+  font-size: 0.9rem;
+}
+
+.preview-client {
+  margin-bottom: 2rem;
+  font-size: 1.1rem;
+}
+
+.preview-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1rem 0;
+  font-size: 0.9rem;
+}
+
+.preview-table th {
+  text-align: left;
+  color: #888;
+  font-weight: 500;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid #eee;
+}
+
+.preview-table td {
+  padding: 0.75rem 0;
+  border-bottom: 1px solid #f9f9f9;
+}
+
+.preview-table td:last-child {
+  text-align: right;
+}
+
+.preview-total {
+  text-align: right;
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin-top: 2rem;
+  color: #333;
+}
+
+.preview-notes {
+  margin-top: 2rem;
+  padding-top: 1rem;
+  border-top: 1px solid #eee;
+  color: #666;
+  font-size: 0.9rem;
+  white-space: pre-wrap;
+}
+
+.preview-actions {
+  margin-top: 2rem;
+  text-align: right;
+}
