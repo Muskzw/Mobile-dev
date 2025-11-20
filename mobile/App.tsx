@@ -1,3 +1,4 @@
+import 'react-native-gesture-handler';
 import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
@@ -42,23 +43,23 @@ initAuth();
 function MainTabs() {
   return (
     <Tab.Navigator>
-      <Tab.Screen 
-        name="Dashboard" 
+      <Tab.Screen
+        name="Dashboard"
         component={DashboardScreen}
         options={{ title: 'Dashboard' }}
       />
-      <Tab.Screen 
-        name="Documents" 
+      <Tab.Screen
+        name="Documents"
         component={DocumentsScreen}
         options={{ title: 'Documents' }}
       />
-      <Tab.Screen 
-        name="Clients" 
+      <Tab.Screen
+        name="Clients"
         component={ClientsScreen}
         options={{ title: 'Clients' }}
       />
-      <Tab.Screen 
-        name="Settings" 
+      <Tab.Screen
+        name="Settings"
         component={SettingsScreen}
         options={{ title: 'Settings' }}
       />
