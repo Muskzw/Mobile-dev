@@ -1,9 +1,22 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, KeyboardAvoidingView, Platform } from 'react-native';
-import { TextInput, Button, Text, Surface } from 'react-native-paper';
+import {
+  View,
+  Text,
+  StyleSheet,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StatusBar,
+} from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
+import { Ionicons } from '@expo/vector-icons';
 import api from '../api/client';
 import { useAuthStore } from '../store/authStore';
+import { Button } from '../components/Button';
+import { Input } from '../components/Input';
+import { Card } from '../components/Card';
+import { colors, spacing, typography, borderRadius } from '../theme';
 
 export default function RegisterScreen() {
   const navigation = useNavigation();
@@ -12,8 +25,31 @@ export default function RegisterScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [errors, setErrors] = useState<{ fullName?: string; email?: string; password?: string }>({});
+
+  const validate = () => {
+    const newErrors: { fullName?: string; email?: string; password?: string } = {};
+
+    if (!email) {
+      newErrors.email = 'Email is required';
+    } else if (!/\S+@\S+\.\S+/.test(email)) {
+      newErrors.email = 'Email is invalid';
+    }
+
+    if (!password) {
+      newErrors.password = 'Password is required';
+    } else if (password.length < 6) {
+      newErrors.password = 'Password must be at least 6 characters';
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
 
   const handleRegister = async () => {
+    if (!validate()) return;
+
     setLoading(true);
     try {
       console.log('Attempting to register with API...');
@@ -27,8 +63,8 @@ export default function RegisterScreen() {
       console.log('Registration successful:', response.data);
       const { token, user } = response.data;
 
+      // Set auth - this will automatically trigger navigation to logged-in screens
       setAuth(token, user, []);
-      navigation.navigate('Companies' as never);
     } catch (error: any) {
       console.error('Register error:', error);
       console.error('Error response:', error.response?.data);
@@ -36,10 +72,8 @@ export default function RegisterScreen() {
       let errorMessage = 'Registration failed. Please try again.';
 
       if (error.response) {
-        // Server responded with error
         const data = error.response.data;
 
-        // Check for validation errors
         if (data.errors && Array.isArray(data.errors)) {
           errorMessage = data.errors.map((err: any) => err.msg || err.message).join('\n');
         } else if (data.error) {
@@ -48,7 +82,6 @@ export default function RegisterScreen() {
           errorMessage = data.message;
         }
       } else if (error.request) {
-        // Request made but no response
         errorMessage = 'Cannot connect to server. Please check your connection.';
       } else {
         errorMessage = error.message;
@@ -61,98 +94,192 @@ export default function RegisterScreen() {
   };
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      style={styles.container}
-    >
-      <Surface style={styles.surface}>
-        <Text variant="headlineMedium" style={styles.title}>
-          Create Account
-        </Text>
-        <Text variant="bodyMedium" style={styles.subtitle}>
-          Start creating professional quotations
-        </Text>
+    <View style={styles.container}>
+      <StatusBar barStyle="light-content" />
+      <LinearGradient
+        colors={colors.gradients.primary as any}
+        style={styles.gradient}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+      >
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={styles.keyboardView}
+        >
+          <ScrollView
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+          >
+            {/* Header */}
+            <View style={styles.header}>
+              <View style={styles.logoContainer}>
+                <LinearGradient
+                  colors={['rgba(255,255,255,0.3)', 'rgba(255,255,255,0.1)']}
+                  style={styles.logoGradient}
+                >
+                  <Ionicons name="document-text" size={40} color={colors.text.inverse} />
+                </LinearGradient>
+              </View>
+              <Text style={styles.title}>Create Account</Text>
+              <Text style={styles.subtitle}>
+                Start creating professional quotations today
+              </Text>
+            </View>
 
-        <View style={styles.form}>
-          <TextInput
-            label="Full Name"
-            value={fullName}
-            onChangeText={setFullName}
-            mode="outlined"
-            style={styles.input}
-          />
-          <TextInput
-            label="Email"
-            value={email}
-            onChangeText={setEmail}
-            keyboardType="email-address"
-            autoCapitalize="none"
-            mode="outlined"
-            style={styles.input}
-          />
-          <TextInput
-            label="Password"
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry
-            mode="outlined"
-            style={styles.input}
-          />
-          <Button
-            mode="contained"
-            onPress={handleRegister}
-            loading={loading}
-            disabled={loading}
-            style={styles.button}
-          >
-            Create Account
-          </Button>
-          <Button
-            mode="text"
-            onPress={() => navigation.navigate('Login' as never)}
-            style={styles.linkButton}
-          >
-            Already have an account? Sign in
-          </Button>
-        </View>
-      </Surface>
-    </KeyboardAvoidingView>
+            {/* Form Card */}
+            <Card style={styles.formCard} padding={6}>
+              <Input
+                label="Full Name"
+                placeholder="John Doe"
+                value={fullName}
+                onChangeText={(text) => {
+                  setFullName(text);
+                  setErrors({ ...errors, fullName: undefined });
+                }}
+                error={errors.fullName}
+                icon={<Ionicons name="person-outline" size={20} color={colors.gray[500]} />}
+                autoCapitalize="words"
+              />
+
+              <Input
+                label="Email Address"
+                placeholder="john@example.com"
+                value={email}
+                onChangeText={(text) => {
+                  setEmail(text);
+                  setErrors({ ...errors, email: undefined });
+                }}
+                error={errors.email}
+                icon={<Ionicons name="mail-outline" size={20} color={colors.gray[500]} />}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                autoComplete="email"
+              />
+
+              <Input
+                label="Password"
+                placeholder="••••••••"
+                value={password}
+                onChangeText={(text) => {
+                  setPassword(text);
+                  setErrors({ ...errors, password: undefined });
+                }}
+                error={errors.password}
+                icon={<Ionicons name="lock-closed-outline" size={20} color={colors.gray[500]} />}
+                rightIcon={
+                  <Ionicons
+                    name={showPassword ? 'eye-off-outline' : 'eye-outline'}
+                    size={20}
+                    color={colors.gray[500]}
+                    onPress={() => setShowPassword(!showPassword)}
+                  />
+                }
+                secureTextEntry={!showPassword}
+              />
+
+              <Button
+                title={loading ? 'Creating Account...' : 'Create Account'}
+                onPress={handleRegister}
+                loading={loading}
+                disabled={loading}
+                gradient
+                size="lg"
+                fullWidth
+                style={styles.button}
+              />
+
+              <View style={styles.footer}>
+                <Text style={styles.footerText}>Already have an account?</Text>
+                <Button
+                  title="Sign In"
+                  onPress={() => navigation.navigate('Login' as never)}
+                  variant="ghost"
+                  size="sm"
+                />
+              </View>
+            </Card>
+
+            {/* Terms */}
+            <Text style={styles.terms}>
+              By creating an account, you agree to our{'\n'}
+              <Text style={styles.termsLink}>Terms of Service</Text> and{' '}
+              <Text style={styles.termsLink}>Privacy Policy</Text>
+            </Text>
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </LinearGradient>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: 'center',
-    padding: 20,
-    backgroundColor: '#f5f5f5'
+    backgroundColor: colors.primary[600],
   },
-  surface: {
-    padding: 24,
-    borderRadius: 8,
-    elevation: 4
+  gradient: {
+    flex: 1,
+  },
+  keyboardView: {
+    flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
+    paddingHorizontal: spacing[6],
+    paddingTop: spacing[16],
+    paddingBottom: spacing[8],
+  },
+  header: {
+    alignItems: 'center',
+    marginBottom: spacing[8],
+  },
+  logoContainer: {
+    marginBottom: spacing[6],
+  },
+  logoGradient: {
+    width: 80,
+    height: 80,
+    borderRadius: borderRadius['2xl'],
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   title: {
-    textAlign: 'center',
-    marginBottom: 8,
-    fontWeight: 'bold'
+    fontSize: typography.fontSize['3xl'],
+    fontWeight: typography.fontWeight.bold,
+    color: colors.text.inverse,
+    marginBottom: spacing[2],
   },
   subtitle: {
+    fontSize: typography.fontSize.base,
+    color: 'rgba(255,255,255,0.8)',
     textAlign: 'center',
-    marginBottom: 32,
-    color: '#666'
   },
-  form: {
-    gap: 16
-  },
-  input: {
-    marginBottom: 8
+  formCard: {
+    marginBottom: spacing[6],
   },
   button: {
-    marginTop: 8,
-    paddingVertical: 4
+    marginTop: spacing[2],
   },
-  linkButton: {
-    marginTop: 8
-  }
+  footer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: spacing[6],
+  },
+  footerText: {
+    fontSize: typography.fontSize.sm,
+    color: colors.text.secondary,
+    marginRight: spacing[2],
+  },
+  terms: {
+    fontSize: typography.fontSize.xs,
+    color: 'rgba(255,255,255,0.7)',
+    textAlign: 'center',
+    lineHeight: typography.lineHeight.relaxed * typography.fontSize.xs,
+  },
+  termsLink: {
+    fontWeight: typography.fontWeight.semibold,
+    color: colors.text.inverse,
+  },
 });
