@@ -5,19 +5,29 @@ import { useAuthStore } from '../store/authStore';
 // You can find it by running: ipconfig (Windows) or ifconfig (Mac/Linux)
 // Look for IPv4 Address on your WiFi adapter
 const API_BASE_URL = __DEV__
-  ? 'http://10.0.2.2:5000/api'  // Android Emulator uses 10.0.2.2 to access host machine
+  ? 'http://192.168.1.146:5000/api'  // Use your computer's IP address
   : 'https://your-api-domain.com/api';
 
-// For physical devices, uncomment and use your computer's IP:
+// For Android Emulator, you can use:
 // const API_BASE_URL = __DEV__ 
-//   ? 'http://192.168.1.XXX:5000/api'  // Replace XXX with your computer's IP
+//   ? 'http://10.0.2.2:5000/api'  // Android Emulator uses 10.0.2.2 to access host machine
 //   : 'https://your-api-domain.com/api';
 
 const api = axios.create({
   baseURL: API_BASE_URL,
+  timeout: 10000, // 10 second timeout
   headers: {
     'Content-Type': 'application/json'
   }
+});
+
+// Log all requests for debugging
+api.interceptors.request.use((config) => {
+  console.log(`API Request: ${config.method?.toUpperCase()} ${config.baseURL}${config.url}`);
+  return config;
+}, (error) => {
+  console.error('Request setup error:', error);
+  return Promise.reject(error);
 });
 
 // Add auth token to requests

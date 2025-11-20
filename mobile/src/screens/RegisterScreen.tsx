@@ -16,17 +16,45 @@ export default function RegisterScreen() {
   const handleRegister = async () => {
     setLoading(true);
     try {
+      console.log('Attempting to register with API...');
+      console.log('Request data:', { email, password, fullName });
+
       const response = await api.post('/auth/register', {
         email,
         password,
         fullName
       });
+      console.log('Registration successful:', response.data);
       const { token, user } = response.data;
-      
+
       setAuth(token, user, []);
       navigation.navigate('Companies' as never);
     } catch (error: any) {
       console.error('Register error:', error);
+      console.error('Error response:', error.response?.data);
+
+      let errorMessage = 'Registration failed. Please try again.';
+
+      if (error.response) {
+        // Server responded with error
+        const data = error.response.data;
+
+        // Check for validation errors
+        if (data.errors && Array.isArray(data.errors)) {
+          errorMessage = data.errors.map((err: any) => err.msg || err.message).join('\n');
+        } else if (data.error) {
+          errorMessage = data.error;
+        } else if (data.message) {
+          errorMessage = data.message;
+        }
+      } else if (error.request) {
+        // Request made but no response
+        errorMessage = 'Cannot connect to server. Please check your connection.';
+      } else {
+        errorMessage = error.message;
+      }
+
+      alert(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -128,4 +156,3 @@ const styles = StyleSheet.create({
     marginTop: 8
   }
 });
-
