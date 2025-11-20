@@ -3,16 +3,19 @@ import { useNavigate, useParams } from "react-router-dom";
 import Layout from "../../components/Layout";
 import { Save, ArrowLeft, Plus, Trash2, FileDown, Calendar, CreditCard, Settings, ChevronDown, ChevronUp, Building } from "lucide-react";
 import api from "../../api/client";
+import toast from "react-hot-toast";
+import { useAuthStore } from "../../store/authStore";
 
 type Item = { id: string; name: string; desc?: string; qty: number; price: number; total: number; };
 
 export default function QuoteEditor() {
   const navigate = useNavigate();
   const { id } = useParams();
+  const { currentCompany } = useAuthStore();
 
-  // Form State
-  const [companyLogo, setCompanyLogo] = useState<string | null>(null); // Store as base64 or URL
-  const [companyName, setCompanyName] = useState("My Company Ltd");
+  // Form State - Initialize with company defaults
+  const [companyLogo, setCompanyLogo] = useState<string | null>(currentCompany?.logo_url || null);
+  const [companyName, setCompanyName] = useState(currentCompany?.name || "My Company Ltd");
   const [clientName, setClientName] = useState("");
   const [clientEmail, setClientEmail] = useState("");
   const [clientAddress, setClientAddress] = useState("");
@@ -34,18 +37,31 @@ export default function QuoteEditor() {
     if (file) {
       // Validate file type
       if (!file.type.startsWith('image/')) {
-        alert('Please select an image file');
+        toast.error('Please select an image file');
+        e.target.value = ''; // Reset input
         return;
       }
       // Validate file size (max 2MB)
       if (file.size > 2 * 1024 * 1024) {
-        alert('File size must be less than 2MB');
+        toast.error('File size must be less than 2MB');
+        e.target.value = ''; // Reset input
         return;
       }
       // Convert to base64 for preview
       const reader = new FileReader();
       reader.onloadend = () => {
-        setCompanyLogo(reader.result as string);
+        const result = reader.result as string;
+        if (result) {
+          setCompanyLogo(result);
+          toast.success('Logo uploaded successfully!');
+        } else {
+          toast.error('Failed to read image file');
+        }
+        e.target.value = ''; // Reset input to allow re-selecting the same file
+      };
+      reader.onerror = () => {
+        toast.error('Error reading file. Please try again.');
+        e.target.value = ''; // Reset input
       };
       reader.readAsDataURL(file);
     }

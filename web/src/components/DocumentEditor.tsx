@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, Link } from "react-router-dom";
 import Layout from "../components/Layout";
 import { Save, ArrowLeft, Plus, Trash2, FileDown, Calendar, CreditCard, Settings, ChevronDown, ChevronUp, Building, Copy, Mail, RefreshCw } from "lucide-react";
 import api from "../api/client";
 import toast from "react-hot-toast";
+import { useAuthStore } from "../store/authStore";
 
 type Item = { id: string; name: string; desc?: string; qty: number; price: number; total: number; };
 
@@ -16,11 +17,12 @@ interface DocumentEditorProps {
 export default function DocumentEditor({ documentType, title, baseRoute }: DocumentEditorProps) {
     const navigate = useNavigate();
     const { id } = useParams();
+    const { currentCompany } = useAuthStore();
 
 
-    // Form State
-    const [companyLogo, setCompanyLogo] = useState<string | null>(null);
-    const [companyName, setCompanyName] = useState("My Company Ltd");
+    // Form State - Initialize with company defaults
+    const [companyLogo, setCompanyLogo] = useState<string | null>(currentCompany?.logo_url || null);
+    const [companyName, setCompanyName] = useState(currentCompany?.name || "My Company Ltd");
     const [clientName, setClientName] = useState("");
     const [clientEmail, setClientEmail] = useState("");
     const [clientAddress, setClientAddress] = useState("");
@@ -36,21 +38,82 @@ export default function DocumentEditor({ documentType, title, baseRoute }: Docum
 
     // UI State
     const [activeSection, setActiveSection] = useState<string | null>("items");
+    const [clients, setClients] = useState<any[]>([]);
+    const [showClientDropdown, setShowClientDropdown] = useState(false);
+    const [clientSearchQuery, setClientSearchQuery] = useState("");
+    const clientInputRef = React.useRef<HTMLDivElement>(null);
+
+    // Fetch clients
+    useEffect(() => {
+        async function fetchClients() {
+            try {
+                const res = await api.get('/clients');
+                setClients(res.data);
+                console.log('Fetched clients:', res.data); // Debug log
+            } catch (error) {
+                console.error("Failed to fetch clients", error);
+                toast.error('Failed to load clients');
+            }
+        }
+        fetchClients();
+    }, []);
+
+    // Close dropdown when clicking outside
+    useEffect(() => {
+        function handleClickOutside(event: MouseEvent) {
+            if (clientInputRef.current && !clientInputRef.current.contains(event.target as Node)) {
+                setShowClientDropdown(false);
+            }
+        }
+        if (showClientDropdown) {
+            document.addEventListener('mousedown', handleClickOutside);
+            return () => document.removeEventListener('mousedown', handleClickOutside);
+        }
+    }, [showClientDropdown]);
+
+    // Filter clients based on search (show all if search is empty)
+    const filteredClients = clientSearchQuery.trim() === ''
+        ? clients
+        : clients.filter(client =>
+            client.name.toLowerCase().includes(clientSearchQuery.toLowerCase()) ||
+            (client.email && client.email.toLowerCase().includes(clientSearchQuery.toLowerCase()))
+        );
+
+    function handleClientSelect(client: any) {
+        setClientName(client.name);
+        setClientEmail(client.email || "");
+        setClientAddress(client.address || "");
+        setShowClientDropdown(false);
+        setClientSearchQuery("");
+    }
 
     function handleLogoUpload(e: React.ChangeEvent<HTMLInputElement>) {
         const file = e.target.files?.[0];
         if (file) {
             if (!file.type.startsWith('image/')) {
-                alert('Please select an image file');
+                toast.error('Please select an image file');
+                e.target.value = ''; // Reset input
                 return;
             }
             if (file.size > 2 * 1024 * 1024) {
-                alert('File size must be less than 2MB');
+                toast.error('File size must be less than 2MB');
+                e.target.value = ''; // Reset input
                 return;
             }
             const reader = new FileReader();
             reader.onloadend = () => {
-                setCompanyLogo(reader.result as string);
+                const result = reader.result as string;
+                if (result) {
+                    setCompanyLogo(result);
+                    toast.success('Logo uploaded successfully!');
+                } else {
+                    toast.error('Failed to read image file');
+                }
+                e.target.value = ''; // Reset input to allow re-selecting the same file
+            };
+            reader.onerror = () => {
+                toast.error('Error reading file. Please try again.');
+                e.target.value = ''; // Reset input
             };
             reader.readAsDataURL(file);
         }
@@ -396,27 +459,45 @@ export default function DocumentEditor({ documentType, title, baseRoute }: Docum
                                                         onClick={() => setCompanyLogo(null)}
                                                         className="absolute top-0 right-0 p-1 bg-destructive text-destructive-foreground rounded-bl-lg hover:bg-destructive/90 transition"
                                                         type="button"
+                                                        title="Remove logo"
                                                     >
                                                         <Trash2 className="w-3 h-3" />
                                                     </button>
                                                 </div>
                                             )}
-                                            <label className="flex-1 cursor-pointer">
-                                                <div className="flex items-center justify-center gap-2 px-4 py-2 border-2 border-dashed border-border rounded-lg hover:border-primary/50 hover:bg-primary/5 transition">
-                                                    <Building className="w-4 h-4 text-muted-foreground" />
-                                                    <span className="text-sm text-muted-foreground">
-                                                        {companyLogo ? 'Change Logo' : 'Upload Logo'}
-                                                    </span>
-                                                </div>
-                                                <input
-                                                    type="file"
-                                                    accept="image/*"
-                                                    onChange={handleLogoUpload}
-                                                    className="hidden"
-                                                />
-                                            </label>
+                                            <div className="flex-1 space-y-2">
+                                                <label className="cursor-pointer block">
+                                                    <div className="flex items-center justify-center gap-2 px-4 py-2 border-2 border-dashed border-border rounded-lg hover:border-primary/50 hover:bg-primary/5 transition">
+                                                        <Building className="w-4 h-4 text-muted-foreground" />
+                                                        <span className="text-sm text-muted-foreground">
+                                                            {companyLogo ? 'Change Logo' : 'Upload Custom Logo'}
+                                                        </span>
+                                                    </div>
+                                                    <input
+                                                        type="file"
+                                                        accept="image/*"
+                                                        onChange={handleLogoUpload}
+                                                        className="hidden"
+                                                    />
+                                                </label>
+                                                {companyLogo !== currentCompany?.logo_url && currentCompany?.logo_url && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setCompanyLogo(currentCompany.logo_url || null)}
+                                                        className="w-full text-xs px-3 py-1.5 bg-secondary text-secondary-foreground rounded-lg hover:bg-secondary/80 transition"
+                                                    >
+                                                        Reset to Company Logo
+                                                    </button>
+                                                )}
+                                            </div>
                                         </div>
-                                        <p className="text-xs text-muted-foreground mt-1">PNG, JPG or SVG. Max 2MB.</p>
+                                        <p className="text-xs text-muted-foreground mt-1">
+                                            {companyLogo === currentCompany?.logo_url
+                                                ? '✓ Using company logo from profile'
+                                                : companyLogo
+                                                    ? 'Custom logo for this document (override)'
+                                                    : 'PNG, JPG or SVG. Max 2MB.'}
+                                        </p>
                                     </div>
                                 </div>
                             )}
@@ -443,14 +524,50 @@ export default function DocumentEditor({ documentType, title, baseRoute }: Docum
                             {activeSection === 'client' && (
                                 <div className="p-6 space-y-6 border-t border-border animate-in slide-in-from-top-2 duration-200">
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        <div>
+                                        <div className="relative" ref={clientInputRef}>
                                             <label className="block text-sm font-medium mb-1">Client Name</label>
                                             <input
                                                 value={clientName}
-                                                onChange={(e) => setClientName(e.target.value)}
+                                                onChange={(e) => {
+                                                    setClientName(e.target.value);
+                                                    setClientSearchQuery(e.target.value);
+                                                    setShowClientDropdown(true);
+                                                }}
+                                                onFocus={() => {
+                                                    setClientSearchQuery(clientName);
+                                                    setShowClientDropdown(true);
+                                                }}
                                                 placeholder="e.g. Acme Corp"
                                                 className="w-full px-4 py-2.5 rounded-lg glass-input outline-none focus:ring-2 focus:ring-primary/50"
+                                                autoComplete="off"
                                             />
+                                            {showClientDropdown && (
+                                                <div className="absolute z-50 w-full mt-1 max-h-60 overflow-auto glass-card rounded-lg shadow-2xl border border-border">
+                                                    {filteredClients.length > 0 ? (
+                                                        filteredClients.map((client) => (
+                                                            <button
+                                                                key={client.id}
+                                                                type="button"
+                                                                onClick={() => handleClientSelect(client)}
+                                                                className="w-full text-left px-4 py-3 hover:bg-primary/10 transition border-b border-border last:border-b-0 first:rounded-t-lg last:rounded-b-lg"
+                                                            >
+                                                                <p className="font-medium">{client.name}</p>
+                                                                {client.email && (
+                                                                    <p className="text-xs text-muted-foreground">{client.email}</p>
+                                                                )}
+                                                            </button>
+                                                        ))
+                                                    ) : (
+                                                        <div className="px-4 py-3 text-sm text-muted-foreground text-center">
+                                                            {clients.length === 0 ? (
+                                                                <p>No clients yet. <Link to="/clients" className="text-primary hover:underline">Add a client</Link></p>
+                                                            ) : (
+                                                                <p>No clients match "{clientSearchQuery}"</p>
+                                                            )}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            )}
                                         </div>
                                         <div>
                                             <label className="block text-sm font-medium mb-1">Email (Optional)</label>

@@ -48,10 +48,27 @@ export default function Layout({ children }: LayoutProps) {
         <div className="flex flex-col h-full">
           {/* Logo */}
           <div className="p-6 border-b border-border">
-            <h1 className="text-xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">Quotation Maker</h1>
-            {currentCompany && (
-              <p className="text-sm text-muted-foreground mt-1">{currentCompany.name}</p>
-            )}
+            <div className="flex items-center gap-3">
+              {currentCompany?.logo_url ? (
+                <img
+                  src={currentCompany.logo_url}
+                  alt={currentCompany.name}
+                  className="w-10 h-10 object-contain rounded-lg border border-border bg-background/50 p-1"
+                />
+              ) : (
+                <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center">
+                  <Building2 className="w-6 h-6 text-primary-foreground" />
+                </div>
+              )}
+              <div className="flex-1 min-w-0">
+                <h1 className="text-lg font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent truncate">
+                  Quotation Maker
+                </h1>
+                {currentCompany && (
+                  <p className="text-xs text-muted-foreground truncate">{currentCompany.name}</p>
+                )}
+              </div>
+            </div>
           </div>
 
           {/* Navigation */}
