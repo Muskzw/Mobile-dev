@@ -13,7 +13,8 @@ import { useRoute, useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import api from '../api/client';
-import { colors, spacing, typography, borderRadius, shadows } from '../theme';
+import { useTheme } from '../context/ThemeContext';
+import { spacing, typography, borderRadius, shadows, Colors } from '../theme';
 import { Card } from '../components/Card';
 import { Button } from '../components/Button';
 
@@ -21,6 +22,8 @@ export default function DocumentViewScreen() {
   const route = useRoute();
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
+  const { colors, isDark } = useTheme();
+  const styles = createStyles(colors);
   const { id } = route.params as { id: string };
 
   const { data: document, isLoading } = useQuery({
@@ -50,7 +53,10 @@ export default function DocumentViewScreen() {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor={colors.background.secondary} />
+      <StatusBar
+        barStyle={isDark ? "light-content" : "dark-content"}
+        backgroundColor={colors.background.secondary}
+      />
 
       {/* Header */}
       <View style={[styles.header, { paddingTop: insets.top + spacing[2] }]}>
@@ -164,7 +170,7 @@ export default function DocumentViewScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: Colors) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background.secondary,

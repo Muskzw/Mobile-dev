@@ -10,6 +10,7 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
+  StatusBar,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
@@ -17,7 +18,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import api from '../api/client';
-import { colors, spacing, typography, borderRadius, shadows } from '../theme';
+import { useTheme } from '../context/ThemeContext';
+import { spacing, typography, borderRadius, shadows, Colors } from '../theme';
 import { Button } from '../components/Button';
 import { Input } from '../components/Input';
 import { Card } from '../components/Card';
@@ -39,6 +41,8 @@ export default function DocumentCreateScreen({ route }: any) {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
+  const { colors, isDark } = useTheme();
+  const styles = createStyles(colors);
   const { type = 'QUOTATION' } = route.params || {};
 
   // State
@@ -151,6 +155,11 @@ export default function DocumentCreateScreen({ route }: any) {
 
   return (
     <View style={styles.container}>
+      <StatusBar
+        barStyle={isDark ? "light-content" : "dark-content"}
+        backgroundColor={colors.background.secondary}
+      />
+
       <View style={[styles.header, { paddingTop: insets.top + spacing[2] }]}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
           <Ionicons name="close" size={24} color={colors.text.primary} />
@@ -389,7 +398,7 @@ export default function DocumentCreateScreen({ route }: any) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: Colors) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background.secondary,
@@ -587,6 +596,7 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: typography.fontSize.lg,
     fontWeight: typography.fontWeight.bold,
+    color: colors.text.primary,
   },
   closeText: {
     color: colors.primary[600],

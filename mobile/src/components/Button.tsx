@@ -8,7 +8,8 @@ import {
     TextStyle,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { colors, spacing, borderRadius, typography, shadows } from '../theme';
+import { spacing, borderRadius, shadows, Colors } from '../theme';
+import { useTheme } from '../context/ThemeContext';
 
 interface ButtonProps {
     title: string;
@@ -35,10 +36,13 @@ export const Button: React.FC<ButtonProps> = ({
     style,
     textStyle,
 }) => {
+    const { colors } = useTheme();
+    const styles = createStyles(colors);
+
     const buttonStyles: ViewStyle[] = [
         styles.button,
-        styles[`button_${size}`],
-        styles[`button_${variant}`],
+        styles[`button_${size}` as keyof typeof styles] as ViewStyle,
+        styles[`button_${variant}` as keyof typeof styles] as ViewStyle,
         ...(fullWidth ? [styles.fullWidth] : []),
         ...(disabled ? [styles.disabled] : []),
         ...(style ? [style] : []),
@@ -46,8 +50,8 @@ export const Button: React.FC<ButtonProps> = ({
 
     const textStyles: TextStyle[] = [
         styles.text,
-        styles[`text_${size}`],
-        styles[`text_${variant}`],
+        styles[`text_${size}` as keyof typeof styles] as TextStyle,
+        styles[`text_${variant}` as keyof typeof styles] as TextStyle,
         ...(disabled ? [styles.textDisabled] : []),
         ...(textStyle ? [textStyle] : []),
     ];
@@ -77,7 +81,7 @@ export const Button: React.FC<ButtonProps> = ({
                     colors={colors.gradients.primary as any}
                     start={{ x: 0, y: 0 }}
                     end={{ x: 1, y: 0 }}
-                    style={[styles.button, styles[`button_${size}`], style]}
+                    style={[styles.button, styles[`button_${size}` as keyof typeof styles] as ViewStyle, style]}
                 >
                     {content}
                 </LinearGradient>
@@ -97,7 +101,7 @@ export const Button: React.FC<ButtonProps> = ({
     );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (colors: Colors) => StyleSheet.create({
     button: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -142,17 +146,17 @@ const styles = StyleSheet.create({
 
     // Text styles
     text: {
-        fontWeight: typography.fontWeight.semibold,
+        fontWeight: '600',
         textAlign: 'center',
     },
     text_sm: {
-        fontSize: typography.fontSize.sm,
+        fontSize: 14,
     },
     text_md: {
-        fontSize: typography.fontSize.base,
+        fontSize: 16,
     },
     text_lg: {
-        fontSize: typography.fontSize.lg,
+        fontSize: 18,
     },
     text_primary: {
         color: colors.text.inverse,
@@ -183,3 +187,4 @@ const styles = StyleSheet.create({
         marginRight: spacing[2],
     },
 });
+

@@ -10,6 +10,7 @@ import {
     KeyboardAvoidingView,
     Platform,
     ScrollView,
+    StatusBar,
 } from 'react-native';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigation } from '@react-navigation/native';
@@ -17,7 +18,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import api from '../api/client';
-import { colors, spacing, typography, borderRadius, shadows } from '../theme';
+import { useTheme } from '../context/ThemeContext';
+import { spacing, typography, borderRadius, shadows, Colors } from '../theme';
 import { Input } from '../components/Input';
 import { Button } from '../components/Button';
 import { Card } from '../components/Card';
@@ -26,6 +28,8 @@ export default function ProductsScreen() {
     const navigation = useNavigation();
     const insets = useSafeAreaInsets();
     const queryClient = useQueryClient();
+    const { colors, isDark } = useTheme();
+    const styles = createStyles(colors);
     const [searchQuery, setSearchQuery] = useState('');
     const [showAddModal, setShowAddModal] = useState(false);
     const [newItem, setNewItem] = useState({ name: '', description: '', unitPrice: '' });
@@ -114,6 +118,11 @@ export default function ProductsScreen() {
 
     return (
         <View style={styles.container}>
+            <StatusBar
+                barStyle={isDark ? "light-content" : "dark-content"}
+                backgroundColor={colors.background.secondary}
+            />
+
             <View style={[styles.header, { paddingTop: insets.top + spacing[4] }]}>
                 <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
                     <Ionicons name="arrow-back" size={24} color={colors.text.primary} />
@@ -224,7 +233,7 @@ export default function ProductsScreen() {
     );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: Colors) => StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: colors.background.secondary,
@@ -343,6 +352,7 @@ const styles = StyleSheet.create({
     modalTitle: {
         fontSize: typography.fontSize.lg,
         fontWeight: typography.fontWeight.bold,
+        color: colors.text.primary,
     },
     closeText: {
         color: colors.primary[600],

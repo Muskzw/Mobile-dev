@@ -16,7 +16,8 @@ import { useQuery } from '@tanstack/react-query';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import api from '../api/client';
 import { useAuthStore } from '../store/authStore';
-import { colors, spacing, typography, borderRadius, shadows } from '../theme';
+import { useTheme } from '../context/ThemeContext';
+import { spacing, typography, borderRadius, shadows, Colors } from '../theme';
 import { Card } from '../components/Card';
 
 const { width } = Dimensions.get('window');
@@ -25,6 +26,8 @@ export default function DashboardScreen() {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
   const { user } = useAuthStore();
+  const { colors, isDark } = useTheme();
+  const styles = createStyles(colors);
 
   const { data: stats, isLoading, refetch } = useQuery({
     queryKey: ['dashboard-stats'],
@@ -69,7 +72,10 @@ export default function DashboardScreen() {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor={colors.background.secondary} />
+      <StatusBar
+        barStyle={isDark ? "light-content" : "dark-content"}
+        backgroundColor={colors.background.secondary}
+      />
 
       <ScrollView
         style={styles.scrollView}
@@ -178,7 +184,7 @@ export default function DashboardScreen() {
                   index !== 2 && styles.recentItemBorder
                 ]}
               >
-                <View style={[styles.recentIcon, { backgroundColor: index === 0 ? '#EEF2FF' : '#F0FDF4' }]}>
+                <View style={[styles.recentIcon, { backgroundColor: index === 0 ? (isDark ? colors.primary[900] : '#EEF2FF') : (isDark ? colors.secondary[900] : '#F0FDF4') }]}>
                   <Ionicons
                     name={index === 0 ? "document-text" : "checkmark-circle"}
                     size={20}
@@ -202,7 +208,7 @@ export default function DashboardScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: Colors) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background.secondary,
@@ -338,6 +344,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   recentCard: {
+    backgroundColor: colors.background.primary,
     ...shadows.sm,
     overflow: 'hidden',
   },

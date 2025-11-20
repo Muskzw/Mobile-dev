@@ -7,6 +7,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Provider as PaperProvider } from 'react-native-paper';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuthStore } from './src/store/authStore';
+import { ThemeProvider } from './src/context/ThemeContext';
 
 // Screens
 import LoginScreen from './src/screens/LoginScreen';
@@ -77,29 +78,37 @@ export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <PaperProvider>
-        <NavigationContainer>
-          <Stack.Navigator screenOptions={{ headerShown: false }}>
-            {!token ? (
-              <>
-                <Stack.Screen name="Login" component={LoginScreen} />
-                <Stack.Screen name="Register" component={RegisterScreen} />
-              </>
-            ) : (
-              <>
-                <Stack.Screen name="Main" component={MainTabs} />
-                <Stack.Screen name="DocumentCreate" component={DocumentCreateScreen} />
-                <Stack.Screen name="DocumentView" component={DocumentViewScreen} />
-                <Stack.Screen name="ClientCreate" component={ClientCreateScreen} />
-                <Stack.Screen name="ClientView" component={ClientViewScreen} />
-                <Stack.Screen name="Products" component={ProductsScreen} />
-                <Stack.Screen name="ContactUs" component={ContactUsScreen} />
-                <Stack.Screen name="Companies" component={CompaniesScreen} />
-              </>
-            )}
-          </Stack.Navigator>
-        </NavigationContainer>
+        <ThemeProvider>
+          <NavigationContainer>
+            <Stack.Navigator
+              screenOptions={{
+                headerShown: false,
+                cardStyle: { backgroundColor: '#F9FAFB' },
+              }}
+            >
+              {/* Auth Stack */}
+              {!token ? (
+                <>
+                  <Stack.Screen name="Login" component={LoginScreen} />
+                  <Stack.Screen name="Register" component={RegisterScreen} />
+                </>
+              ) : (
+                /* App Stack */
+                <>
+                  <Stack.Screen name="Main" component={MainTabs} />
+                  <Stack.Screen name="DocumentCreate" component={DocumentCreateScreen} />
+                  <Stack.Screen name="DocumentView" component={DocumentViewScreen} />
+                  <Stack.Screen name="ClientCreate" component={ClientCreateScreen} />
+                  <Stack.Screen name="ClientView" component={ClientViewScreen} />
+                  <Stack.Screen name="Products" component={ProductsScreen} />
+                  <Stack.Screen name="ContactUs" component={ContactUsScreen} />
+                  <Stack.Screen name="Companies" component={CompaniesScreen} />
+                </>
+              )}
+            </Stack.Navigator>
+          </NavigationContainer>
+        </ThemeProvider>
       </PaperProvider>
     </QueryClientProvider>
   );
 }
-

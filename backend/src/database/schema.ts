@@ -102,6 +102,7 @@ export async function createTables() {
       CREATE TABLE IF NOT EXISTS saved_items (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
         company_id UUID REFERENCES companies(id) ON DELETE CASCADE,
+        user_id UUID REFERENCES users(id) ON DELETE CASCADE,
         name VARCHAR(255) NOT NULL,
         description TEXT,
         unit_price DECIMAL(12, 2) NOT NULL,

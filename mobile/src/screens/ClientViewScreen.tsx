@@ -7,13 +7,15 @@ import {
     TouchableOpacity,
     Linking,
     Alert,
+    StatusBar,
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../api/client';
-import { colors, spacing, typography, borderRadius, shadows } from '../theme';
+import { useTheme } from '../context/ThemeContext';
+import { spacing, typography, borderRadius, shadows, Colors } from '../theme';
 import { Card } from '../components/Card';
 import { Input } from '../components/Input';
 import { Button } from '../components/Button';
@@ -31,6 +33,8 @@ export default function ClientViewScreen() {
     const route = useRoute();
     const insets = useSafeAreaInsets();
     const queryClient = useQueryClient();
+    const { colors, isDark } = useTheme();
+    const styles = createStyles(colors);
     const { clientId } = route.params as { clientId: string };
 
     const [isEditing, setIsEditing] = useState(false);
@@ -97,6 +101,10 @@ export default function ClientViewScreen() {
     if (isLoading || !client) {
         return (
             <View style={styles.container}>
+                <StatusBar
+                    barStyle={isDark ? "light-content" : "dark-content"}
+                    backgroundColor={colors.background.secondary}
+                />
                 <View style={[styles.header, { paddingTop: insets.top + spacing[4] }]}>
                     <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
                         <Ionicons name="arrow-back" size={24} color={colors.text.primary} />
@@ -113,6 +121,11 @@ export default function ClientViewScreen() {
 
     return (
         <View style={styles.container}>
+            <StatusBar
+                barStyle={isDark ? "light-content" : "dark-content"}
+                backgroundColor={colors.background.secondary}
+            />
+
             <View style={[styles.header, { paddingTop: insets.top + spacing[4] }]}>
                 <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
                     <Ionicons name="arrow-back" size={24} color={colors.text.primary} />
@@ -245,7 +258,7 @@ export default function ClientViewScreen() {
     );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: Colors) => StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: colors.background.secondary,

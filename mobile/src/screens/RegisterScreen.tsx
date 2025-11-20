@@ -16,11 +16,14 @@ import { useAuthStore } from '../store/authStore';
 import { Button } from '../components/Button';
 import { Input } from '../components/Input';
 import { Card } from '../components/Card';
-import { colors, spacing, typography, borderRadius } from '../theme';
+import { useTheme } from '../context/ThemeContext';
+import { spacing, typography, borderRadius, Colors } from '../theme';
 
 export default function RegisterScreen() {
   const navigation = useNavigation();
   const { setAuth } = useAuthStore();
+  const { colors, isDark } = useTheme();
+  const styles = createStyles(colors);
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -213,7 +216,7 @@ export default function RegisterScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: Colors) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.primary[600],
@@ -257,6 +260,7 @@ const styles = StyleSheet.create({
   },
   formCard: {
     marginBottom: spacing[6],
+    backgroundColor: colors.background.primary,
   },
   button: {
     marginTop: spacing[2],

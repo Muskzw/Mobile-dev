@@ -7,12 +7,18 @@ import {
   TouchableOpacity,
   Alert,
   Switch,
+  Image,
+  StatusBar,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import * as ImagePicker from 'expo-image-picker';
 import { useAuthStore } from '../store/authStore';
-import { colors, spacing, typography, borderRadius, shadows } from '../theme';
+import { useTheme } from '../context/ThemeContext';
+import api from '../api/client';
+import { BASE_URL } from '../config';
+import { spacing, typography, borderRadius, shadows, Colors } from '../theme';
 import { Button } from '../components/Button';
 import { Card } from '../components/Card';
 import { Input } from '../components/Input';
@@ -20,17 +26,49 @@ import { Input } from '../components/Input';
 export default function SettingsScreen() {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
-  const { user, currentCompany, logout } = useAuthStore();
+  const { user, currentCompany, companies, setAuth, setCurrentCompany, logout } = useAuthStore();
+  const { colors, isDark, toggleTheme } = useTheme();
+  const styles = createStyles(colors);
+
+  const [loading, setLoading] = useState(false);
 
   const [aiEnabled, setAiEnabled] = useState(true);
   const [notifications, setNotifications] = useState(true);
   const [editingCompany, setEditingCompany] = useState(false);
+  const [logoUri, setLogoUri] = useState<string | null>(currentCompany?.logo_url ? `${BASE_URL}${currentCompany.logo_url}` : null);
 
   const [companyForm, setCompanyForm] = useState({
     name: currentCompany?.name || '',
     address: currentCompany?.address || '',
     email: currentCompany?.email || '',
   });
+
+  // Update form when currentCompany changes
+  React.useEffect(() => {
+    if (currentCompany) {
+      setCompanyForm({
+        name: currentCompany.name,
+        address: currentCompany.address || '',
+        email: currentCompany.email || '',
+      });
+      if (currentCompany.logo_url) {
+        setLogoUri(`${BASE_URL}${currentCompany.logo_url}`);
+      }
+    }
+  }, [currentCompany]);
+
+  const pickImage = async () => {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.5,
+    });
+
+    if (!result.canceled) {
+      setLogoUri(result.assets[0].uri);
+    }
+  };
 
   const handleLogout = () => {
     Alert.alert(
@@ -49,9 +87,67 @@ export default function SettingsScreen() {
     );
   };
 
-  const handleSaveCompany = () => {
-    setEditingCompany(false);
-    Alert.alert('Success', 'Company details updated');
+  const handleSaveCompany = async () => {
+    if (!companyForm.name) {
+      Alert.alert('Error', 'Company Name is required');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const formData = new FormData();
+      formData.append('name', companyForm.name);
+      formData.append('address', companyForm.address);
+      formData.append('email', companyForm.email);
+
+      if (logoUri && !logoUri.startsWith('http')) {
+        const filename = logoUri.split('/').pop();
+        const match = /\.(\w+)$/.exec(filename || '');
+        const type = match ? `image/${match[1]}` : 'image/jpeg';
+
+        // @ts-ignore
+        formData.append('logo', {
+          uri: logoUri,
+          name: filename || 'logo.jpg',
+          type,
+        });
+      }
+
+      const config = {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      };
+
+      let response;
+      if (currentCompany?.id) {
+        // Update existing company
+        response = await api.put(`/companies/${currentCompany.id}`, formData, config);
+
+        // Update store
+        const updatedCompany = response.data;
+        setCurrentCompany(updatedCompany);
+        // Update in companies list
+        const updatedCompanies = companies.map(c => c.id === updatedCompany.id ? updatedCompany : c);
+        setAuth(useAuthStore.getState().token!, user!, updatedCompanies);
+      } else {
+        // Create new company
+        response = await api.post('/companies', formData, config);
+
+        // Update store
+        const newCompany = response.data;
+        setCurrentCompany(newCompany);
+        setAuth(useAuthStore.getState().token!, user!, [...companies, newCompany]);
+      }
+
+      setEditingCompany(false);
+      Alert.alert('Success', 'Company details updated');
+    } catch (error) {
+      console.error(error);
+      Alert.alert('Error', 'Failed to save company details');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const SettingItem = ({
@@ -93,6 +189,11 @@ export default function SettingsScreen() {
 
   return (
     <View style={styles.container}>
+      <StatusBar
+        barStyle={isDark ? "light-content" : "dark-content"}
+        backgroundColor={colors.background.secondary}
+      />
+
       <View style={[styles.header, { paddingTop: insets.top + spacing[4] }]}>
         <Text style={styles.headerTitle}>Settings</Text>
       </View>
@@ -117,15 +218,29 @@ export default function SettingsScreen() {
         <Card style={styles.card} padding={4}>
           {!editingCompany ? (
             <>
-              <View style={styles.companyInfoRow}>
-                <Text style={styles.companyLabel}>Name</Text>
-                <Text style={styles.companyValue}>{companyForm.name}</Text>
+              <View style={styles.companyHeader}>
+                {logoUri ? (
+                  <Image source={{ uri: logoUri }} style={styles.companyLogo} />
+                ) : (
+                  <View style={styles.companyLogoPlaceholder}>
+                    <Text style={styles.companyLogoText}>
+                      {currentCompany?.name?.charAt(0) || 'C'}
+                    </Text>
+                  </View>
+                )}
+                <View style={{ flex: 1 }}>
+                  <View style={styles.companyInfoRow}>
+                    <Text style={styles.companyLabel}>Name</Text>
+                    <Text style={styles.companyValue}>{companyForm.name}</Text>
+                  </View>
+                  <View style={styles.divider} />
+                  <View style={styles.companyInfoRow}>
+                    <Text style={styles.companyLabel}>Email</Text>
+                    <Text style={styles.companyValue}>{companyForm.email}</Text>
+                  </View>
+                </View>
               </View>
-              <View style={styles.divider} />
-              <View style={styles.companyInfoRow}>
-                <Text style={styles.companyLabel}>Email</Text>
-                <Text style={styles.companyValue}>{companyForm.email}</Text>
-              </View>
+
               <View style={styles.divider} />
               <View style={styles.companyInfoRow}>
                 <Text style={styles.companyLabel}>Address</Text>
@@ -141,6 +256,17 @@ export default function SettingsScreen() {
             </>
           ) : (
             <View>
+              <TouchableOpacity onPress={pickImage} style={styles.logoPicker}>
+                {logoUri ? (
+                  <Image source={{ uri: logoUri }} style={styles.pickerImage} />
+                ) : (
+                  <View style={styles.pickerPlaceholder}>
+                    <Ionicons name="camera" size={24} color={colors.gray[400]} />
+                    <Text style={styles.pickerText}>Upload Logo</Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+
               <Input
                 label="Company Name"
                 value={companyForm.name}
@@ -170,6 +296,7 @@ export default function SettingsScreen() {
                   onPress={handleSaveCompany}
                   gradient
                   style={{ flex: 1 }}
+                  loading={loading}
                 />
               </View>
             </View>
@@ -195,13 +322,13 @@ export default function SettingsScreen() {
             onValueChange={setNotifications}
           />
           <View style={styles.divider} />
-          <TouchableOpacity onPress={() => Alert.alert('Coming Soon', 'Dark mode will be available in the next update!')}>
-            <SettingItem
-              icon="moon"
-              title="Dark Mode"
-              type="link"
-            />
-          </TouchableOpacity>
+          <SettingItem
+            icon="moon"
+            title="Dark Mode"
+            subtitle="Switch between light and dark themes"
+            value={isDark}
+            onValueChange={toggleTheme}
+          />
         </Card>
 
         {/* Support */}
@@ -238,7 +365,7 @@ export default function SettingsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: Colors) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background.secondary,
@@ -349,6 +476,31 @@ const styles = StyleSheet.create({
     backgroundColor: colors.gray[100],
     marginLeft: spacing[16],
   },
+  companyHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: spacing[4],
+  },
+  companyLogo: {
+    width: 60,
+    height: 60,
+    borderRadius: borderRadius.md,
+    marginRight: spacing[4],
+  },
+  companyLogoPlaceholder: {
+    width: 60,
+    height: 60,
+    borderRadius: borderRadius.md,
+    backgroundColor: colors.primary[100],
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: spacing[4],
+  },
+  companyLogoText: {
+    fontSize: typography.fontSize['2xl'],
+    fontWeight: typography.fontWeight.bold,
+    color: colors.primary[600],
+  },
   companyInfoRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -369,6 +521,31 @@ const styles = StyleSheet.create({
   editActions: {
     flexDirection: 'row',
     marginTop: spacing[4],
+  },
+  logoPicker: {
+    alignSelf: 'center',
+    marginBottom: spacing[4],
+  },
+  pickerImage: {
+    width: 100,
+    height: 100,
+    borderRadius: borderRadius.md,
+  },
+  pickerPlaceholder: {
+    width: 100,
+    height: 100,
+    borderRadius: borderRadius.md,
+    backgroundColor: colors.gray[100],
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: colors.gray[300],
+    borderStyle: 'dashed',
+  },
+  pickerText: {
+    fontSize: typography.fontSize.xs,
+    color: colors.text.secondary,
+    marginTop: spacing[2],
   },
   logoutButton: {
     marginTop: spacing[2],

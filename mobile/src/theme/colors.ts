@@ -1,5 +1,4 @@
-export const colors = {
-    // Primary Brand Colors
+const palette = {
     primary: {
         50: '#EEF2FF',
         100: '#E0E7FF',
@@ -12,8 +11,6 @@ export const colors = {
         800: '#3730A3',
         900: '#312E81',
     },
-
-    // Secondary/Accent Colors
     secondary: {
         50: '#F0FDF4',
         100: '#DCFCE7',
@@ -26,8 +23,6 @@ export const colors = {
         800: '#166534',
         900: '#14532D',
     },
-
-    // Neutrals
     gray: {
         50: '#F9FAFB',
         100: '#F3F4F6',
@@ -40,29 +35,26 @@ export const colors = {
         800: '#1F2937',
         900: '#111827',
     },
+};
 
-    // Semantic Colors
+export const lightColors = {
+    ...palette,
     success: '#10B981',
     warning: '#F59E0B',
     error: '#EF4444',
     info: '#3B82F6',
-
-    // Background
+    shadow: '#000000',
     background: {
         primary: '#FFFFFF',
         secondary: '#F9FAFB',
         tertiary: '#F3F4F6',
     },
-
-    // Text
     text: {
         primary: '#111827',
         secondary: '#6B7280',
         tertiary: '#9CA3AF',
         inverse: '#FFFFFF',
     },
-
-    // Gradients
     gradients: {
         primary: ['#6366F1', '#8B5CF6'],
         secondary: ['#10B981', '#059669'],
@@ -71,4 +63,32 @@ export const colors = {
     },
 };
 
-export type Colors = typeof colors;
+export const darkColors = {
+    ...palette,
+    success: '#10B981',
+    warning: '#F59E0B',
+    error: '#EF4444',
+    info: '#3B82F6',
+    shadow: '#000000',
+    background: {
+        primary: '#111827', // gray-900
+        secondary: '#000000',
+        tertiary: '#1F2937', // gray-800
+    },
+    text: {
+        primary: '#F9FAFB', // gray-50
+        secondary: '#D1D5DB', // gray-300
+        tertiary: '#9CA3AF', // gray-400
+        inverse: '#111827',
+    },
+    gradients: {
+        primary: ['#4F46E5', '#7C3AED'], // Slightly darker
+        secondary: ['#059669', '#047857'],
+        sunset: ['#D97706', '#DC2626'],
+        ocean: ['#2563EB', '#4F46E5'],
+    },
+};
+
+
+export const colors = lightColors;
+export type Colors = typeof lightColors;

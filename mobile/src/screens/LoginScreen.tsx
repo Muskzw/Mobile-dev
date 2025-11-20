@@ -17,11 +17,14 @@ import { useAuthStore } from '../store/authStore';
 import { Button } from '../components/Button';
 import { Input } from '../components/Input';
 import { Card } from '../components/Card';
-import { colors, spacing, typography, borderRadius } from '../theme';
+import { useTheme } from '../context/ThemeContext';
+import { spacing, typography, borderRadius, Colors } from '../theme';
 
 export default function LoginScreen() {
   const navigation = useNavigation();
   const { setAuth, setCurrentCompany } = useAuthStore();
+  const { colors, isDark } = useTheme();
+  const styles = createStyles(colors);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -58,8 +61,11 @@ export default function LoginScreen() {
         setCurrentCompany(companies[0]);
       }
 
+      // Navigate to Companies screen after auth state is set and navigator updates
       if (companies.length === 0) {
-        navigation.navigate('Companies' as never);
+        setTimeout(() => {
+          navigation.navigate('Companies' as never);
+        }, 100);
       }
     } catch (error: any) {
       console.error('Login error:', error);
@@ -197,7 +203,7 @@ export default function LoginScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: Colors) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.primary[600],
@@ -241,6 +247,7 @@ const styles = StyleSheet.create({
   },
   formCard: {
     marginBottom: spacing[6],
+    backgroundColor: colors.background.primary,
   },
   forgotPassword: {
     alignSelf: 'flex-end',

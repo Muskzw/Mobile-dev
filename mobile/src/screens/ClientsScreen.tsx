@@ -20,7 +20,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import api from '../api/client';
-import { colors, spacing, typography, borderRadius, shadows } from '../theme';
+import { useTheme } from '../context/ThemeContext';
+import { spacing, typography, borderRadius, shadows, Colors } from '../theme';
 import { Input } from '../components/Input';
 import { Button } from '../components/Button';
 import { Card } from '../components/Card';
@@ -29,6 +30,8 @@ export default function ClientsScreen() {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
+  const { colors, isDark } = useTheme();
+  const styles = createStyles(colors);
   const [searchQuery, setSearchQuery] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -135,7 +138,10 @@ export default function ClientsScreen() {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor={colors.background.secondary} />
+      <StatusBar
+        barStyle={isDark ? "light-content" : "dark-content"}
+        backgroundColor={colors.background.secondary}
+      />
 
       {/* Header */}
       <View style={[styles.header, { paddingTop: insets.top + spacing[4] }]}>
@@ -259,14 +265,15 @@ export default function ClientsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: Colors) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background.secondary,
   },
   header: {
     paddingHorizontal: spacing[6],
-    marginBottom: spacing[4],
+    paddingBottom: spacing[4],
+    backgroundColor: colors.background.primary,
   },
   title: {
     fontSize: typography.fontSize['3xl'],
@@ -404,6 +411,7 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: typography.fontSize.lg,
     fontWeight: typography.fontWeight.bold,
+    color: colors.text.primary,
   },
   closeText: {
     color: colors.primary[600],

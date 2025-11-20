@@ -1,17 +1,9 @@
 import axios from 'axios';
 import { useAuthStore } from '../store/authStore';
 
-// For physical devices, replace localhost with your computer's IP address
-// You can find it by running: ipconfig (Windows) or ifconfig (Mac/Linux)
-// Look for IPv4 Address on your WiFi adapter
-const API_BASE_URL = __DEV__
-  ? 'http://192.168.1.146:5000/api'  // Use your computer's IP address
-  : 'https://your-api-domain.com/api';
+import { API_URL } from '../config';
 
-// For Android Emulator, you can use:
-// const API_BASE_URL = __DEV__ 
-//   ? 'http://10.0.2.2:5000/api'  // Android Emulator uses 10.0.2.2 to access host machine
-//   : 'https://your-api-domain.com/api';
+const API_BASE_URL = API_URL;
 
 const api = axios.create({
   baseURL: API_BASE_URL,

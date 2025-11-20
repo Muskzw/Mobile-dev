@@ -1,4 +1,4 @@
-import { colors } from './colors';
+import { colors, Colors } from './colors';
 import { typography, spacing, borderRadius, shadows } from './tokens';
 
 export const theme = {
@@ -12,4 +12,4 @@ export const theme = {
 export type Theme = typeof theme;
 
 // Re-export for convenience
-export { colors, typography, spacing, borderRadius, shadows };
+export { colors, typography, spacing, borderRadius, shadows, Colors };

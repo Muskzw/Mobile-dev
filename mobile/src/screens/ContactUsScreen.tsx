@@ -6,16 +6,20 @@ import {
     TouchableOpacity,
     Linking,
     ScrollView,
+    StatusBar,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { colors, spacing, typography, borderRadius, shadows } from '../theme';
+import { useTheme } from '../context/ThemeContext';
+import { spacing, typography, borderRadius, shadows, Colors } from '../theme';
 import { Card } from '../components/Card';
 
 export default function ContactUsScreen() {
     const navigation = useNavigation();
     const insets = useSafeAreaInsets();
+    const { colors, isDark } = useTheme();
+    const styles = createStyles(colors);
 
     const handleEmail = () => {
         Linking.openURL('mailto:support@yourbusiness.com');
@@ -46,6 +50,11 @@ export default function ContactUsScreen() {
 
     return (
         <View style={styles.container}>
+            <StatusBar
+                barStyle={isDark ? "light-content" : "dark-content"}
+                backgroundColor={colors.background.secondary}
+            />
+
             <View style={[styles.header, { paddingTop: insets.top + spacing[4] }]}>
                 <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
                     <Ionicons name="arrow-back" size={24} color={colors.text.primary} />
@@ -105,7 +114,7 @@ export default function ContactUsScreen() {
     );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: Colors) => StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: colors.background.secondary,

@@ -1,12 +1,20 @@
 import React from 'react';
-import { View, StyleSheet, FlatList } from 'react-native';
-import { Text, Card, Button } from 'react-native-paper';
+import { View, StyleSheet, FlatList, StatusBar } from 'react-native';
+import { Text } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import api from '../api/client';
 import { useAuthStore } from '../store/authStore';
+import { useTheme } from '../context/ThemeContext';
+import { spacing, typography, borderRadius, shadows, Colors } from '../theme';
+import { Card } from '../components/Card';
+import { Button } from '../components/Button';
 
 export default function CompaniesScreen() {
   const { setCurrentCompany } = useAuthStore();
+  const { colors, isDark } = useTheme();
+  const styles = createStyles(colors);
+  const insets = useSafeAreaInsets();
 
   const { data: companies, isLoading } = useQuery({
     queryKey: ['companies'],
@@ -18,34 +26,43 @@ export default function CompaniesScreen() {
 
   if (isLoading) {
     return (
-      <View style={styles.container}>
-        <Text>Loading...</Text>
+      <View style={[styles.container, styles.loadingContainer]}>
+        <Text style={styles.loadingText}>Loading...</Text>
       </View>
     );
   }
 
   return (
     <View style={styles.container}>
+      <StatusBar
+        barStyle={isDark ? "light-content" : "dark-content"}
+        backgroundColor={colors.background.secondary}
+      />
+
+      <View style={[styles.header, { paddingTop: insets.top + spacing[4] }]}>
+        <Text style={styles.title}>Select Company</Text>
+      </View>
+
       <FlatList
         data={companies || []}
         keyExtractor={(item) => item.id}
+        contentContainerStyle={styles.listContent}
         renderItem={({ item }) => (
-          <Card style={styles.card}>
-            <Card.Content>
-              <Text variant="titleMedium">{item.name}</Text>
-              <Text variant="bodySmall" style={styles.currency}>
-                {item.currency}
+          <Card style={styles.card} padding={4}>
+            <View>
+              <Text style={styles.companyName}>{item.name}</Text>
+              <Text style={styles.currency}>
+                Currency: {item.currency}
               </Text>
-              <Button
-                mode="contained"
-                onPress={() => {
-                  setCurrentCompany(item);
-                }}
-                style={styles.button}
-              >
-                Select
-              </Button>
-            </Card.Content>
+            </View>
+            <Button
+              title="Select"
+              onPress={() => {
+                setCurrentCompany(item);
+              }}
+              gradient
+              style={styles.button}
+            />
           </Card>
         )}
       />
@@ -53,21 +70,51 @@ export default function CompaniesScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: Colors) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5'
+    backgroundColor: colors.background.secondary,
+  },
+  loadingContainer: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    color: colors.text.secondary,
+    fontSize: typography.fontSize.base,
+  },
+  header: {
+    paddingHorizontal: spacing[4],
+    paddingBottom: spacing[4],
+    backgroundColor: colors.background.primary,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.gray[100],
+  },
+  title: {
+    fontSize: typography.fontSize.xl,
+    fontWeight: typography.fontWeight.bold,
+    color: colors.text.primary,
+  },
+  listContent: {
+    padding: spacing[4],
   },
   card: {
-    margin: 8,
-    elevation: 2
+    marginBottom: spacing[4],
+    backgroundColor: colors.background.primary,
+    ...shadows.sm,
+  },
+  companyName: {
+    fontSize: typography.fontSize.lg,
+    fontWeight: typography.fontWeight.bold,
+    color: colors.text.primary,
+    marginBottom: spacing[1],
   },
   currency: {
-    color: '#666',
-    marginTop: 4
+    fontSize: typography.fontSize.sm,
+    color: colors.text.secondary,
+    marginBottom: spacing[4],
   },
   button: {
-    marginTop: 8
+    marginTop: spacing[2],
   }
 });
-

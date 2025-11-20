@@ -5,9 +5,9 @@ import {
     Text,
     StyleSheet,
     TextInputProps,
-    TouchableOpacity,
 } from 'react-native';
-import { colors, spacing, borderRadius, typography } from '../theme';
+import { spacing, borderRadius, typography, Colors } from '../theme';
+import { useTheme } from '../context/ThemeContext';
 
 interface InputProps extends TextInputProps {
     label?: string;
@@ -25,6 +25,8 @@ export const Input: React.FC<InputProps> = ({
     ...props
 }) => {
     const [isFocused, setIsFocused] = useState(false);
+    const { colors } = useTheme();
+    const styles = createStyles(colors);
 
     return (
         <View style={styles.container}>
@@ -33,7 +35,7 @@ export const Input: React.FC<InputProps> = ({
                 style={[
                     styles.inputContainer,
                     isFocused && styles.inputContainerFocused,
-                    error && styles.inputContainerError,
+                    error ? styles.inputContainerError : null,
                 ]}
             >
                 {icon && <View style={styles.iconLeft}>{icon}</View>}
@@ -51,7 +53,7 @@ export const Input: React.FC<InputProps> = ({
     );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (colors: Colors) => StyleSheet.create({
     container: {
         marginBottom: spacing[4],
     },
@@ -96,3 +98,4 @@ const styles = StyleSheet.create({
         marginTop: spacing[1],
     },
 });
+

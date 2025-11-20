@@ -8,6 +8,7 @@ import {
     Alert,
     KeyboardAvoidingView,
     Platform,
+    StatusBar,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
@@ -15,7 +16,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQueryClient } from '@tanstack/react-query';
 import api from '../api/client';
 import { useAuthStore } from '../store/authStore';
-import { colors, spacing, typography } from '../theme';
+import { useTheme } from '../context/ThemeContext';
+import { spacing, typography, borderRadius, shadows, Colors } from '../theme';
 import { Button } from '../components/Button';
 import { Input } from '../components/Input';
 import { Card } from '../components/Card';
@@ -25,6 +27,8 @@ export default function ClientCreateScreen() {
     const insets = useSafeAreaInsets();
     const queryClient = useQueryClient();
     const { currentCompany, logout } = useAuthStore();
+    const { colors, isDark } = useTheme();
+    const styles = createStyles(colors);
     const [loading, setLoading] = useState(false);
 
     const [form, setForm] = useState({
@@ -103,6 +107,11 @@ export default function ClientCreateScreen() {
 
     return (
         <View style={styles.container}>
+            <StatusBar
+                barStyle={isDark ? "light-content" : "dark-content"}
+                backgroundColor={colors.background.secondary}
+            />
+
             <View style={[styles.header, { paddingTop: insets.top + spacing[2] }]}>
                 <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
                     <Ionicons name="close" size={24} color={colors.text.primary} />
@@ -173,7 +182,7 @@ export default function ClientCreateScreen() {
     );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: Colors) => StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: colors.background.secondary,
