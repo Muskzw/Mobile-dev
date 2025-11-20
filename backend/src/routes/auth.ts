@@ -41,6 +41,13 @@ router.post('/register', [
 
     const user = userResult.rows[0];
 
+    // Create default company
+    const companyResult = await pool.query(
+      'INSERT INTO companies (user_id, name, email) VALUES ($1, $2, $3) RETURNING *',
+      [user.id, `${fullName || 'My'} Company`, email]
+    );
+    const company = companyResult.rows[0];
+
     // Generate token
     const jwtSecret = process.env.JWT_SECRET || 'secret';
     const token = jwt.sign(
@@ -57,7 +64,8 @@ router.post('/register', [
         fullName: user.full_name,
         subscriptionStatus: user.subscription_status,
         trialEndsAt: user.trial_ends_at
-      }
+      },
+      companies: [company]
     });
   } catch (error) {
     console.error('Registration error:', error);

@@ -61,10 +61,10 @@ export default function RegisterScreen() {
         fullName
       });
       console.log('Registration successful:', response.data);
-      const { token, user } = response.data;
+      const { token, user, companies } = response.data;
 
       // Set auth - this will automatically trigger navigation to logged-in screens
-      setAuth(token, user, []);
+      setAuth(token, user, companies || []);
     } catch (error: any) {
       console.error('Register error:', error);
       console.error('Error response:', error.response?.data);

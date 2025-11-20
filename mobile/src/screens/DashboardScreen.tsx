@@ -1,14 +1,32 @@
 import React from 'react';
-import { View, StyleSheet, ScrollView } from 'react-native';
-import { Text, Card, Button, FAB } from 'react-native-paper';
-import { useQuery } from '@tanstack/react-query';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  StatusBar,
+  TouchableOpacity,
+  RefreshControl,
+  Dimensions,
+} from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
+import { Ionicons } from '@expo/vector-icons';
+import { useQuery } from '@tanstack/react-query';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import api from '../api/client';
+import { useAuthStore } from '../store/authStore';
+import { colors, spacing, typography, borderRadius, shadows } from '../theme';
+import { Card } from '../components/Card';
+
+const { width } = Dimensions.get('window');
 
 export default function DashboardScreen() {
   const navigation = useNavigation();
-  
-  const { data: stats, isLoading } = useQuery({
+  const insets = useSafeAreaInsets();
+  const { user } = useAuthStore();
+
+  const { data: stats, isLoading, refetch } = useQuery({
     queryKey: ['dashboard-stats'],
     queryFn: async () => {
       const response = await api.get('/dashboard/stats');
@@ -16,78 +34,171 @@ export default function DashboardScreen() {
     }
   });
 
-  if (isLoading) {
-    return (
-      <View style={styles.container}>
-        <Text>Loading...</Text>
+  const StatCard = ({ title, value, icon, gradient, delay }: any) => (
+    <TouchableOpacity activeOpacity={0.9}>
+      <LinearGradient
+        colors={gradient}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.statCard}
+      >
+        <View style={styles.statIconContainer}>
+          <Ionicons name={icon} size={24} color="white" />
+        </View>
+        <View>
+          <Text style={styles.statValue}>{value}</Text>
+          <Text style={styles.statTitle}>{title}</Text>
+        </View>
+        <View style={styles.statDecoration} />
+      </LinearGradient>
+    </TouchableOpacity>
+  );
+
+  const ActionButton = ({ title, icon, color, onPress }: any) => (
+    <TouchableOpacity
+      style={styles.actionButton}
+      onPress={onPress}
+      activeOpacity={0.7}
+    >
+      <View style={[styles.actionIcon, { backgroundColor: `${color}15` }]}>
+        <Ionicons name={icon} size={24} color={color} />
       </View>
-    );
-  }
+      <Text style={styles.actionText}>{title}</Text>
+    </TouchableOpacity>
+  );
 
   return (
     <View style={styles.container}>
-      <ScrollView style={styles.scrollView}>
+      <StatusBar barStyle="dark-content" backgroundColor={colors.background.secondary} />
+
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingTop: insets.top + spacing[4] }
+        ]}
+        refreshControl={
+          <RefreshControl refreshing={isLoading} onRefresh={refetch} tintColor={colors.primary[500]} />
+        }
+      >
+        {/* Header Section */}
         <View style={styles.header}>
-          <Text variant="headlineMedium" style={styles.title}>
-            Dashboard
-          </Text>
+          <View>
+            <Text style={styles.greeting}>Hello, {user?.fullName?.split(' ')[0] || 'User'} 👋</Text>
+            <Text style={styles.subtitle}>Here's your business overview</Text>
+          </View>
+          <TouchableOpacity style={styles.profileButton}>
+            <LinearGradient
+              colors={colors.gradients.primary as any}
+              style={styles.profileGradient}
+            >
+              <Text style={styles.profileInitials}>
+                {user?.fullName?.charAt(0) || 'U'}
+              </Text>
+            </LinearGradient>
+          </TouchableOpacity>
         </View>
 
-        <View style={styles.statsGrid}>
-          <Card style={styles.statCard}>
-            <Card.Content>
-              <Text variant="titleLarge">{stats?.quotations?.total || 0}</Text>
-              <Text variant="bodyMedium" style={styles.statLabel}>
-                Total Quotations
-              </Text>
-            </Card.Content>
-          </Card>
+        {/* Stats Grid */}
+        <View style={styles.statsContainer}>
+          <StatCard
+            title="Quotations"
+            value={stats?.quotations?.total || 0}
+            icon="document-text"
+            gradient={colors.gradients.primary as any}
+          />
+          <StatCard
+            title="Invoices"
+            value={stats?.invoices?.total || 0}
+            icon="receipt"
+            gradient={colors.gradients.secondary as any}
+          />
+          <StatCard
+            title="Pending"
+            value={stats?.quotations?.pending || 0}
+            icon="time"
+            gradient={colors.gradients.sunset as any}
+          />
+          <StatCard
+            title="Clients"
+            value={stats?.clients?.total || 0}
+            icon="people"
+            gradient={colors.gradients.ocean as any}
+          />
+        </View>
 
-          <Card style={styles.statCard}>
-            <Card.Content>
-              <Text variant="titleLarge">{stats?.invoices?.total || 0}</Text>
-              <Text variant="bodyMedium" style={styles.statLabel}>
-                Total Invoices
-              </Text>
-            </Card.Content>
-          </Card>
-
-          <Card style={styles.statCard}>
-            <Card.Content>
-              <Text variant="titleLarge">{stats?.upcomingDeadlines || 0}</Text>
-              <Text variant="bodyMedium" style={styles.statLabel}>
-                Upcoming Deadlines
-              </Text>
-            </Card.Content>
+        {/* Quick Actions */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Quick Actions</Text>
+          <Card style={styles.actionsCard} padding={4}>
+            <View style={styles.actionsGrid}>
+              <ActionButton
+                title="New Quote"
+                icon="add-circle"
+                color={colors.primary[600]}
+                onPress={() => navigation.navigate('DocumentCreate' as never)}
+              />
+              <ActionButton
+                title="New Client"
+                icon="person-add"
+                color={colors.secondary[600]}
+                onPress={() => navigation.navigate('Clients' as never)} // Assuming ClientCreate exists or goes to list
+              />
+              <ActionButton
+                title="Documents"
+                icon="folder-open"
+                color={colors.warning}
+                onPress={() => navigation.navigate('Documents' as never)}
+              />
+              <ActionButton
+                title="Settings"
+                icon="settings"
+                color={colors.gray[600]}
+                onPress={() => navigation.navigate('Settings' as never)}
+              />
+            </View>
           </Card>
         </View>
 
-        <Card style={styles.quickActions}>
-          <Card.Title title="Quick Actions" />
-          <Card.Content>
-            <Button
-              mode="contained"
-              onPress={() => navigation.navigate('DocumentCreate' as never)}
-              style={styles.actionButton}
-            >
-              Create Quotation
-            </Button>
-            <Button
-              mode="outlined"
-              onPress={() => navigation.navigate('Documents' as never)}
-              style={styles.actionButton}
-            >
-              View Documents
-            </Button>
-          </Card.Content>
-        </Card>
+        {/* Recent Activity Placeholder */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Recent Activity</Text>
+            <TouchableOpacity onPress={() => navigation.navigate('Documents' as never)}>
+              <Text style={styles.seeAll}>See All</Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Placeholder for recent items - would map through real data here */}
+          <Card style={styles.recentCard} padding={0}>
+            {[1, 2, 3].map((_, index) => (
+              <TouchableOpacity
+                key={index}
+                style={[
+                  styles.recentItem,
+                  index !== 2 && styles.recentItemBorder
+                ]}
+              >
+                <View style={[styles.recentIcon, { backgroundColor: index === 0 ? '#EEF2FF' : '#F0FDF4' }]}>
+                  <Ionicons
+                    name={index === 0 ? "document-text" : "checkmark-circle"}
+                    size={20}
+                    color={index === 0 ? colors.primary[600] : colors.secondary[600]}
+                  />
+                </View>
+                <View style={styles.recentInfo}>
+                  <Text style={styles.recentTitle}>
+                    {index === 0 ? 'Quotation #1023 created' : 'Invoice #INV-001 paid'}
+                  </Text>
+                  <Text style={styles.recentTime}>2 hours ago</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={20} color={colors.gray[400]} />
+              </TouchableOpacity>
+            ))}
+          </Card>
+        </View>
+
       </ScrollView>
-
-      <FAB
-        icon="plus"
-        style={styles.fab}
-        onPress={() => navigation.navigate('DocumentCreate' as never)}
-      />
     </View>
   );
 }
@@ -95,42 +206,171 @@ export default function DashboardScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5'
+    backgroundColor: colors.background.secondary,
   },
   scrollView: {
-    flex: 1
+    flex: 1,
+  },
+  scrollContent: {
+    paddingBottom: spacing[24],
   },
   header: {
-    padding: 16
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: spacing[6],
+    marginBottom: spacing[6],
   },
-  title: {
-    fontWeight: 'bold'
+  greeting: {
+    fontSize: typography.fontSize['2xl'],
+    fontWeight: typography.fontWeight.bold,
+    color: colors.text.primary,
   },
-  statsGrid: {
+  subtitle: {
+    fontSize: typography.fontSize.sm,
+    color: colors.text.secondary,
+    marginTop: 2,
+  },
+  profileButton: {
+    ...shadows.sm,
+  },
+  profileGradient: {
+    width: 48,
+    height: 48,
+    borderRadius: borderRadius.full,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  profileInitials: {
+    fontSize: typography.fontSize.lg,
+    fontWeight: typography.fontWeight.bold,
+    color: 'white',
+  },
+  statsContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    padding: 8,
-    gap: 8
+    paddingHorizontal: spacing[4],
+    gap: spacing[3],
+    marginBottom: spacing[8],
   },
   statCard: {
-    width: '47%',
-    margin: 4
+    width: (width - spacing[8] - spacing[3]) / 2,
+    padding: spacing[4],
+    borderRadius: borderRadius.xl,
+    height: 110,
+    justifyContent: 'space-between',
+    position: 'relative',
+    overflow: 'hidden',
+    ...shadows.md,
   },
-  statLabel: {
-    color: '#666',
-    marginTop: 4
+  statIconContainer: {
+    width: 32,
+    height: 32,
+    borderRadius: borderRadius.full,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing[2],
   },
-  quickActions: {
-    margin: 16
+  statValue: {
+    fontSize: typography.fontSize['2xl'],
+    fontWeight: typography.fontWeight.bold,
+    color: 'white',
+  },
+  statTitle: {
+    fontSize: typography.fontSize.xs,
+    color: 'rgba(255,255,255,0.9)',
+    fontWeight: typography.fontWeight.medium,
+  },
+  statDecoration: {
+    position: 'absolute',
+    right: -20,
+    bottom: -20,
+    width: 80,
+    height: 80,
+    borderRadius: borderRadius.full,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+  },
+  section: {
+    paddingHorizontal: spacing[6],
+    marginBottom: spacing[6],
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacing[3],
+  },
+  sectionTitle: {
+    fontSize: typography.fontSize.lg,
+    fontWeight: typography.fontWeight.bold,
+    color: colors.text.primary,
+    marginBottom: spacing[3],
+  },
+  seeAll: {
+    fontSize: typography.fontSize.sm,
+    color: colors.primary[600],
+    fontWeight: typography.fontWeight.semibold,
+  },
+  actionsCard: {
+    backgroundColor: colors.background.primary,
+    ...shadows.sm,
+  },
+  actionsGrid: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
   },
   actionButton: {
-    marginVertical: 4
+    alignItems: 'center',
+    width: '22%',
   },
-  fab: {
-    position: 'absolute',
-    margin: 16,
-    right: 0,
-    bottom: 0
-  }
+  actionIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: borderRadius.xl,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing[2],
+  },
+  actionText: {
+    fontSize: typography.fontSize.xs,
+    color: colors.text.secondary,
+    fontWeight: typography.fontWeight.medium,
+    textAlign: 'center',
+  },
+  recentCard: {
+    ...shadows.sm,
+    overflow: 'hidden',
+  },
+  recentItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: spacing[4],
+    backgroundColor: colors.background.primary,
+  },
+  recentItemBorder: {
+    borderBottomWidth: 1,
+    borderBottomColor: colors.gray[100],
+  },
+  recentIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: borderRadius.full,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: spacing[3],
+  },
+  recentInfo: {
+    flex: 1,
+  },
+  recentTitle: {
+    fontSize: typography.fontSize.sm,
+    fontWeight: typography.fontWeight.semibold,
+    color: colors.text.primary,
+    marginBottom: 2,
+  },
+  recentTime: {
+    fontSize: typography.fontSize.xs,
+    color: colors.text.tertiary,
+  },
 });
-

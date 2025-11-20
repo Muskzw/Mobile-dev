@@ -20,6 +20,7 @@ interface ButtonProps {
     fullWidth?: boolean;
     gradient?: boolean;
     style?: ViewStyle;
+    textStyle?: TextStyle;
 }
 
 export const Button: React.FC<ButtonProps> = ({
@@ -32,6 +33,7 @@ export const Button: React.FC<ButtonProps> = ({
     fullWidth = false,
     gradient = false,
     style,
+    textStyle,
 }) => {
     const buttonStyles: ViewStyle[] = [
         styles.button,
@@ -47,6 +49,7 @@ export const Button: React.FC<ButtonProps> = ({
         styles[`text_${size}`],
         styles[`text_${variant}`],
         ...(disabled ? [styles.textDisabled] : []),
+        ...(textStyle ? [textStyle] : []),
     ];
 
     const content = (

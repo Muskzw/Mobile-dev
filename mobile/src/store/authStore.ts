@@ -11,6 +11,8 @@ interface User {
 interface Company {
   id: string;
   name: string;
+  email?: string;
+  address?: string;
   logo_url?: string;
   currency: string;
   brand_color: string;

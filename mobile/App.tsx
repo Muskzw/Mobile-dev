@@ -16,6 +16,7 @@ import DocumentsScreen from './src/screens/DocumentsScreen';
 import DocumentCreateScreen from './src/screens/DocumentCreateScreen';
 import DocumentViewScreen from './src/screens/DocumentViewScreen';
 import ClientsScreen from './src/screens/ClientsScreen';
+import ClientCreateScreen from './src/screens/ClientCreateScreen';
 import CompaniesScreen from './src/screens/CompaniesScreen';
 import SettingsScreen from './src/screens/SettingsScreen';
 
@@ -85,6 +86,7 @@ export default function App() {
                 <Stack.Screen name="Main" component={MainTabs} />
                 <Stack.Screen name="DocumentCreate" component={DocumentCreateScreen} />
                 <Stack.Screen name="DocumentView" component={DocumentViewScreen} />
+                <Stack.Screen name="ClientCreate" component={ClientCreateScreen} />
                 <Stack.Screen name="Companies" component={CompaniesScreen} />
               </>
             )}
