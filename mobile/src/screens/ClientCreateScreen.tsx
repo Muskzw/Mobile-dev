@@ -24,7 +24,7 @@ export default function ClientCreateScreen() {
     const navigation = useNavigation();
     const insets = useSafeAreaInsets();
     const queryClient = useQueryClient();
-    const { currentCompany } = useAuthStore();
+    const { currentCompany, logout } = useAuthStore();
     const [loading, setLoading] = useState(false);
 
     const [form, setForm] = useState({
@@ -49,7 +49,21 @@ export default function ClientCreateScreen() {
         if (!validate()) return;
 
         if (!currentCompany) {
-            Alert.alert('Error', 'No company selected. Please relogin.');
+            Alert.alert(
+                'Error',
+                'No company selected. Please relogin to fix this.',
+                [
+                    { text: 'Cancel', style: 'cancel' },
+                    {
+                        text: 'Logout',
+                        onPress: () => {
+                            logout();
+                            // Navigation will be handled by App.tsx
+                        },
+                        style: 'destructive'
+                    }
+                ]
+            );
             return;
         }
 

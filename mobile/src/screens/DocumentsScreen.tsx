@@ -39,7 +39,8 @@ export default function DocumentsScreen() {
 
     const matchesFilter =
       activeFilter === 'ALL' ||
-      doc.status.toUpperCase() === activeFilter;
+      activeFilter === 'ALL' ||
+      doc.type === activeFilter;
 
     return matchesSearch && matchesFilter;
   });
@@ -131,12 +132,15 @@ export default function DocumentsScreen() {
           icon={<Ionicons name="search" size={20} color={colors.gray[400]} />}
           style={styles.searchInput}
         />
-        <View style={styles.filters}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filters} contentContainerStyle={styles.filtersContent}>
           <FilterTab title="All" value="ALL" />
-          <FilterTab title="Paid" value="PAID" />
-          <FilterTab title="Pending" value="PENDING" />
-          <FilterTab title="Draft" value="DRAFT" />
-        </View>
+          <FilterTab title="Quotes" value="QUOTATION" />
+          <FilterTab title="Invoices" value="INVOICE" />
+          <FilterTab title="POs" value="PURCHASE_ORDER" />
+          <FilterTab title="Proforma" value="PROFORMA" />
+          <FilterTab title="Delivery" value="DELIVERY_NOTE" />
+          <FilterTab title="Receipts" value="RECEIPT" />
+        </ScrollView>
       </View>
 
       {/* List */}
@@ -219,6 +223,9 @@ const styles = StyleSheet.create({
   filters: {
     flexDirection: 'row',
     marginBottom: spacing[4],
+  },
+  filtersContent: {
+    paddingRight: spacing[6],
   },
   filterTab: {
     paddingVertical: spacing[2],

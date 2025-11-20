@@ -8,8 +8,13 @@ import {
   StatusBar,
   RefreshControl,
   Linking,
+  Alert,
+  Modal,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
 } from 'react-native';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -17,12 +22,17 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import api from '../api/client';
 import { colors, spacing, typography, borderRadius, shadows } from '../theme';
 import { Input } from '../components/Input';
+import { Button } from '../components/Button';
 import { Card } from '../components/Card';
 
 export default function ClientsScreen() {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
+  const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState('');
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [newClient, setNewClient] = useState({ name: '', email: '', phone: '', address: '' });
 
   const { data: clients, isLoading, refetch } = useQuery({
     queryKey: ['clients'],
@@ -31,6 +41,35 @@ export default function ClientsScreen() {
       return response.data;
     }
   });
+
+  const handleAddClient = async () => {
+    if (!newClient.name || !newClient.email) {
+      Alert.alert('Error', 'Name and Email are required');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const clientData = {
+        name: newClient.name.trim(),
+        email: newClient.email.trim(),
+        phone: newClient.phone.trim() || undefined,
+        address: newClient.address.trim() || undefined,
+      };
+
+      await api.post('/clients', clientData);
+      queryClient.invalidateQueries({ queryKey: ['clients'] });
+      setShowAddModal(false);
+      setNewClient({ name: '', email: '', phone: '', address: '' });
+      Alert.alert('Success', 'Client added successfully');
+    } catch (error: any) {
+      console.error(error);
+      const errorMsg = error.response?.data?.errors?.[0]?.msg || error.response?.data?.error || 'Failed to add client';
+      Alert.alert('Error', errorMsg);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const filteredClients = clients?.filter((client: any) =>
     client.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -46,47 +85,52 @@ export default function ClientsScreen() {
   };
 
   const ClientItem = ({ item }: { item: any }) => (
-    <Card style={styles.clientCard} padding={4}>
-      <View style={styles.cardHeader}>
-        <View style={styles.clientAvatar}>
-          <Text style={styles.avatarText}>{item.name.charAt(0)}</Text>
+    <TouchableOpacity
+      activeOpacity={0.7}
+      onPress={() => (navigation as any).navigate('ClientView', { clientId: item.id })}
+    >
+      <Card style={styles.clientCard} padding={4}>
+        <View style={styles.cardHeader}>
+          <View style={styles.clientAvatar}>
+            <Text style={styles.avatarText}>{item.name.charAt(0)}</Text>
+          </View>
+          <View style={styles.headerInfo}>
+            <Text style={styles.clientName}>{item.name}</Text>
+            <Text style={styles.clientDocs}>
+              {item.documents_count || 0} Documents
+            </Text>
+          </View>
         </View>
-        <View style={styles.headerInfo}>
-          <Text style={styles.clientName}>{item.name}</Text>
-          <Text style={styles.clientDocs}>
-            {item.documents_count || 0} Documents
-          </Text>
+
+        <View style={styles.divider} />
+
+        <View style={styles.contactRow}>
+          {item.email && (
+            <TouchableOpacity
+              style={styles.contactItem}
+              onPress={() => handleEmail(item.email)}
+            >
+              <View style={[styles.contactIcon, { backgroundColor: colors.primary[50] }]}>
+                <Ionicons name="mail" size={16} color={colors.primary[600]} />
+              </View>
+              <Text style={styles.contactText} numberOfLines={1}>{item.email}</Text>
+            </TouchableOpacity>
+          )}
+
+          {item.phone && (
+            <TouchableOpacity
+              style={styles.contactItem}
+              onPress={() => handleCall(item.phone)}
+            >
+              <View style={[styles.contactIcon, { backgroundColor: colors.success + '15' }]}>
+                <Ionicons name="call" size={16} color={colors.success} />
+              </View>
+              <Text style={styles.contactText} numberOfLines={1}>{item.phone}</Text>
+            </TouchableOpacity>
+          )}
         </View>
-      </View>
-
-      <View style={styles.divider} />
-
-      <View style={styles.contactRow}>
-        {item.email && (
-          <TouchableOpacity
-            style={styles.contactItem}
-            onPress={() => handleEmail(item.email)}
-          >
-            <View style={[styles.contactIcon, { backgroundColor: colors.primary[50] }]}>
-              <Ionicons name="mail" size={16} color={colors.primary[600]} />
-            </View>
-            <Text style={styles.contactText} numberOfLines={1}>{item.email}</Text>
-          </TouchableOpacity>
-        )}
-
-        {item.phone && (
-          <TouchableOpacity
-            style={styles.contactItem}
-            onPress={() => handleCall(item.phone)}
-          >
-            <View style={[styles.contactIcon, { backgroundColor: colors.success + '15' }]}>
-              <Ionicons name="call" size={16} color={colors.success} />
-            </View>
-            <Text style={styles.contactText} numberOfLines={1}>{item.phone}</Text>
-          </TouchableOpacity>
-        )}
-      </View>
-    </Card>
+      </Card>
+    </TouchableOpacity>
   );
 
   return (
@@ -136,7 +180,7 @@ export default function ClientsScreen() {
       <TouchableOpacity
         style={styles.fabContainer}
         activeOpacity={0.8}
-        onPress={() => (navigation as any).navigate('ClientCreate')}
+        onPress={() => setShowAddModal(true)}
       >
         <LinearGradient
           colors={colors.gradients.secondary as any}
@@ -147,6 +191,70 @@ export default function ClientsScreen() {
           <Ionicons name="person-add" size={28} color="white" />
         </LinearGradient>
       </TouchableOpacity>
+
+      {/* Add Client Modal */}
+      <Modal
+        visible={showAddModal}
+        animationType="slide"
+        presentationStyle="pageSheet"
+      >
+        <View style={styles.modalContainer}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>New Client</Text>
+            <TouchableOpacity onPress={() => setShowAddModal(false)}>
+              <Text style={styles.closeText}>Close</Text>
+            </TouchableOpacity>
+          </View>
+
+          <KeyboardAvoidingView
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            style={{ flex: 1 }}
+          >
+            <ScrollView contentContainerStyle={styles.modalContent}>
+              <Input
+                label="Client Name"
+                placeholder="e.g. John Doe"
+                value={newClient.name}
+                onChangeText={(text) => setNewClient({ ...newClient, name: text })}
+              />
+
+              <Input
+                label="Email"
+                placeholder="email@example.com"
+                value={newClient.email}
+                onChangeText={(text) => setNewClient({ ...newClient, email: text })}
+                keyboardType="email-address"
+              />
+
+              <Input
+                label="Phone"
+                placeholder="Optional"
+                value={newClient.phone}
+                onChangeText={(text) => setNewClient({ ...newClient, phone: text })}
+                keyboardType="phone-pad"
+              />
+
+              <Input
+                label="Address"
+                placeholder="Optional"
+                value={newClient.address}
+                onChangeText={(text) => setNewClient({ ...newClient, address: text })}
+                multiline
+                numberOfLines={3}
+                style={{ height: 80, textAlignVertical: 'top' }}
+              />
+
+              <Button
+                title="Add Client"
+                onPress={handleAddClient}
+                gradient
+                loading={loading}
+                style={{ marginTop: spacing[4] }}
+              />
+            </ScrollView>
+          </KeyboardAvoidingView>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -279,5 +387,29 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.full,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  modalContainer: {
+    flex: 1,
+    backgroundColor: colors.background.secondary,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: spacing[4],
+    backgroundColor: colors.background.primary,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.gray[100],
+  },
+  modalTitle: {
+    fontSize: typography.fontSize.lg,
+    fontWeight: typography.fontWeight.bold,
+  },
+  closeText: {
+    color: colors.primary[600],
+    fontSize: typography.fontSize.base,
+  },
+  modalContent: {
+    padding: spacing[6],
   },
 });

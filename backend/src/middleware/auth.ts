@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
+import pool from '../database/connection';
 
 export interface AuthRequest extends Request {
   userId?: string;
@@ -22,14 +23,9 @@ export const authenticate = (req: AuthRequest, res: Response, next: NextFunction
   }
 };
 
+// Single-tenant mode - no company required
 export const requireCompany = (req: AuthRequest, res: Response, next: NextFunction) => {
-  const companyId = req.headers['x-company-id'] as string;
-  
-  if (!companyId) {
-    return res.status(400).json({ error: 'Company ID required' });
-  }
-
-  req.companyId = companyId;
+  // In single-tenant mode, we don't require company
+  // Just pass through
   next();
 };
-

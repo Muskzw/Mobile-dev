@@ -35,15 +35,17 @@ interface Item {
   unit_price: string;
 }
 
-export default function DocumentCreateScreen() {
+export default function DocumentCreateScreen({ route }: any) {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
+  const { type = 'QUOTATION' } = route.params || {};
 
   // State
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [items, setItems] = useState<Item[]>([]);
   const [showClientModal, setShowClientModal] = useState(false);
+  const [showProductModal, setShowProductModal] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [date, setDate] = useState(new Date());
   const [loading, setLoading] = useState(false);
@@ -53,6 +55,14 @@ export default function DocumentCreateScreen() {
     queryKey: ['clients'],
     queryFn: async () => {
       const response = await api.get('/clients');
+      return response.data;
+    }
+  });
+
+  const { data: products } = useQuery({
+    queryKey: ['saved-items'],
+    queryFn: async () => {
+      const response = await api.get('/saved-items');
       return response.data;
     }
   });
@@ -68,6 +78,16 @@ export default function DocumentCreateScreen() {
   // Handlers
   const handleAddItem = () => {
     setItems([...items, { id: Date.now().toString(), description: '', quantity: '1', unit_price: '0' }]);
+  };
+
+  const handleAddProduct = (product: any) => {
+    setItems([...items, {
+      id: Date.now().toString(),
+      description: product.name,
+      quantity: '1',
+      unit_price: product.unit_price
+    }]);
+    setShowProductModal(false);
   };
 
   const handleUpdateItem = (id: string, field: keyof Item, value: string) => {
@@ -93,7 +113,7 @@ export default function DocumentCreateScreen() {
     setLoading(true);
     try {
       await api.post('/documents', {
-        type: 'QUOTATION',
+        type: type.toUpperCase(),
         clientId: selectedClient.id,
         date: date.toISOString(),
         items: items.map(item => ({
@@ -107,14 +127,25 @@ export default function DocumentCreateScreen() {
 
       queryClient.invalidateQueries({ queryKey: ['documents'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
-      Alert.alert('Success', 'Quotation created successfully', [
+      Alert.alert('Success', `${type} created successfully`, [
         { text: 'OK', onPress: () => navigation.goBack() }
       ]);
     } catch (error) {
       console.error(error);
-      Alert.alert('Error', 'Failed to create quotation');
+      Alert.alert('Error', `Failed to create ${type.toLowerCase()}`);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const getTitle = () => {
+    switch (type) {
+      case 'INVOICE': return 'New Invoice';
+      case 'PURCHASE_ORDER': return 'New Purchase Order';
+      case 'PROFORMA': return 'New Proforma';
+      case 'DELIVERY_NOTE': return 'New Delivery Note';
+      case 'RECEIPT': return 'New Receipt';
+      default: return 'New Quotation';
     }
   };
 
@@ -124,7 +155,7 @@ export default function DocumentCreateScreen() {
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
           <Ionicons name="close" size={24} color={colors.text.primary} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>New Quotation</Text>
+        <Text style={styles.headerTitle}>{getTitle()}</Text>
         <View style={{ width: 40 }} />
       </View>
 
@@ -188,9 +219,15 @@ export default function DocumentCreateScreen() {
           {/* Items Section */}
           <View style={styles.itemsHeader}>
             <Text style={styles.sectionTitle}>Items</Text>
-            <TouchableOpacity onPress={handleAddItem}>
-              <Text style={styles.addItemText}>+ Add Item</Text>
-            </TouchableOpacity>
+            <View style={styles.itemsActions}>
+              <TouchableOpacity onPress={() => setShowProductModal(true)} style={styles.actionButton}>
+                <Ionicons name="cube-outline" size={16} color={colors.secondary[600]} />
+                <Text style={styles.addProductText}>+ Product</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={handleAddItem}>
+                <Text style={styles.addItemText}>+ Add Item</Text>
+              </TouchableOpacity>
+            </View>
           </View>
 
           {items.map((item, index) => (
@@ -309,6 +346,45 @@ export default function DocumentCreateScreen() {
           />
         </View>
       </Modal>
+      {/* Product Modal */}
+      <Modal
+        visible={showProductModal}
+        animationType="slide"
+        presentationStyle="pageSheet"
+      >
+        <View style={styles.modalContainer}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>Select Product</Text>
+            <TouchableOpacity onPress={() => setShowProductModal(false)}>
+              <Text style={styles.closeText}>Close</Text>
+            </TouchableOpacity>
+          </View>
+          <FlatList
+            data={products || []}
+            keyExtractor={(item) => item.id}
+            renderItem={({ item }) => (
+              <TouchableOpacity
+                style={styles.clientItem}
+                onPress={() => handleAddProduct(item)}
+              >
+                <View style={styles.clientAvatar}>
+                  <Ionicons name="cube-outline" size={20} color={colors.primary[700]} />
+                </View>
+                <View>
+                  <Text style={styles.clientListName}>{item.name}</Text>
+                  <Text style={styles.clientListEmail}>${parseFloat(item.unit_price).toFixed(2)}</Text>
+                </View>
+                <Ionicons name="add-circle-outline" size={24} color={colors.primary[600]} style={{ marginLeft: 'auto' }} />
+              </TouchableOpacity>
+            )}
+            ListEmptyComponent={
+              <View style={styles.emptyState}>
+                <Text style={styles.emptyStateText}>No products found</Text>
+              </View>
+            }
+          />
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -400,6 +476,20 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: spacing[2],
+  },
+  itemsActions: {
+    flexDirection: 'row',
+    gap: spacing[3],
+  },
+  actionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing[1],
+  },
+  addProductText: {
+    fontSize: typography.fontSize.sm,
+    fontWeight: typography.fontWeight.bold,
+    color: colors.secondary[600],
   },
   addItemText: {
     fontSize: typography.fontSize.sm,
@@ -531,6 +621,15 @@ const styles = StyleSheet.create({
   },
   clientListEmail: {
     fontSize: typography.fontSize.sm,
+    color: colors.text.secondary,
+  },
+  emptyState: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: spacing[12],
+  },
+  emptyStateText: {
+    fontSize: typography.fontSize.base,
     color: colors.text.secondary,
   },
 });

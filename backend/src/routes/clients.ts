@@ -21,11 +21,12 @@ router.post('/', [
 
     const { name, email, phone, address, taxNumber, notes } = req.body;
 
+    // In single-tenant mode, use user_id instead of company_id
     const result = await pool.query(
-      `INSERT INTO clients (company_id, name, email, phone, address, tax_number, notes)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)
+      `INSERT INTO clients (company_id, name, email, phone, address, tax_number, notes, user_id)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
        RETURNING *`,
-      [req.companyId, name, email || null, phone || null, address || null, taxNumber || null, notes || null]
+      [req.companyId || null, name, email || null, phone || null, address || null, taxNumber || null, notes || null, req.userId]
     );
 
     res.status(201).json(result.rows[0]);
@@ -38,9 +39,10 @@ router.post('/', [
 // Get all clients
 router.get('/', async (req: AuthRequest, res: Response) => {
   try {
+    // In single-tenant mode, filter by user_id
     const result = await pool.query(
-      'SELECT * FROM clients WHERE company_id = $1 ORDER BY name ASC',
-      [req.companyId]
+      'SELECT * FROM clients WHERE user_id = $1 OR company_id = $2 ORDER BY name ASC',
+      [req.userId, req.companyId || null]
     );
     res.json(result.rows);
   } catch (error) {

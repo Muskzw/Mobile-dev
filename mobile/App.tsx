@@ -17,6 +17,9 @@ import DocumentCreateScreen from './src/screens/DocumentCreateScreen';
 import DocumentViewScreen from './src/screens/DocumentViewScreen';
 import ClientsScreen from './src/screens/ClientsScreen';
 import ClientCreateScreen from './src/screens/ClientCreateScreen';
+import ProductsScreen from './src/screens/ProductsScreen';
+import ContactUsScreen from './src/screens/ContactUsScreen';
+import ClientViewScreen from './src/screens/ClientViewScreen';
 import CompaniesScreen from './src/screens/CompaniesScreen';
 import SettingsScreen from './src/screens/SettingsScreen';
 
@@ -43,7 +46,7 @@ initAuth();
 
 function MainTabs() {
   return (
-    <Tab.Navigator>
+    <Tab.Navigator screenOptions={{ headerShown: false }}>
       <Tab.Screen
         name="Dashboard"
         component={DashboardScreen}
@@ -87,6 +90,9 @@ export default function App() {
                 <Stack.Screen name="DocumentCreate" component={DocumentCreateScreen} />
                 <Stack.Screen name="DocumentView" component={DocumentViewScreen} />
                 <Stack.Screen name="ClientCreate" component={ClientCreateScreen} />
+                <Stack.Screen name="ClientView" component={ClientViewScreen} />
+                <Stack.Screen name="Products" component={ProductsScreen} />
+                <Stack.Screen name="ContactUs" component={ContactUsScreen} />
                 <Stack.Screen name="Companies" component={CompaniesScreen} />
               </>
             )}

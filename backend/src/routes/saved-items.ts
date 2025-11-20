@@ -12,8 +12,8 @@ router.use(requireCompany);
 router.get('/', async (req: AuthRequest, res: Response) => {
   try {
     const result = await pool.query(
-      'SELECT * FROM saved_items WHERE company_id = $1 ORDER BY name ASC',
-      [req.companyId]
+      'SELECT * FROM saved_items WHERE user_id = $1 OR company_id = $2 ORDER BY name ASC',
+      [req.userId, req.companyId || null]
     );
     res.json(result.rows);
   } catch (error) {
@@ -36,10 +36,10 @@ router.post('/', [
     const { name, description, unitPrice, taxRate, category } = req.body;
 
     const result = await pool.query(
-      `INSERT INTO saved_items (company_id, name, description, unit_price, tax_rate, category)
-       VALUES ($1, $2, $3, $4, $5, $6)
+      `INSERT INTO saved_items (company_id, name, description, unit_price, tax_rate, category, user_id)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
        RETURNING *`,
-      [req.companyId, name, description || null, unitPrice, taxRate || 0, category || null]
+      [req.companyId || null, name, description || null, unitPrice, taxRate || 0, category || null, req.userId]
     );
 
     res.status(201).json(result.rows[0]);

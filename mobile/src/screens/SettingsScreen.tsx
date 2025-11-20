@@ -5,9 +5,8 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Switch,
   Alert,
-  Image,
+  Switch,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
@@ -44,9 +43,6 @@ export default function SettingsScreen() {
           style: 'destructive',
           onPress: () => {
             logout();
-            // Navigation is handled automatically by the auth state listener in App.tsx
-            // but we can force it just in case
-            // navigation.reset({ index: 0, routes: [{ name: 'Login' }] });
           }
         }
       ]
@@ -54,7 +50,6 @@ export default function SettingsScreen() {
   };
 
   const handleSaveCompany = () => {
-    // Here we would call the API to update company details
     setEditingCompany(false);
     Alert.alert('Success', 'Company details updated');
   };
@@ -200,7 +195,7 @@ export default function SettingsScreen() {
             onValueChange={setNotifications}
           />
           <View style={styles.divider} />
-          <TouchableOpacity>
+          <TouchableOpacity onPress={() => Alert.alert('Coming Soon', 'Dark mode will be available in the next update!')}>
             <SettingItem
               icon="moon"
               title="Dark Mode"
@@ -212,9 +207,9 @@ export default function SettingsScreen() {
         {/* Support */}
         <Text style={styles.sectionTitle}>Support</Text>
         <Card style={styles.card} padding={0}>
-          <TouchableOpacity>
+          <TouchableOpacity onPress={() => (navigation as any).navigate('ContactUs')}>
             <SettingItem
-              icon="help-circle"
+              icon="help-circle-outline"
               title="Help Center"
               type="link"
             />
@@ -352,7 +347,7 @@ const styles = StyleSheet.create({
   divider: {
     height: 1,
     backgroundColor: colors.gray[100],
-    marginLeft: spacing[16], // Indent divider to align with text
+    marginLeft: spacing[16],
   },
   companyInfoRow: {
     flexDirection: 'row',

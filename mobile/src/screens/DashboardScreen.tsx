@@ -34,7 +34,7 @@ export default function DashboardScreen() {
     }
   });
 
-  const StatCard = ({ title, value, icon, gradient, delay }: any) => (
+  const StatCard = ({ title, value, icon, gradient }: any) => (
     <TouchableOpacity activeOpacity={0.9}>
       <LinearGradient
         colors={gradient}
@@ -87,7 +87,7 @@ export default function DashboardScreen() {
             <Text style={styles.greeting}>Hello, {user?.fullName?.split(' ')[0] || 'User'} 👋</Text>
             <Text style={styles.subtitle}>Here's your business overview</Text>
           </View>
-          <TouchableOpacity style={styles.profileButton}>
+          <TouchableOpacity style={styles.profileButton} onPress={() => navigation.navigate('Settings' as never)}>
             <LinearGradient
               colors={colors.gradients.primary as any}
               style={styles.profileGradient}
@@ -142,13 +142,13 @@ export default function DashboardScreen() {
                 title="New Client"
                 icon="person-add"
                 color={colors.secondary[600]}
-                onPress={() => navigation.navigate('Clients' as never)} // Assuming ClientCreate exists or goes to list
+                onPress={() => navigation.navigate('ClientCreate' as never)}
               />
               <ActionButton
-                title="Documents"
-                icon="folder-open"
-                color={colors.warning}
-                onPress={() => navigation.navigate('Documents' as never)}
+                title="Products"
+                icon="cube"
+                color={colors.info[500]}
+                onPress={() => navigation.navigate('Products' as never)}
               />
               <ActionButton
                 title="Settings"
@@ -169,7 +169,6 @@ export default function DashboardScreen() {
             </TouchableOpacity>
           </View>
 
-          {/* Placeholder for recent items - would map through real data here */}
           <Card style={styles.recentCard} padding={0}>
             {[1, 2, 3].map((_, index) => (
               <TouchableOpacity
@@ -346,7 +345,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     padding: spacing[4],
-    backgroundColor: colors.background.primary,
   },
   recentItemBorder: {
     borderBottomWidth: 1,
@@ -355,17 +353,17 @@ const styles = StyleSheet.create({
   recentIcon: {
     width: 40,
     height: 40,
-    borderRadius: borderRadius.full,
+    borderRadius: borderRadius.md,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: spacing[3],
+    marginRight: spacing[4],
   },
   recentInfo: {
     flex: 1,
   },
   recentTitle: {
     fontSize: typography.fontSize.sm,
-    fontWeight: typography.fontWeight.semibold,
+    fontWeight: typography.fontWeight.medium,
     color: colors.text.primary,
     marginBottom: 2,
   },
