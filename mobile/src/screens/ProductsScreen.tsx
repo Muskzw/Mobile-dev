@@ -34,6 +34,7 @@ export default function ProductsScreen() {
     const [showAddModal, setShowAddModal] = useState(false);
     const [newItem, setNewItem] = useState({ name: '', description: '', unitPrice: '' });
     const [loading, setLoading] = useState(false);
+    const [editingItem, setEditingItem] = useState<any>(null);
 
     const { data: products, isLoading } = useQuery({
         queryKey: ['saved-items'],
@@ -43,7 +44,7 @@ export default function ProductsScreen() {
         }
     });
 
-    const handleAddProduct = async () => {
+    const handleSaveProduct = async () => {
         if (!newItem.name || !newItem.unitPrice) {
             Alert.alert('Error', 'Name and Price are required');
             return;
@@ -51,20 +52,39 @@ export default function ProductsScreen() {
 
         setLoading(true);
         try {
-            await api.post('/saved-items', {
+            const payload = {
                 ...newItem,
                 unitPrice: parseFloat(newItem.unitPrice)
-            });
+            };
+
+            if (editingItem) {
+                await api.put(`/saved-items/${editingItem.id}`, payload);
+                Alert.alert('Success', 'Product updated successfully');
+            } else {
+                await api.post('/saved-items', payload);
+                Alert.alert('Success', 'Product added successfully');
+            }
+
             queryClient.invalidateQueries({ queryKey: ['saved-items'] });
             setShowAddModal(false);
             setNewItem({ name: '', description: '', unitPrice: '' });
-            Alert.alert('Success', 'Product added successfully');
+            setEditingItem(null);
         } catch (error) {
             console.error(error);
-            Alert.alert('Error', 'Failed to add product');
+            Alert.alert('Error', editingItem ? 'Failed to update product' : 'Failed to add product');
         } finally {
             setLoading(false);
         }
+    };
+
+    const handleEditProduct = (item: any) => {
+        setEditingItem(item);
+        setNewItem({
+            name: item.name,
+            description: item.description || '',
+            unitPrice: item.unit_price.toString()
+        });
+        setShowAddModal(true);
     };
 
     const handleDeleteProduct = (id: string) => {
@@ -104,9 +124,14 @@ export default function ProductsScreen() {
                     <Text style={styles.productName}>{item.name}</Text>
                     <Text style={styles.productPrice}>${parseFloat(item.unit_price).toFixed(2)}</Text>
                 </View>
-                <TouchableOpacity onPress={() => handleDeleteProduct(item.id)}>
-                    <Ionicons name="trash-outline" size={20} color={colors.error} />
-                </TouchableOpacity>
+                <View style={{ flexDirection: 'row' }}>
+                    <TouchableOpacity onPress={() => handleEditProduct(item)} style={{ marginRight: 12 }}>
+                        <Ionicons name="create-outline" size={20} color={colors.primary[600]} />
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={() => handleDeleteProduct(item.id)}>
+                        <Ionicons name="trash-outline" size={20} color={colors.error} />
+                    </TouchableOpacity>
+                </View>
             </View>
             {item.description && (
                 <Text style={styles.productDescription} numberOfLines={2}>
@@ -161,7 +186,11 @@ export default function ProductsScreen() {
             <TouchableOpacity
                 style={styles.fabContainer}
                 activeOpacity={0.8}
-                onPress={() => setShowAddModal(true)}
+                onPress={() => {
+                    setEditingItem(null);
+                    setNewItem({ name: '', description: '', unitPrice: '' });
+                    setShowAddModal(true);
+                }}
             >
                 <LinearGradient
                     colors={colors.gradients.primary as any}
@@ -181,8 +210,12 @@ export default function ProductsScreen() {
             >
                 <View style={styles.modalContainer}>
                     <View style={styles.modalHeader}>
-                        <Text style={styles.modalTitle}>New Product</Text>
-                        <TouchableOpacity onPress={() => setShowAddModal(false)}>
+                        <Text style={styles.modalTitle}>{editingItem ? 'Edit Product' : 'New Product'}</Text>
+                        <TouchableOpacity onPress={() => {
+                            setShowAddModal(false);
+                            setEditingItem(null);
+                            setNewItem({ name: '', description: '', unitPrice: '' });
+                        }}>
                             <Text style={styles.closeText}>Close</Text>
                         </TouchableOpacity>
                     </View>
@@ -219,8 +252,8 @@ export default function ProductsScreen() {
                             />
 
                             <Button
-                                title="Add Product"
-                                onPress={handleAddProduct}
+                                title={editingItem ? "Update Product" : "Add Product"}
+                                onPress={handleSaveProduct}
                                 gradient
                                 loading={loading}
                                 style={{ marginTop: spacing[4] }}

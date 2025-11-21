@@ -8,7 +8,7 @@ import { Provider as PaperProvider } from 'react-native-paper';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuthStore } from './src/store/authStore';
-import { ThemeProvider } from './src/context/ThemeContext';
+import { ThemeProvider, useTheme } from './src/context/ThemeContext';
 
 // Screens
 import LoginScreen from './src/screens/LoginScreen';
@@ -47,6 +47,8 @@ const initAuth = async () => {
 initAuth();
 
 function MainTabs() {
+  const { colors } = useTheme();
+
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
@@ -66,12 +68,12 @@ function MainTabs() {
 
           return <Ionicons name={iconName} size={size} color={color} />;
         },
-        tabBarActiveTintColor: '#3B82F6',
-        tabBarInactiveTintColor: '#9CA3AF',
+        tabBarActiveTintColor: colors.primary[600],
+        tabBarInactiveTintColor: colors.gray[400],
         tabBarStyle: {
-          backgroundColor: '#FFFFFF',
+          backgroundColor: colors.background.primary,
           borderTopWidth: 1,
-          borderTopColor: '#E5E7EB',
+          borderTopColor: colors.gray[200],
           paddingBottom: 5,
           paddingTop: 5,
           height: 60,
@@ -106,41 +108,48 @@ function MainTabs() {
   );
 }
 
-export default function App() {
+function AppNavigator() {
   const { token } = useAuthStore();
+  const { colors } = useTheme();
 
+  return (
+    <NavigationContainer>
+      <Stack.Navigator
+        screenOptions={{
+          headerShown: false,
+          cardStyle: { backgroundColor: colors.background.secondary },
+        }}
+      >
+        {/* Auth Stack */}
+        {!token ? (
+          <>
+            <Stack.Screen name="Login" component={LoginScreen} />
+            <Stack.Screen name="Register" component={RegisterScreen} />
+          </>
+        ) : (
+          /* App Stack */
+          <>
+            <Stack.Screen name="Main" component={MainTabs} />
+            <Stack.Screen name="DocumentCreate" component={DocumentCreateScreen} />
+            <Stack.Screen name="DocumentView" component={DocumentViewScreen} />
+            <Stack.Screen name="ClientCreate" component={ClientCreateScreen} />
+            <Stack.Screen name="ClientView" component={ClientViewScreen} />
+            <Stack.Screen name="Products" component={ProductsScreen} />
+            <Stack.Screen name="ContactUs" component={ContactUsScreen} />
+            <Stack.Screen name="Companies" component={CompaniesScreen} />
+          </>
+        )}
+      </Stack.Navigator>
+    </NavigationContainer>
+  );
+}
+
+export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <PaperProvider>
         <ThemeProvider>
-          <NavigationContainer>
-            <Stack.Navigator
-              screenOptions={{
-                headerShown: false,
-                cardStyle: { backgroundColor: '#F9FAFB' },
-              }}
-            >
-              {/* Auth Stack */}
-              {!token ? (
-                <>
-                  <Stack.Screen name="Login" component={LoginScreen} />
-                  <Stack.Screen name="Register" component={RegisterScreen} />
-                </>
-              ) : (
-                /* App Stack */
-                <>
-                  <Stack.Screen name="Main" component={MainTabs} />
-                  <Stack.Screen name="DocumentCreate" component={DocumentCreateScreen} />
-                  <Stack.Screen name="DocumentView" component={DocumentViewScreen} />
-                  <Stack.Screen name="ClientCreate" component={ClientCreateScreen} />
-                  <Stack.Screen name="ClientView" component={ClientViewScreen} />
-                  <Stack.Screen name="Products" component={ProductsScreen} />
-                  <Stack.Screen name="ContactUs" component={ContactUsScreen} />
-                  <Stack.Screen name="Companies" component={CompaniesScreen} />
-                </>
-              )}
-            </Stack.Navigator>
-          </NavigationContainer>
+          <AppNavigator />
         </ThemeProvider>
       </PaperProvider>
     </QueryClientProvider>

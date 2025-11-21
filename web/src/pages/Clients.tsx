@@ -2,12 +2,14 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import Layout from '../components/Layout';
 import api from '../api/client';
-import { Plus, Search, User, Mail, Phone } from 'lucide-react';
+import { Plus, Search, User, Mail, Phone, Pencil, Trash2, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 export default function Clients() {
   const [search, setSearch] = useState('');
   const [showModal, setShowModal] = useState(false);
+  const [editingClient, setEditingClient] = useState<any>(null);
+  const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const queryClient = useQueryClient();
 
   const { data: clients, isLoading } = useQuery({
@@ -27,6 +29,7 @@ export default function Clients() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['clients'] });
       setShowModal(false);
+      setEditingClient(null);
       toast.success('Client created successfully');
     },
     onError: (error: any) => {
@@ -34,17 +37,62 @@ export default function Clients() {
     }
   });
 
+  const updateMutation = useMutation({
+    mutationFn: async (data: any) => {
+      const response = await api.put(`/clients/${editingClient.id}`, data);
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['clients'] });
+      setShowModal(false);
+      setEditingClient(null);
+      toast.success('Client updated successfully');
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.error || 'Failed to update client');
+    }
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      await api.delete(`/clients/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['clients'] });
+      setConfirmDelete(null);
+      toast.success('Client deleted successfully');
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.error || 'Failed to delete client');
+    }
+  });
+
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
-    createMutation.mutate({
+    const data = {
       name: formData.get('name'),
       email: formData.get('email'),
       phone: formData.get('phone'),
       address: formData.get('address'),
       taxNumber: formData.get('taxNumber'),
       notes: formData.get('notes')
-    });
+    };
+
+    if (editingClient) {
+      updateMutation.mutate(data);
+    } else {
+      createMutation.mutate(data);
+    }
+  };
+
+  const handleEdit = (client: any) => {
+    setEditingClient(client);
+    setShowModal(true);
+  };
+
+  const handleDelete = (id: string) => {
+    deleteMutation.mutate(id);
   };
 
   return (
@@ -56,7 +104,11 @@ export default function Clients() {
             <p className="text-muted-foreground mt-1">Manage your client database</p>
           </div>
           <button
-            onClick={() => setShowModal(true)}
+            <button
+            onClick={() => {
+              setEditingClient(null);
+              setShowModal(true);
+            }}
             className="flex items-center space-x-2 bg-primary text-primary-foreground px-4 py-2 rounded-xl hover:bg-primary/90 transition shadow-lg shadow-primary/25"
           >
             <Plus className="w-5 h-5" />
@@ -94,6 +146,20 @@ export default function Clients() {
                       <h3 className="font-semibold text-lg">{client.name}</h3>
                     </div>
                   </div>
+                  <div className="flex space-x-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button
+                      onClick={() => handleEdit(client)}
+                      className="p-2 hover:bg-primary/10 rounded-lg text-primary transition"
+                    >
+                      <Pencil className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => setConfirmDelete(client.id)}
+                      className="p-2 hover:bg-destructive/10 rounded-lg text-destructive transition"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
                 <div className="space-y-2 text-sm text-muted-foreground">
                   {client.email && (
@@ -123,7 +189,10 @@ export default function Clients() {
             <h3 className="text-lg font-medium mb-2">No clients found</h3>
             <p className="text-muted-foreground mb-6">Add your first client to get started</p>
             <button
-              onClick={() => setShowModal(true)}
+              onClick={() => {
+                setEditingClient(null);
+                setShowModal(true);
+              }}
               className="inline-flex items-center space-x-2 bg-primary text-primary-foreground px-4 py-2 rounded-xl hover:bg-primary/90 transition shadow-lg shadow-primary/25"
             >
               <Plus className="w-5 h-5" />
@@ -136,7 +205,12 @@ export default function Clients() {
         {showModal && (
           <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
             <div className="glass-card bg-background rounded-2xl shadow-2xl max-w-md w-full p-8 border border-white/20">
-              <h2 className="text-2xl font-bold mb-6">Add New Client</h2>
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-2xl font-bold">{editingClient ? 'Edit Client' : 'Add New Client'}</h2>
+                <button onClick={() => setShowModal(false)} className="text-muted-foreground hover:text-foreground">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
               <form onSubmit={handleSubmit} className="space-y-5">
                 <div>
                   <label className="block text-sm font-medium mb-2">
@@ -145,6 +219,7 @@ export default function Clients() {
                   <input
                     type="text"
                     name="name"
+                    defaultValue={editingClient?.name}
                     required
                     className="w-full px-4 py-2.5 rounded-xl glass-input outline-none focus:ring-2 focus:ring-primary/50"
                   />
@@ -156,6 +231,7 @@ export default function Clients() {
                   <input
                     type="email"
                     name="email"
+                    defaultValue={editingClient?.email}
                     className="w-full px-4 py-2.5 rounded-xl glass-input outline-none focus:ring-2 focus:ring-primary/50"
                   />
                 </div>
@@ -166,6 +242,7 @@ export default function Clients() {
                   <input
                     type="tel"
                     name="phone"
+                    defaultValue={editingClient?.phone}
                     className="w-full px-4 py-2.5 rounded-xl glass-input outline-none focus:ring-2 focus:ring-primary/50"
                   />
                 </div>
@@ -175,6 +252,7 @@ export default function Clients() {
                   </label>
                   <textarea
                     name="address"
+                    defaultValue={editingClient?.address}
                     rows={2}
                     className="w-full px-4 py-2.5 rounded-xl glass-input outline-none focus:ring-2 focus:ring-primary/50"
                   />
@@ -192,10 +270,37 @@ export default function Clients() {
                     disabled={createMutation.isPending}
                     className="flex-1 bg-primary text-primary-foreground px-4 py-2.5 rounded-xl hover:bg-primary/90 disabled:opacity-50 shadow-lg shadow-primary/25"
                   >
-                    {createMutation.isPending ? 'Creating...' : 'Create Client'}
+                    {createMutation.isPending || updateMutation.isPending ? 'Saving...' : (editingClient ? 'Update Client' : 'Create Client')}
                   </button>
                 </div>
               </form>
+            </div>
+          </div>
+        )}
+
+        {/* Delete Confirmation Modal */}
+        {confirmDelete && (
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <div className="glass-card bg-background rounded-2xl shadow-2xl max-w-sm w-full p-6 border border-white/20">
+              <h3 className="text-xl font-bold mb-2">Delete Client</h3>
+              <p className="text-muted-foreground mb-6">
+                Are you sure you want to delete this client? This action cannot be undone.
+              </p>
+              <div className="flex space-x-4">
+                <button
+                  onClick={() => setConfirmDelete(null)}
+                  className="flex-1 px-4 py-2 border border-border rounded-xl hover:bg-accent transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => handleDelete(confirmDelete)}
+                  disabled={deleteMutation.isPending}
+                  className="flex-1 bg-destructive text-destructive-foreground px-4 py-2 rounded-xl hover:bg-destructive/90 disabled:opacity-50"
+                >
+                  {deleteMutation.isPending ? 'Deleting...' : 'Delete'}
+                </button>
+              </div>
             </div>
           </div>
         )}

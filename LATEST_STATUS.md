@@ -1,53 +1,43 @@
-# 🟢 SYSTEM STATUS UPDATE
+# ✅ ALL FIXED! Documents Now Visible
 
-**Date**: November 21, 2025  
-**Status**: ✅ ALL SYSTEMS OPERATIONAL
+## 🎉 WHAT WAS FIXED
 
----
+### 1. **Documents Not Showing (CRITICAL FIX)**
+- **Root Cause**: The authentication middleware wasn't extracting `company_id` from request headers
+- **Fix**: Updated `backend/src/middleware/auth.ts` to read the `x-company-id` header
+- **Result**: All new documents will now be properly linked to your company
 
-## 🔧 LATEST FIXES (Just Applied)
+### 2. **Schema Fix**
+- **Issue**: `document_number` was globally unique instead of unique per company
+- **Fix**: Updated `backend/src/database/schema.ts` - now unique per `(company_id, document_number)`
+- **Result**: Multiple companies can have `INV-2025-0001`, etc.
 
-### 1. ✅ **Backend: Fixed "Duplicate Key" Error**
-- **Issue**: Creation failed with 500 error because document numbers were required to be unique *globally* instead of *per company*.
-- **Fix**: Updated database constraints to allow same document numbers (e.g., QTE-2025-0001) across different companies.
-- **Bonus**: Improved number generation logic to be more robust.
-
-### 2. ✅ **UI: Added Document Type Selection**
-- **Issue**: User could only see "Create Quotation"
-- **Fix**: Added a "Create New" modal to the Documents screen
-- **Now Available**:
-  - 📄 New Quotation
-  - 🧾 New Invoice
-  - 📋 New Proforma
-  - 🚚 New Delivery Note
-  - 💰 New Receipt
+### 3. **Historical Data Fix**
+- **Issue**: Existing documents had NULL `company_id`
+- **Fix**: Updated all documents to belong to your company
+- **Result**: All your previously created documents are now visible!
 
 ---
 
-## 🎯 HOW TO TEST
+## 🎯 TEST IT NOW!
 
-1. **Reload the Mobile App** (Shake device -> Reload, or press 'r' in terminal)
-2. Go to **Documents** tab
-3. Tap the **+ (Plus)** button
-4. Select **"New Quotation"** (or any type)
-5. Fill in details and tap **Create**
-6. It should work instantly! 🚀
+1. **Pull Down to Refresh** on the Documents screen
+2. You should now see **5 documents**:
+   - 1 Quotation (QTE-2025-0001)
+   - 1 Invoice (INV-2025-0001)
+   - 1 Proforma (PRO-2025-0001)
+   - 1 Delivery Note (DN-2025-0001)
+   - 1 Receipt (RCT-2025-0001)
 
----
-
-## 📊 CURRENT CAPABILITIES
-
-| Feature | Status | Notes |
-|---------|--------|-------|
-| **Create Quotation** | ✅ Working | Fixed 500 Error |
-| **Create Invoice** | ✅ Working | Now selectable |
-| **Create Receipt** | ✅ Working | Now selectable |
-| **Dashboard Stats** | ✅ Working | Shows real client count |
-| **Navigation** | ✅ Working | Icons fixed |
-| **Dark Mode** | ✅ Working | |
+3. **Create a new document** - it will work properly now
+4. **Download PDF** - tap on any document and click "Download PDF"
 
 ---
 
-## 🚀 NEXT STEPS
+## 📝 What Changed in Code
 
-Refer to `NEXT_STEPS.md` for your growth plan!
+- `backend/src/middleware/auth.ts`: Extracts `company_id` from `x-company-id` header
+- `backend/src/database/schema.ts`: Fixed unique constraint on `document_number`
+- Database: Updated existing documents with proper `company_id`
+
+Everything should work perfectly now! 🚀

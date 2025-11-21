@@ -7,8 +7,12 @@ import {
   StatusBar,
   TouchableOpacity,
   ActivityIndicator,
+  Linking,
+  Modal,
+  Image,
+  Alert,
 } from 'react-native';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -17,14 +21,22 @@ import { useTheme } from '../context/ThemeContext';
 import { spacing, typography, borderRadius, shadows, Colors } from '../theme';
 import { Card } from '../components/Card';
 import { Button } from '../components/Button';
+import * as FileSystem from 'expo-file-system/legacy';
+import * as Sharing from 'expo-sharing';
+import { useAuthStore } from '../store/authStore';
+import { BASE_URL } from '../config';
 
 export default function DocumentViewScreen() {
   const route = useRoute();
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
   const { colors, isDark } = useTheme();
+  const { token, currentCompany } = useAuthStore();
   const styles = createStyles(colors);
   const { id } = route.params as { id: string };
+  const queryClient = useQueryClient();
+  const [downloadLoading, setDownloadLoading] = React.useState(false);
+  const [showShareModal, setShowShareModal] = React.useState(false);
 
   const { data: document, isLoading } = useQuery({
     queryKey: ['document', id],
@@ -33,6 +45,214 @@ export default function DocumentViewScreen() {
       return response.data;
     }
   });
+
+  const handleDelete = () => {
+    Alert.alert(
+      'Delete Document',
+      'Are you sure you want to delete this document? This action cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await api.delete(`/documents/${id}`);
+              queryClient.invalidateQueries({ queryKey: ['documents'] });
+              navigation.goBack();
+            } catch (error) {
+              console.error('Delete error:', error);
+              Alert.alert('Error', 'Failed to delete document');
+            }
+          }
+        }
+      ]
+    );
+  };
+
+  const handleEdit = () => {
+    (navigation as any).navigate('DocumentCreate', {
+      type: document?.type || 'QUOTATION',
+      editMode: true,
+      documentId: id
+    });
+  };
+
+  const handleDuplicate = async () => {
+    try {
+      setDownloadLoading(true);
+      const response = await api.post(`/documents/${id}/duplicate`);
+      const newDoc = response.data;
+
+      queryClient.invalidateQueries({ queryKey: ['documents'] });
+
+      Alert.alert('Success', 'Document duplicated successfully', [
+        {
+          text: 'View New Document',
+          onPress: () => {
+            (navigation as any).push('DocumentView', { id: newDoc.id });
+          }
+        },
+        { text: 'OK', style: 'cancel' }
+      ]);
+    } catch (error) {
+      console.error('Duplicate error:', error);
+      Alert.alert('Error', 'Failed to duplicate document');
+    } finally {
+      setDownloadLoading(false);
+    }
+  };
+
+  const showMenu = () => {
+    Alert.alert(
+      'Document Options',
+      'Choose an action',
+      [
+        { text: 'Edit', onPress: handleEdit },
+        { text: 'Duplicate', onPress: handleDuplicate },
+        { text: 'Delete', onPress: handleDelete, style: 'destructive' },
+        { text: 'Cancel', style: 'cancel' }
+      ]
+    );
+  };
+
+  // Helper function to download PDF
+  const downloadPDF = async (): Promise<string | null> => {
+    try {
+      console.log('Starting PDF download for document:', id);
+
+      if (!document) {
+        Alert.alert('Error', 'Document data is not available');
+        return null;
+      }
+
+      if (!token) {
+        Alert.alert('Error', 'Not authenticated. Please log in again.');
+        return null;
+      }
+
+      console.log('Token found from auth store');
+      const fileName = `${document.document_number || 'document'}.pdf`;
+      const fileUri = `${FileSystem.documentDirectory}${fileName}`;
+
+      console.log('Download URL:', `${api.defaults.baseURL}/documents/${id}/pdf`);
+
+      const downloadRes = await FileSystem.downloadAsync(
+        `${api.defaults.baseURL}/documents/${id}/pdf`,
+        fileUri,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        }
+      );
+
+      console.log('Download response status:', downloadRes.status);
+
+      if (downloadRes.status === 200) {
+        console.log('PDF downloaded successfully to:', downloadRes.uri);
+        return downloadRes.uri;
+      } else {
+        Alert.alert('Error', `Failed to download PDF. Status: ${downloadRes.status}`);
+        return null;
+      }
+    } catch (error: any) {
+      console.error('PDF Download Error:', error);
+      Alert.alert('Download Error', `Failed to download PDF: ${error.message || 'Unknown error'}`);
+      return null;
+    }
+  };
+
+  // Share via WhatsApp
+  const handleWhatsAppShare = async () => {
+    try {
+      setDownloadLoading(true);
+      setShowShareModal(false);
+
+      const fileUri = await downloadPDF();
+      if (!fileUri) return;
+
+      const docType = document?.type?.charAt(0).toUpperCase() + document?.type?.slice(1).replace('_', ' ') || 'Document';
+      const message = `Hello! Please find your ${docType} ${document?.document_number}.\n\nTotal: ${document?.currency} ${parseFloat(document?.total || 0).toFixed(2)}`;
+
+      const whatsappUrl = `whatsapp://send?text=${encodeURIComponent(message)}`;
+      const canOpen = await Linking.canOpenURL(whatsappUrl);
+
+      if (canOpen) {
+        await Linking.openURL(whatsappUrl);
+        setTimeout(async () => {
+          if (await Sharing.isAvailableAsync()) {
+            await Sharing.shareAsync(fileUri, {
+              mimeType: 'application/pdf',
+              dialogTitle: 'Share via WhatsApp',
+              UTI: 'com.adobe.pdf'
+            });
+          }
+        }, 500);
+      } else {
+        Alert.alert('WhatsApp Not Available', 'Please install WhatsApp to use this feature.');
+      }
+    } catch (error: any) {
+      console.error('WhatsApp share error:', error);
+      Alert.alert('Error', 'Failed to share via WhatsApp');
+    } finally {
+      setDownloadLoading(false);
+    }
+  };
+
+  // Share via Email
+  const handleEmailShare = async () => {
+    try {
+      setDownloadLoading(true);
+      setShowShareModal(false);
+
+      const fileUri = await downloadPDF();
+      if (!fileUri) return;
+
+      if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(fileUri, {
+          mimeType: 'application/pdf',
+          dialogTitle: `${document?.document_number}`,
+          UTI: 'com.adobe.pdf'
+        });
+      } else {
+        Alert.alert('Success', `PDF saved to: ${fileUri}`);
+      }
+    } catch (error: any) {
+      console.error('Email share error:', error);
+      Alert.alert('Error', 'Failed to share via email');
+    } finally {
+      setDownloadLoading(false);
+    }
+  };
+
+  // Download locally
+  const handleLocalDownload = async () => {
+    try {
+      setDownloadLoading(true);
+      setShowShareModal(false);
+
+      const fileUri = await downloadPDF();
+      if (!fileUri) return;
+
+      const sharingAvailable = await Sharing.isAvailableAsync();
+
+      if (sharingAvailable) {
+        await Sharing.shareAsync(fileUri, {
+          mimeType: 'application/pdf',
+          dialogTitle: 'Save Document',
+          UTI: 'com.adobe.pdf'
+        });
+      } else {
+        Alert.alert('Success', `PDF saved to: ${fileUri}`);
+      }
+    } catch (error: any) {
+      console.error('Local download error:', error);
+      Alert.alert('Error', 'Failed to download PDF');
+    } finally {
+      setDownloadLoading(false);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -67,7 +287,7 @@ export default function DocumentViewScreen() {
           <Ionicons name="arrow-back" size={24} color={colors.text.primary} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Document Details</Text>
-        <TouchableOpacity style={styles.menuButton}>
+        <TouchableOpacity style={styles.menuButton} onPress={showMenu}>
           <Ionicons name="ellipsis-horizontal" size={24} color={colors.text.primary} />
         </TouchableOpacity>
       </View>
@@ -80,6 +300,33 @@ export default function DocumentViewScreen() {
             {document?.status}
           </Text>
         </View>
+
+        {/* Company Preview Section */}
+        {currentCompany && (
+          <Card style={styles.sectionCard} padding={6}>
+            <Text style={styles.label}>COMPANY DETAILS</Text>
+            <View style={styles.companyContainer}>
+              {currentCompany.logo_url ? (
+                <Image
+                  source={{ uri: `${BASE_URL}${currentCompany.logo_url}` }}
+                  style={styles.companyLogo}
+                  resizeMode="contain"
+                />
+              ) : (
+                <View style={styles.companyLogoPlaceholder}>
+                  <Text style={styles.companyLogoText}>
+                    {currentCompany.name.charAt(0).toUpperCase()}
+                  </Text>
+                </View>
+              )}
+              <View style={styles.companyInfo}>
+                <Text style={styles.companyName}>{currentCompany.name}</Text>
+                {currentCompany.email && <Text style={styles.companyDetail}>{currentCompany.email}</Text>}
+                {currentCompany.address && <Text style={styles.companyDetail}>{currentCompany.address}</Text>}
+              </View>
+            </View>
+          </Card>
+        )}
 
         {/* Document Info */}
         <Card style={styles.sectionCard} padding={6}>
@@ -154,18 +401,83 @@ export default function DocumentViewScreen() {
       {/* Actions Footer */}
       <View style={[styles.footer, { paddingBottom: insets.bottom + spacing[4] }]}>
         <Button
-          title="Download PDF"
-          onPress={() => { }}
-          variant="outline"
-          style={styles.footerButton}
-        />
-        <Button
-          title="Send Email"
-          onPress={() => { }}
+          title="Share Document"
+          onPress={() => setShowShareModal(true)}
           gradient
-          style={styles.footerButton}
+          loading={downloadLoading}
+          fullWidth
         />
       </View>
+
+      {/* Share Modal */}
+      <Modal
+        visible={showShareModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowShareModal(false)}
+      >
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setShowShareModal(false)}
+        >
+          <View style={styles.shareModalContent}>
+            <Text style={styles.shareModalTitle}>Share Document</Text>
+
+            <TouchableOpacity
+              style={styles.shareOption}
+              onPress={handleWhatsAppShare}
+              disabled={downloadLoading}
+            >
+              <View style={[styles.shareIcon, { backgroundColor: '#25D366' + '15' }]}>
+                <Ionicons name="logo-whatsapp" size={24} color="#25D366" />
+              </View>
+              <View style={styles.shareOptionTextContainer}>
+                <Text style={styles.shareOptionText}>WhatsApp</Text>
+                <Text style={styles.shareOptionDesc}>Share via WhatsApp</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color={colors.gray[400]} />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.shareOption}
+              onPress={handleEmailShare}
+              disabled={downloadLoading}
+            >
+              <View style={[styles.shareIcon, { backgroundColor: colors.info[100] }]}>
+                <Ionicons name="mail" size={24} color={colors.info[600]} />
+              </View>
+              <View style={styles.shareOptionTextContainer}>
+                <Text style={styles.shareOptionText}>Email</Text>
+                <Text style={styles.shareOptionDesc}>Send via email</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color={colors.gray[400]} />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.shareOption}
+              onPress={handleLocalDownload}
+              disabled={downloadLoading}
+            >
+              <View style={[styles.shareIcon, { backgroundColor: colors.primary[100] }]}>
+                <Ionicons name="download" size={24} color={colors.primary[600]} />
+              </View>
+              <View style={styles.shareOptionTextContainer}>
+                <Text style={styles.shareOptionText}>Download</Text>
+                <Text style={styles.shareOptionDesc}>Save to device</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color={colors.gray[400]} />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.cancelButton}
+              onPress={() => setShowShareModal(false)}
+            >
+              <Text style={styles.cancelButtonText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </View>
   );
 }
@@ -241,6 +553,44 @@ const createStyles = (colors: Colors) => StyleSheet.create({
     fontSize: typography.fontSize.base,
     fontWeight: typography.fontWeight.semibold,
     color: colors.text.primary,
+  },
+  companyName: {
+    fontSize: typography.fontSize.lg,
+    fontWeight: typography.fontWeight.bold,
+    color: colors.text.primary,
+    marginBottom: spacing[1],
+  },
+  companyDetail: {
+    fontSize: typography.fontSize.sm,
+    color: colors.text.secondary,
+  },
+  companyContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: spacing[2],
+  },
+  companyLogo: {
+    width: 60,
+    height: 60,
+    borderRadius: borderRadius.lg,
+    marginRight: spacing[4],
+  },
+  companyLogoPlaceholder: {
+    width: 60,
+    height: 60,
+    borderRadius: borderRadius.lg,
+    backgroundColor: colors.primary[100],
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: spacing[4],
+  },
+  companyLogoText: {
+    fontSize: typography.fontSize['2xl'],
+    fontWeight: typography.fontWeight.bold,
+    color: colors.primary[600],
+  },
+  companyInfo: {
+    flex: 1,
   },
   divider: {
     height: 1,
@@ -323,13 +673,65 @@ const createStyles = (colors: Colors) => StyleSheet.create({
     left: 0,
     right: 0,
     backgroundColor: colors.background.primary,
-    flexDirection: 'row',
     padding: spacing[4],
     borderTopWidth: 1,
     borderTopColor: colors.gray[100],
-    gap: spacing[4],
   },
-  footerButton: {
+  modalOverlay: {
     flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
+  },
+  shareModalContent: {
+    backgroundColor: colors.background.primary,
+    borderTopLeftRadius: borderRadius.xl,
+    borderTopRightRadius: borderRadius.xl,
+    padding: spacing[6],
+    paddingBottom: spacing[10],
+  },
+  shareModalTitle: {
+    fontSize: typography.fontSize.xl,
+    fontWeight: typography.fontWeight.bold,
+    color: colors.text.primary,
+    marginBottom: spacing[6],
+    textAlign: 'center',
+  },
+  shareOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: spacing[4],
+    borderBottomWidth: 1,
+    borderBottomColor: colors.gray[100],
+  },
+  shareIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: borderRadius.full,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: spacing[4],
+  },
+  shareOptionTextContainer: {
+    flex: 1,
+  },
+  shareOptionText: {
+    fontSize: typography.fontSize.base,
+    fontWeight: typography.fontWeight.semibold,
+    color: colors.text.primary,
+    marginBottom: 2,
+  },
+  shareOptionDesc: {
+    fontSize: typography.fontSize.sm,
+    color: colors.text.secondary,
+  },
+  cancelButton: {
+    marginTop: spacing[4],
+    paddingVertical: spacing[4],
+    alignItems: 'center',
+  },
+  cancelButtonText: {
+    fontSize: typography.fontSize.base,
+    fontWeight: typography.fontWeight.semibold,
+    color: colors.text.secondary,
   },
 });

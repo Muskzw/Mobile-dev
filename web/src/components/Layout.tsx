@@ -9,7 +9,8 @@ import {
   LogOut,
   Menu,
   X,
-  CreditCard
+  CreditCard,
+  Package
 } from 'lucide-react';
 import { useState } from 'react';
 
@@ -36,6 +37,7 @@ export default function Layout({ children }: LayoutProps) {
     { path: '/delivery-notes', icon: FileText, label: 'Delivery Notes' },
     { path: '/receipts', icon: FileText, label: 'Receipts' },
     { path: '/clients', icon: Users, label: 'Clients' },
+    { path: '/products', icon: Package, label: 'Products' },
     { path: '/companies', icon: Building2, label: 'Companies' },
     { path: '/subscription', icon: CreditCard, label: 'Subscription' },
     { path: '/settings', icon: Settings, label: 'Settings' }

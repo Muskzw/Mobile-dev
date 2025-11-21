@@ -78,6 +78,42 @@ export default function ClientViewScreen() {
         },
     });
 
+    const handleDelete = () => {
+        Alert.alert(
+            'Delete Client',
+            'Are you sure you want to delete this client? All associated documents will also be deleted.',
+            [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                    text: 'Delete',
+                    style: 'destructive',
+                    onPress: async () => {
+                        try {
+                            await api.delete(`/clients/${clientId}`);
+                            queryClient.invalidateQueries({ queryKey: ['clients'] });
+                            navigation.goBack();
+                        } catch (error) {
+                            console.error('Delete error:', error);
+                            Alert.alert('Error', 'Failed to delete client');
+                        }
+                    }
+                }
+            ]
+        );
+    };
+
+    const showMenu = () => {
+        Alert.alert(
+            'Client Options',
+            'Choose an action',
+            [
+                { text: 'Edit', onPress: () => setIsEditing(true) },
+                { text: 'Delete', onPress: handleDelete, style: 'destructive' },
+                { text: 'Cancel', style: 'cancel' }
+            ]
+        );
+    };
+
     const handleSave = () => {
         if (!editedClient?.name || !editedClient?.email) {
             Alert.alert('Error', 'Name and email are required');
@@ -132,8 +168,8 @@ export default function ClientViewScreen() {
                 </TouchableOpacity>
                 <Text style={styles.title}>Client Details</Text>
                 {!isEditing && (
-                    <TouchableOpacity onPress={() => setIsEditing(true)}>
-                        <Ionicons name="create-outline" size={24} color={colors.primary[600]} />
+                    <TouchableOpacity onPress={showMenu} style={styles.menuButton}>
+                        <Ionicons name="ellipsis-horizontal" size={24} color={colors.text.primary} />
                     </TouchableOpacity>
                 )}
                 {isEditing && <View style={{ width: 40 }} />}
@@ -274,6 +310,9 @@ const createStyles = (colors: Colors) => StyleSheet.create({
         borderBottomColor: colors.gray[100],
     },
     backButton: {
+        padding: spacing[2],
+    },
+    menuButton: {
         padding: spacing[2],
     },
     title: {

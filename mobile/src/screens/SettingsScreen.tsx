@@ -27,7 +27,7 @@ export default function SettingsScreen() {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
   const { user, currentCompany, companies, setAuth, setCurrentCompany, logout } = useAuthStore();
-  const { colors, isDark, toggleTheme } = useTheme();
+  const { colors, isDark } = useTheme();
   const styles = createStyles(colors);
 
   const [loading, setLoading] = useState(false);
@@ -322,13 +322,14 @@ export default function SettingsScreen() {
             onValueChange={setNotifications}
           />
           <View style={styles.divider} />
-          <SettingItem
-            icon="moon"
-            title="Dark Mode"
-            subtitle="Switch between light and dark themes"
-            value={isDark}
-            onValueChange={toggleTheme}
-          />
+          <TouchableOpacity>
+            <SettingItem
+              icon="moon"
+              title="Dark Mode"
+              subtitle="Follows your device system settings"
+              type="link"
+            />
+          </TouchableOpacity>
         </Card>
 
         {/* Support */}

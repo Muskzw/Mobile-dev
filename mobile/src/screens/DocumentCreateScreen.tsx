@@ -43,7 +43,7 @@ export default function DocumentCreateScreen({ route }: any) {
   const queryClient = useQueryClient();
   const { colors, isDark } = useTheme();
   const styles = createStyles(colors);
-  const { type = 'QUOTATION' } = route.params || {};
+  const { type = 'QUOTATION', editMode = false, documentId = null } = route.params || {};
 
   // State
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
@@ -70,6 +70,45 @@ export default function DocumentCreateScreen({ route }: any) {
       return response.data;
     }
   });
+
+  // Fetch document details if in edit mode
+  useEffect(() => {
+    if (editMode && documentId) {
+      const fetchDocument = async () => {
+        try {
+          setLoading(true);
+          const response = await api.get(`/documents/${documentId}`);
+          const doc = response.data;
+
+          // Populate state
+          if (doc.client) {
+            setSelectedClient(doc.client);
+          }
+
+          if (doc.items) {
+            setItems(doc.items.map((item: any) => ({
+              id: item.id || Date.now().toString() + Math.random(),
+              description: item.name || item.description,
+              quantity: item.quantity.toString(),
+              unit_price: item.unit_price.toString()
+            })));
+          }
+
+          if (doc.issue_date) {
+            setDate(new Date(doc.issue_date));
+          }
+
+        } catch (error) {
+          console.error('Fetch document error:', error);
+          Alert.alert('Error', 'Failed to load document details');
+          navigation.goBack();
+        } finally {
+          setLoading(false);
+        }
+      };
+      fetchDocument();
+    }
+  }, [editMode, documentId]);
 
   // Calculations
   const subtotal = items.reduce((sum, item) => {
@@ -116,7 +155,7 @@ export default function DocumentCreateScreen({ route }: any) {
 
     setLoading(true);
     try {
-      await api.post('/documents', {
+      const payload = {
         type: type.toLowerCase(),
         clientId: selectedClient.id,
         issueDate: date.toISOString().split('T')[0],
@@ -128,29 +167,56 @@ export default function DocumentCreateScreen({ route }: any) {
         })),
         currency: 'USD',
         taxRate
-      });
+      };
+
+      console.log('Creating/Updating document with payload:', JSON.stringify(payload, null, 2));
+
+      if (editMode && documentId) {
+        await api.put(`/documents/${documentId}`, payload);
+        Alert.alert('Success', `${type} updated successfully`, [
+          { text: 'OK', onPress: () => navigation.goBack() }
+        ]);
+      } else {
+        const response = await api.post('/documents', payload);
+        console.log('Document created successfully:', response.data);
+        Alert.alert('Success', `${type} created successfully`, [
+          { text: 'OK', onPress: () => navigation.goBack() }
+        ]);
+      }
 
       queryClient.invalidateQueries({ queryKey: ['documents'] });
+      queryClient.invalidateQueries({ queryKey: ['document', documentId] });
       queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
-      Alert.alert('Success', `${type} created successfully`, [
-        { text: 'OK', onPress: () => navigation.goBack() }
-      ]);
-    } catch (error) {
-      console.error(error);
-      Alert.alert('Error', `Failed to create ${type.toLowerCase()}`);
+
+    } catch (error: any) {
+      console.error('Create document error:', error);
+      console.error('Error response:', error.response?.data);
+      console.error('Error status:', error.response?.status);
+
+      let errorMessage = `Failed to create ${type.toLowerCase()}`;
+      if (error.response?.data?.error) {
+        errorMessage += `: ${error.response.data.error}`;
+      } else if (error.response?.data?.errors) {
+        errorMessage += `: ${error.response.data.errors.map((e: any) => e.msg || e.message).join(', ')}`;
+      } else if (error.message) {
+        errorMessage += `: ${error.message}`;
+      }
+
+      Alert.alert('Error', errorMessage);
     } finally {
       setLoading(false);
     }
   };
 
   const getTitle = () => {
+    const prefix = editMode ? 'Edit' : 'New';
     switch (type) {
-      case 'INVOICE': return 'New Invoice';
-      case 'PURCHASE_ORDER': return 'New Purchase Order';
-      case 'PROFORMA': return 'New Proforma';
-      case 'DELIVERY_NOTE': return 'New Delivery Note';
-      case 'RECEIPT': return 'New Receipt';
-      default: return 'New Quotation';
+      case 'INVOICE': return `${prefix} Invoice`;
+      case 'PURCHASE_ORDER': return `${prefix} Purchase Order`;
+      case 'PROFORMA': return `${prefix} Proforma`;
+      case 'DELIVERY_NOTE': return `${prefix} Delivery Note`;
+      case 'RECEIPT': return `${prefix} Receipt`;
+      default: return `${prefix} Quotation`;
     }
   };
 
@@ -308,7 +374,7 @@ export default function DocumentCreateScreen({ route }: any) {
 
         <View style={[styles.footer, { paddingBottom: insets.bottom + spacing[4] }]}>
           <Button
-            title="Create Quotation"
+            title={`${editMode ? 'Update' : 'Create'} ${type.charAt(0).toUpperCase() + type.slice(1).toLowerCase().replace('_', ' ')}`}
             onPress={handleSave}
             gradient
             loading={loading}

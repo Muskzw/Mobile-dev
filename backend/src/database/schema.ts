@@ -63,7 +63,7 @@ export async function createTables() {
         company_id UUID REFERENCES companies(id) ON DELETE CASCADE,
         client_id UUID REFERENCES clients(id) ON DELETE SET NULL,
         type VARCHAR(50) NOT NULL CHECK (type IN ('quotation', 'invoice', 'proforma', 'receipt', 'delivery_note')),
-        document_number VARCHAR(100) UNIQUE NOT NULL,
+        document_number VARCHAR(100) NOT NULL,
         status VARCHAR(50) DEFAULT 'draft' CHECK (status IN ('draft', 'sent', 'accepted', 'rejected', 'paid', 'overdue')),
         issue_date DATE NOT NULL,
         due_date DATE,
@@ -78,7 +78,8 @@ export async function createTables() {
         paid_at TIMESTAMP,
         metadata JSONB,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE (company_id, document_number)
       )
     `);
 

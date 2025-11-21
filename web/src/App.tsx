@@ -10,6 +10,7 @@ import Dashboard from './pages/Dashboard';
 import Companies from './pages/Companies';
 import CompanySetup from './pages/CompanySetup';
 import Clients from './pages/Clients';
+import Products from './pages/Products';
 import Settings from './pages/Settings';
 import QuotesPage from './pages/quotes/QuotesPage';
 import QuoteEditor from './pages/quotes/QuoteEditor';
@@ -65,6 +66,11 @@ function App() {
             <Route path="/clients" element={
               <PrivateRoute>
                 <Clients />
+              </PrivateRoute>
+            } />
+            <Route path="/products" element={
+              <PrivateRoute>
+                <Products />
               </PrivateRoute>
             } />
             <Route path="/settings" element={
