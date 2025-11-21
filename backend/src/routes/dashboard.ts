@@ -55,13 +55,20 @@ router.get('/stats', async (req: AuthRequest, res: Response) => {
       [req.companyId]
     );
 
+    // Total clients
+    const clientsResult = await pool.query(
+      `SELECT COUNT(*) as total FROM clients WHERE company_id = $1 OR user_id = $2`,
+      [req.companyId, req.userId]
+    );
+
     res.json({
       quotations: {
         total: parseInt(quotationsResult.rows[0].total),
         draft: parseInt(quotationsResult.rows[0].draft),
         sent: parseInt(quotationsResult.rows[0].sent),
         accepted: parseInt(quotationsResult.rows[0].accepted),
-        rejected: parseInt(quotationsResult.rows[0].rejected)
+        rejected: parseInt(quotationsResult.rows[0].rejected),
+        pending: parseInt(quotationsResult.rows[0].sent) + parseInt(quotationsResult.rows[0].draft)
       },
       invoices: {
         total: parseInt(invoicesResult.rows[0].total),
@@ -69,6 +76,9 @@ router.get('/stats', async (req: AuthRequest, res: Response) => {
         overdue: parseInt(invoicesResult.rows[0].overdue),
         totalPaid: parseFloat(invoicesResult.rows[0].total_paid || 0),
         totalPending: parseFloat(invoicesResult.rows[0].total_pending || 0)
+      },
+      clients: {
+        total: parseInt(clientsResult.rows[0].total)
       },
       upcomingDeadlines: parseInt(deadlinesResult.rows[0].count),
       recentActivity: recentResult.rows

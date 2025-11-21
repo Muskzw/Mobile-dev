@@ -8,6 +8,7 @@ import {
   StatusBar,
   RefreshControl,
   ScrollView,
+  Modal,
 } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigation } from '@react-navigation/native';
@@ -27,6 +28,7 @@ export default function DocumentsScreen() {
   const styles = createStyles(colors);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState('ALL');
+  const [showCreateModal, setShowCreateModal] = useState(false);
 
   const { data: documents, isLoading, refetch } = useQuery({
     queryKey: ['documents'],
@@ -84,7 +86,7 @@ export default function DocumentsScreen() {
         <View style={styles.cardHeader}>
           <View style={styles.documentIcon}>
             <Ionicons
-              name={item.type === 'INVOICE' ? 'receipt' : 'document-text'}
+              name={item.type === 'invoice' ? 'receipt' : 'document-text'}
               size={24}
               color={colors.primary[600]}
             />
@@ -140,12 +142,12 @@ export default function DocumentsScreen() {
         />
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filters} contentContainerStyle={styles.filtersContent}>
           <FilterTab title="All" value="ALL" />
-          <FilterTab title="Quotes" value="QUOTATION" />
-          <FilterTab title="Invoices" value="INVOICE" />
-          <FilterTab title="POs" value="PURCHASE_ORDER" />
-          <FilterTab title="Proforma" value="PROFORMA" />
-          <FilterTab title="Delivery" value="DELIVERY_NOTE" />
-          <FilterTab title="Receipts" value="RECEIPT" />
+          <FilterTab title="Quotes" value="quotation" />
+          <FilterTab title="Invoices" value="invoice" />
+          <FilterTab title="POs" value="purchase_order" />
+          <FilterTab title="Proforma" value="proforma" />
+          <FilterTab title="Delivery" value="delivery_note" />
+          <FilterTab title="Receipts" value="receipt" />
         </ScrollView>
       </View>
 
@@ -176,7 +178,7 @@ export default function DocumentsScreen() {
       <TouchableOpacity
         style={styles.fabContainer}
         activeOpacity={0.8}
-        onPress={() => navigation.navigate('DocumentCreate' as never)}
+        onPress={() => setShowCreateModal(true)}
       >
         <LinearGradient
           colors={colors.gradients.primary as any}
@@ -187,6 +189,89 @@ export default function DocumentsScreen() {
           <Ionicons name="add" size={32} color="white" />
         </LinearGradient>
       </TouchableOpacity>
+
+      {/* Create Modal */}
+      <Modal
+        visible={showCreateModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowCreateModal(false)}
+      >
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setShowCreateModal(false)}
+        >
+          <View style={styles.createModalContent}>
+            <Text style={styles.createModalTitle}>Create New</Text>
+
+            <TouchableOpacity
+              style={styles.createOption}
+              onPress={() => {
+                setShowCreateModal(false);
+                (navigation as any).navigate('DocumentCreate', { type: 'QUOTATION' });
+              }}
+            >
+              <View style={[styles.createIcon, { backgroundColor: colors.primary[100] }]}>
+                <Ionicons name="document-text" size={24} color={colors.primary[600]} />
+              </View>
+              <Text style={styles.createOptionText}>Quotation</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.createOption}
+              onPress={() => {
+                setShowCreateModal(false);
+                (navigation as any).navigate('DocumentCreate', { type: 'INVOICE' });
+              }}
+            >
+              <View style={[styles.createIcon, { backgroundColor: colors.secondary[100] }]}>
+                <Ionicons name="receipt" size={24} color={colors.secondary[600]} />
+              </View>
+              <Text style={styles.createOptionText}>Invoice</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.createOption}
+              onPress={() => {
+                setShowCreateModal(false);
+                (navigation as any).navigate('DocumentCreate', { type: 'PROFORMA' });
+              }}
+            >
+              <View style={[styles.createIcon, { backgroundColor: colors.info[100] }]}>
+                <Ionicons name="clipboard" size={24} color={colors.info[600]} />
+              </View>
+              <Text style={styles.createOptionText}>Proforma Invoice</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.createOption}
+              onPress={() => {
+                setShowCreateModal(false);
+                (navigation as any).navigate('DocumentCreate', { type: 'DELIVERY_NOTE' });
+              }}
+            >
+              <View style={[styles.createIcon, { backgroundColor: colors.warning[100] }]}>
+                <Ionicons name="bus" size={24} color={colors.warning[600]} />
+              </View>
+              <Text style={styles.createOptionText}>Delivery Note</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.createOption}
+              onPress={() => {
+                setShowCreateModal(false);
+                (navigation as any).navigate('DocumentCreate', { type: 'RECEIPT' });
+              }}
+            >
+              <View style={[styles.createIcon, { backgroundColor: colors.success[100] }]}>
+                <Ionicons name="checkmark-circle" size={24} color={colors.success[600]} />
+              </View>
+              <Text style={styles.createOptionText}>Receipt</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </View>
   );
 }
@@ -356,5 +441,44 @@ const createStyles = (colors: Colors) => StyleSheet.create({
     borderRadius: borderRadius.full,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
+  },
+  createModalContent: {
+    backgroundColor: colors.background.primary,
+    borderTopLeftRadius: borderRadius.xl,
+    borderTopRightRadius: borderRadius.xl,
+    padding: spacing[6],
+    paddingBottom: spacing[10],
+  },
+  createModalTitle: {
+    fontSize: typography.fontSize.xl,
+    fontWeight: typography.fontWeight.bold,
+    color: colors.text.primary,
+    marginBottom: spacing[6],
+    textAlign: 'center',
+  },
+  createOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: spacing[3],
+    borderBottomWidth: 1,
+    borderBottomColor: colors.gray[100],
+  },
+  createIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: borderRadius.full,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: spacing[4],
+  },
+  createOptionText: {
+    fontSize: typography.fontSize.lg,
+    fontWeight: typography.fontWeight.medium,
+    color: colors.text.primary,
   },
 });

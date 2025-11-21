@@ -23,23 +23,46 @@ async function generateDocumentNumber(type: string, companyId: string): Promise<
 
   const prefix = prefixMap[type] || 'DOC';
   const year = new Date().getFullYear();
+  const pattern = `${prefix}-${year}-%`;
 
-  // Get the last document number for this type and year
-  const result = await pool.query(
-    `SELECT document_number FROM documents 
-     WHERE company_id = $1 AND type = $2 AND document_number LIKE $3
-     ORDER BY created_at DESC LIMIT 1`,
-    [companyId, type, `${prefix}-${year}-%`]
-  );
+  // Use a transaction to ensure atomicity
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
 
-  let sequence = 1;
-  if (result.rows.length > 0) {
-    const lastNumber = result.rows[0].document_number;
-    const lastSeq = parseInt(lastNumber.split('-')[2], 10);
-    sequence = isNaN(lastSeq) ? 1 : lastSeq + 1;
+    // Get the maximum sequence number with row-level lock
+    const result = await client.query(
+      `SELECT document_number FROM documents 
+       WHERE company_id = $1 AND type = $2 AND document_number LIKE $3
+       ORDER BY document_number DESC
+       LIMIT 1
+       FOR UPDATE`,
+      [companyId, type, pattern]
+    );
+
+    let sequence = 1;
+    if (result.rows.length > 0) {
+      const lastNumber = result.rows[0].document_number;
+      // Extract sequence: "QTE-2025-0001" -> "0001" -> 1
+      const parts = lastNumber.split('-');
+      if (parts.length === 3) {
+        const lastSeq = parseInt(parts[2], 10);
+        sequence = isNaN(lastSeq) ? 1 : lastSeq + 1;
+      }
+    }
+
+    const documentNumber = `${prefix}-${year}-${sequence.toString().padStart(4, '0')}`;
+
+    await client.query('COMMIT');
+    return documentNumber;
+  } catch (error) {
+    await client.query('ROLLBACK');
+    // Fallback to timestamp if something goes wrong
+    const timestamp = Date.now().toString().slice(-6);
+    return `${prefix}-${year}-${timestamp}`;
+  } finally {
+    client.release();
   }
-
-  return `${prefix}-${year}-${sequence.toString().padStart(4, '0')}`;
 }
 
 // Create document
@@ -51,6 +74,7 @@ router.post('/', [
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
+      console.error('Document validation errors:', JSON.stringify(errors.array(), null, 2));
       return res.status(400).json({ errors: errors.array() });
     }
 
@@ -79,64 +103,109 @@ router.post('/', [
     const companyResult = await pool.query('SELECT currency FROM companies WHERE id = $1', [req.companyId]);
     const currency = companyResult.rows[0]?.currency || 'USD';
 
-    const documentNumber = await generateDocumentNumber(type, req.companyId!);
+    // Use a single transaction for number generation AND document insertion
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
 
-    // Create document
-    const docResult = await pool.query(
-      `INSERT INTO documents (
-        company_id, client_id, type, document_number, issue_date, due_date,
-        subtotal, tax_rate, tax_amount, total, currency, notes, terms, metadata
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
-      RETURNING *`,
-      [
-        req.companyId,
-        clientId || null,
-        type,
-        documentNumber,
-        issueDate || new Date().toISOString().split('T')[0],
-        dueDate || null,
-        subtotal,
-        taxRate || 0,
-        taxAmount,
-        total,
-        currency,
-        notes || null,
-        terms || null,
-        req.body.metadata || null
-      ]
-    );
+      // Lock the company row to prevent race conditions (gap locking)
+      await client.query('SELECT id FROM companies WHERE id = $1 FOR UPDATE', [req.companyId]);
 
-    const document = docResult.rows[0];
+      // Generate document number within the transaction
+      const prefix = type === 'quotation' ? 'QTE' : type === 'invoice' ? 'INV' : type === 'proforma' ? 'PRO' : type === 'delivery_note' ? 'DN' : type === 'receipt' ? 'RCT' : 'DOC';
+      const year = new Date().getFullYear();
+      const pattern = `${prefix}-${year}-%`;
 
-    // Create document items
-    for (let i = 0; i < items.length; i++) {
-      const item = items[i];
-      const itemTotal = parseFloat(item.quantity) * parseFloat(item.unitPrice);
+      // Get all document numbers for this type/year to correctly determine the next sequence
+      const numberResult = await client.query(
+        `SELECT document_number FROM documents 
+         WHERE company_id = $1 AND type = $2 AND document_number LIKE $3`,
+        [req.companyId, type, pattern]
+      );
 
-      await pool.query(
-        `INSERT INTO document_items (
-          document_id, name, description, quantity, unit_price, tax_rate, total, sort_order
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+      let sequence = 1;
+      if (numberResult.rows.length > 0) {
+        const maxSeq = numberResult.rows.reduce((max: number, row: any) => {
+          const parts = row.document_number.split('-');
+          if (parts.length === 3) {
+            const seq = parseInt(parts[2], 10);
+            return isNaN(seq) ? max : Math.max(max, seq);
+          }
+          return max;
+        }, 0);
+        sequence = maxSeq + 1;
+      }
+
+      const documentNumber = `${prefix}-${year}-${sequence.toString().padStart(4, '0')}`;
+
+      // Create document in the SAME transaction
+      const docResult = await client.query(
+        `INSERT INTO documents (
+          company_id, client_id, type, document_number, issue_date, due_date,
+          subtotal, tax_rate, tax_amount, total, currency, notes, terms, metadata
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+        RETURNING *`,
         [
-          document.id,
-          item.name,
-          item.description || null,
-          item.quantity,
-          item.unitPrice,
-          item.taxRate || 0,
-          itemTotal,
-          i
+          req.companyId,
+          clientId || null,
+          type,
+          documentNumber,
+          issueDate || new Date().toISOString().split('T')[0],
+          dueDate || null,
+          subtotal,
+          taxRate || 0,
+          taxAmount,
+          total,
+          currency,
+          notes || null,
+          terms || null,
+          req.body.metadata || null
         ]
       );
+
+      const document = docResult.rows[0];
+
+      // Create document items
+      for (let i = 0; i < items.length; i++) {
+        const item = items[i];
+        const itemTotal = parseFloat(item.quantity) * parseFloat(item.unitPrice);
+
+        await client.query(
+          `INSERT INTO document_items (
+            document_id, name, description, quantity, unit_price, tax_rate, total, sort_order
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+          [
+            document.id,
+            item.name,
+            item.description || null,
+            item.quantity,
+            item.unitPrice,
+            item.taxRate || 0,
+            itemTotal,
+            i
+          ]
+        );
+      }
+
+      // Commit the transaction
+      await client.query('COMMIT');
+
+      // Fetch complete document with items
+      const completeDoc = await getDocumentWithItems(document.id);
+
+      res.status(201).json(completeDoc);
+    } catch (error) {
+      await client.query('ROLLBACK');
+      console.error('Create document error:', error);
+      res.status(500).json({ error: 'Server error' });
+    } finally {
+      client.release();
     }
-
-    // Fetch complete document with items
-    const completeDoc = await getDocumentWithItems(document.id);
-
-    res.status(201).json(completeDoc);
   } catch (error) {
-    console.error('Create document error:', error);
-    res.status(500).json({ error: 'Server error' });
+    console.error('Route error:', error);
+    if (!res.headersSent) {
+      res.status(500).json({ error: 'Server error' });
+    }
   }
 });
 

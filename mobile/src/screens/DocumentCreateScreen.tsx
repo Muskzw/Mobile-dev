@@ -117,10 +117,11 @@ export default function DocumentCreateScreen({ route }: any) {
     setLoading(true);
     try {
       await api.post('/documents', {
-        type: type.toUpperCase(),
+        type: type.toLowerCase(),
         clientId: selectedClient.id,
-        date: date.toISOString(),
+        issueDate: date.toISOString().split('T')[0],
         items: items.map(item => ({
+          name: item.description,
           description: item.description,
           quantity: parseFloat(item.quantity),
           unitPrice: parseFloat(item.unit_price)
