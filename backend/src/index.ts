@@ -6,6 +6,7 @@ import { createTables } from './database/schema';
 
 // Routes
 import authRoutes from './routes/auth';
+import passwordResetRoutes from './routes/passwordReset';
 import companyRoutes from './routes/companies';
 import clientRoutes from './routes/clients';
 import documentRoutes from './routes/documents';
@@ -61,6 +62,7 @@ createTables().then(() => {
 
 // Routes
 app.use('/api/auth', authRoutes);
+app.use('/api/password', passwordResetRoutes);
 app.use('/api/companies', companyRoutes);
 app.use('/api/clients', clientRoutes);
 app.use('/api/documents', documentRoutes);

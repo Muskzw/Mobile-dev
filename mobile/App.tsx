@@ -24,6 +24,9 @@ import ContactUsScreen from './src/screens/ContactUsScreen';
 import ClientViewScreen from './src/screens/ClientViewScreen';
 import CompaniesScreen from './src/screens/CompaniesScreen';
 import SettingsScreen from './src/screens/SettingsScreen';
+import ForgotPasswordScreen from './src/screens/ForgotPasswordScreen';
+import PrivacyPolicyScreen from './src/screens/PrivacyPolicyScreen';
+import TermsOfServiceScreen from './src/screens/TermsOfServiceScreen';
 
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -125,6 +128,7 @@ function AppNavigator() {
           <>
             <Stack.Screen name="Login" component={LoginScreen} />
             <Stack.Screen name="Register" component={RegisterScreen} />
+            <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
           </>
         ) : (
           /* App Stack */
@@ -137,6 +141,8 @@ function AppNavigator() {
             <Stack.Screen name="Products" component={ProductsScreen} />
             <Stack.Screen name="ContactUs" component={ContactUsScreen} />
             <Stack.Screen name="Companies" component={CompaniesScreen} />
+            <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicyScreen} />
+            <Stack.Screen name="TermsOfService" component={TermsOfServiceScreen} />
           </>
         )}
       </Stack.Navigator>

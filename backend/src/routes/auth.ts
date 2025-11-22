@@ -153,5 +153,110 @@ router.get('/me', authenticate, async (req: AuthRequest, res: Response) => {
   }
 });
 
+// Forgot Password - Request reset token
+router.post('/forgot-password', [
+  body('email').isEmail().normalizeEmail()
+], async (req: Request, res: Response) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+
+    const { email } = req.body;
+
+    // Check if user exists
+    const userResult = await pool.query(
+      'SELECT id, email, full_name FROM users WHERE email = $1',
+      [email]
+    );
+
+    // Always return success to prevent email enumeration attacks
+    if (userResult.rows.length === 0) {
+      return res.json({
+        message: 'If an account exists with that email, you will receive password reset instructions.'
+      });
+    }
+
+    const user = userResult.rows[0];
+
+    // Generate reset token (using crypto for security)
+    const crypto = require('crypto');
+    const resetToken = crypto.randomBytes(32).toString('hex');
+    const resetTokenHash = crypto.createHash('sha256').update(resetToken).digest('hex');
+    const resetTokenExpiry = new Date(Date.now() + 3600000); // 1 hour from now
+
+    // Store reset token in database
+    await pool.query(
+      `UPDATE users 
+       SET reset_token = $1, reset_token_expiry = $2 
+       WHERE id = $3`,
+      [resetTokenHash, resetTokenExpiry, user.id]
+    );
+
+    // Send password reset email
+    const { sendPasswordResetEmail } = require('../utils/email');
+    await sendPasswordResetEmail(user.email, user.full_name || 'User', resetToken);
+
+    res.json({
+      message: 'If an account exists with that email, you will receive password reset instructions.'
+    });
+
+  } catch (error) {
+    console.error('Forgot password error:', error);
+    res.status(500).json({ message: 'Failed to process password reset request' });
+  }
+});
+
+// Reset Password - Validate token and update password
+router.post('/reset-password', [
+  body('token').notEmpty(),
+  body('newPassword').isLength({ min: 6 })
+], async (req: Request, res: Response) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+
+    const { token, newPassword } = req.body;
+
+    // Hash the token to compare with database
+    const crypto = require('crypto');
+    const resetTokenHash = crypto.createHash('sha256').update(token).digest('hex');
+
+    // Find user with valid reset token
+    const userResult = await pool.query(
+      `SELECT id, email FROM users 
+       WHERE reset_token = $1 
+       AND reset_token_expiry > NOW()`,
+      [resetTokenHash]
+    );
+
+    if (userResult.rows.length === 0) {
+      return res.status(400).json({ message: 'Invalid or expired reset token' });
+    }
+
+    const user = userResult.rows[0];
+
+    // Hash new password
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    // Update password and clear reset token
+    await pool.query(
+      `UPDATE users 
+       SET password_hash = $1, reset_token = NULL, reset_token_expiry = NULL 
+       WHERE id = $2`,
+      [hashedPassword, user.id]
+    );
+
+    res.json({ message: 'Password has been reset successfully' });
+
+  } catch (error) {
+    console.error('Reset password error:', error);
+    res.status(500).json({ message: 'Failed to reset password' });
+  }
+});
+
 export default router;
 

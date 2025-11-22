@@ -14,6 +14,8 @@ export async function createTables() {
         subscription_status VARCHAR(50) DEFAULT 'trial',
         trial_ends_at TIMESTAMP,
         subscription_ends_at TIMESTAMP,
+        reset_token VARCHAR(255),
+        reset_token_expiry TIMESTAMP,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )

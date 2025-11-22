@@ -446,10 +446,18 @@ export default function SettingsScreen() {
             />
           </TouchableOpacity>
           <View style={styles.divider} />
-          <TouchableOpacity>
+          <TouchableOpacity onPress={() => (navigation as any).navigate('PrivacyPolicy')}>
             <SettingItem
               icon="shield-checkmark"
               title="Privacy Policy"
+              type="link"
+            />
+          </TouchableOpacity>
+          <View style={styles.divider} />
+          <TouchableOpacity onPress={() => (navigation as any).navigate('TermsOfService')}>
+            <SettingItem
+              icon="document-text-outline"
+              title="Terms of Service"
               type="link"
             />
           </TouchableOpacity>
