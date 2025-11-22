@@ -19,6 +19,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import api from '../api/client';
 import { useTheme } from '../context/ThemeContext';
+import { useAuthStore } from '../store/authStore';
 import { spacing, typography, borderRadius, shadows, Colors } from '../theme';
 import { Button } from '../components/Button';
 import { Input } from '../components/Input';
@@ -37,6 +38,8 @@ interface Item {
   unit_price: string;
 }
 
+const CURRENCIES = ['USD', 'EUR', 'GBP', 'CAD', 'AUD', 'ZAR', 'JPY', 'CNY', 'INR'];
+
 export default function DocumentCreateScreen({ route }: any) {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
@@ -44,6 +47,7 @@ export default function DocumentCreateScreen({ route }: any) {
   const { colors, isDark } = useTheme();
   const styles = createStyles(colors);
   const { type = 'QUOTATION', editMode = false, documentId = null } = route.params || {};
+  const { currentCompany } = useAuthStore();
 
   // State
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
@@ -53,6 +57,12 @@ export default function DocumentCreateScreen({ route }: any) {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [date, setDate] = useState(new Date());
   const [loading, setLoading] = useState(false);
+  const [clientSearch, setClientSearch] = useState('');
+  const [productSearch, setProductSearch] = useState('');
+  const [taxRate, setTaxRate] = useState(currentCompany?.taxRate?.toString() || '10');
+  const [currency, setCurrency] = useState(currentCompany?.currency || 'USD');
+  const [terms, setTerms] = useState(currentCompany?.terms || '');
+  const [showCurrencyModal, setShowCurrencyModal] = useState(false);
 
   // Queries
   const { data: clients } = useQuery({
@@ -97,6 +107,9 @@ export default function DocumentCreateScreen({ route }: any) {
           if (doc.issue_date) {
             setDate(new Date(doc.issue_date));
           }
+          if (doc.tax_rate) setTaxRate(doc.tax_rate.toString());
+          if (doc.currency) setCurrency(doc.currency);
+          if (doc.terms) setTerms(doc.terms);
 
         } catch (error) {
           console.error('Fetch document error:', error);
@@ -114,8 +127,7 @@ export default function DocumentCreateScreen({ route }: any) {
   const subtotal = items.reduce((sum, item) => {
     return sum + (parseFloat(item.quantity || '0') * parseFloat(item.unit_price || '0'));
   }, 0);
-  const taxRate = 10; // Hardcoded for now, could be dynamic
-  const taxAmount = subtotal * (taxRate / 100);
+  const taxAmount = subtotal * (parseFloat(taxRate || '0') / 100);
   const total = subtotal + taxAmount;
 
   // Handlers
@@ -165,8 +177,9 @@ export default function DocumentCreateScreen({ route }: any) {
           quantity: parseFloat(item.quantity),
           unitPrice: parseFloat(item.unit_price)
         })),
-        currency: 'USD',
-        taxRate
+        currency,
+        taxRate: parseFloat(taxRate),
+        terms
       };
 
       console.log('Creating/Updating document with payload:', JSON.stringify(payload, null, 2));
@@ -268,18 +281,48 @@ export default function DocumentCreateScreen({ route }: any) {
           </TouchableOpacity>
 
           {/* Date Section */}
+          {/* Date Section */}
           <Text style={styles.sectionTitle}>Details</Text>
-          <TouchableOpacity
-            onPress={() => setShowDatePicker(true)}
-            activeOpacity={0.7}
-          >
-            <Card style={styles.selectorCard} padding={4}>
-              <View style={styles.dateRow}>
-                <Ionicons name="calendar-outline" size={20} color={colors.gray[500]} />
-                <Text style={styles.dateText}>{date.toLocaleDateString()}</Text>
+          <Card style={styles.selectorCard} padding={4}>
+            <TouchableOpacity
+              onPress={() => setShowDatePicker(true)}
+              style={styles.dateRow}
+            >
+              <Ionicons name="calendar-outline" size={20} color={colors.gray[500]} />
+              <Text style={styles.dateText}>{date.toLocaleDateString()}</Text>
+            </TouchableOpacity>
+            <View style={styles.divider} />
+            <View style={{ flexDirection: 'row', gap: spacing[4] }}>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: typography.fontSize.xs, color: colors.text.secondary, marginBottom: spacing[1], marginLeft: spacing[1] }}>Currency</Text>
+                <TouchableOpacity
+                  onPress={() => setShowCurrencyModal(true)}
+                  style={{
+                    borderWidth: 1,
+                    borderColor: colors.gray[300],
+                    borderRadius: borderRadius.md,
+                    padding: spacing[3],
+                    backgroundColor: colors.background.primary,
+                    flexDirection: 'row',
+                    justifyContent: 'space-between',
+                    alignItems: 'center'
+                  }}
+                >
+                  <Text style={{ color: colors.text.primary }}>{currency}</Text>
+                  <Ionicons name="chevron-down" size={16} color={colors.gray[400]} />
+                </TouchableOpacity>
               </View>
-            </Card>
-          </TouchableOpacity>
+              <View style={{ flex: 1 }}>
+                <Input
+                  label="Tax Rate (%)"
+                  value={taxRate}
+                  onChangeText={setTaxRate}
+                  keyboardType="numeric"
+                  placeholder="10"
+                />
+              </View>
+            </View>
+          </Card>
           {showDatePicker && (
             <DateTimePicker
               value={date}
@@ -353,6 +396,19 @@ export default function DocumentCreateScreen({ route }: any) {
             </TouchableOpacity>
           )}
 
+          {/* Terms */}
+          <Text style={styles.sectionTitle}>Terms & Notes</Text>
+          <Card style={{ marginBottom: spacing[6] }} padding={4}>
+            <Input
+              placeholder="Terms & Conditions..."
+              value={terms}
+              onChangeText={setTerms}
+              multiline
+              numberOfLines={4}
+              style={{ borderWidth: 0, backgroundColor: 'transparent', padding: 0 }}
+            />
+          </Card>
+
           {/* Summary */}
           <Card style={styles.summaryCard} padding={4}>
             <View style={styles.summaryRow}>
@@ -361,12 +417,12 @@ export default function DocumentCreateScreen({ route }: any) {
             </View>
             <View style={styles.summaryRow}>
               <Text style={styles.summaryLabel}>Tax ({taxRate}%)</Text>
-              <Text style={styles.summaryValue}>${taxAmount.toFixed(2)}</Text>
+              <Text style={styles.summaryValue}>{currency} {taxAmount.toFixed(2)}</Text>
             </View>
             <View style={styles.divider} />
             <View style={styles.summaryRow}>
               <Text style={styles.totalLabel}>Total</Text>
-              <Text style={styles.totalValue}>${total.toFixed(2)}</Text>
+              <Text style={styles.totalValue}>{currency} {total.toFixed(2)}</Text>
             </View>
           </Card>
 
@@ -396,8 +452,19 @@ export default function DocumentCreateScreen({ route }: any) {
               <Text style={styles.closeText}>Close</Text>
             </TouchableOpacity>
           </View>
+          <View style={{ paddingHorizontal: spacing[4], paddingBottom: spacing[2] }}>
+            <Input
+              placeholder="Search clients..."
+              value={clientSearch}
+              onChangeText={setClientSearch}
+              icon={<Ionicons name="search" size={20} color={colors.gray[400]} />}
+            />
+          </View>
           <FlatList
-            data={clients || []}
+            data={clients?.filter((c: any) =>
+              c.name.toLowerCase().includes(clientSearch.toLowerCase()) ||
+              c.email.toLowerCase().includes(clientSearch.toLowerCase())
+            ) || []}
             keyExtractor={(item) => item.id}
             renderItem={({ item }) => (
               <TouchableOpacity
@@ -435,8 +502,18 @@ export default function DocumentCreateScreen({ route }: any) {
               <Text style={styles.closeText}>Close</Text>
             </TouchableOpacity>
           </View>
+          <View style={{ paddingHorizontal: spacing[4], paddingBottom: spacing[2] }}>
+            <Input
+              placeholder="Search products..."
+              value={productSearch}
+              onChangeText={setProductSearch}
+              icon={<Ionicons name="search" size={20} color={colors.gray[400]} />}
+            />
+          </View>
           <FlatList
-            data={products || []}
+            data={products?.filter((p: any) =>
+              p.name.toLowerCase().includes(productSearch.toLowerCase())
+            ) || []}
             keyExtractor={(item) => item.id}
             renderItem={({ item }) => (
               <TouchableOpacity
@@ -460,6 +537,48 @@ export default function DocumentCreateScreen({ route }: any) {
             }
           />
         </View>
+      </Modal>
+
+      {/* Currency Modal */}
+      <Modal
+        visible={showCurrencyModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowCurrencyModal(false)}
+      >
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setShowCurrencyModal(false)}
+        >
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Select Currency</Text>
+            <ScrollView style={{ maxHeight: 300 }}>
+              {CURRENCIES.map(curr => (
+                <TouchableOpacity
+                  key={curr}
+                  style={{
+                    paddingVertical: spacing[4],
+                    borderBottomWidth: 1,
+                    borderBottomColor: colors.gray[100],
+                    flexDirection: 'row',
+                    justifyContent: 'space-between',
+                    alignItems: 'center'
+                  }}
+                  onPress={() => {
+                    setCurrency(curr);
+                    setShowCurrencyModal(false);
+                  }}
+                >
+                  <Text style={{ fontSize: typography.fontSize.base, color: colors.text.primary }}>{curr}</Text>
+                  {currency === curr && (
+                    <Ionicons name="checkmark" size={20} color={colors.primary[600]} />
+                  )}
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        </TouchableOpacity>
       </Modal>
     </View>
   );
@@ -708,5 +827,17 @@ const createStyles = (colors: Colors) => StyleSheet.create({
   emptyStateText: {
     fontSize: typography.fontSize.base,
     color: colors.text.secondary,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: colors.background.primary,
+    borderTopLeftRadius: borderRadius.xl,
+    borderTopRightRadius: borderRadius.xl,
+    padding: spacing[6],
+    paddingBottom: spacing[10],
   },
 });

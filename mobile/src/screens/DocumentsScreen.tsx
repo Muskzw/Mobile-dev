@@ -20,6 +20,7 @@ import { useTheme } from '../context/ThemeContext';
 import { spacing, typography, borderRadius, shadows, Colors } from '../theme';
 import { Input } from '../components/Input';
 import { Card } from '../components/Card';
+import { Button } from '../components/Button';
 
 export default function DocumentsScreen() {
   const navigation = useNavigation();
@@ -29,6 +30,8 @@ export default function DocumentsScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState('ALL');
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [activeStatus, setActiveStatus] = useState('ALL');
+  const [showFilterModal, setShowFilterModal] = useState(false);
 
   const { data: documents, isLoading, refetch } = useQuery({
     queryKey: ['documents'],
@@ -43,11 +46,15 @@ export default function DocumentsScreen() {
       doc.document_number.toLowerCase().includes(searchQuery.toLowerCase()) ||
       doc.client?.name?.toLowerCase().includes(searchQuery.toLowerCase());
 
-    const matchesFilter =
+    const matchesType =
       activeFilter === 'ALL' ||
       doc.type === activeFilter;
 
-    return matchesSearch && matchesFilter;
+    const matchesStatus =
+      activeStatus === 'ALL' ||
+      doc.status?.toUpperCase() === activeStatus;
+
+    return matchesSearch && matchesType && matchesStatus;
   });
 
   const getStatusColor = (status: string) => {
@@ -77,44 +84,69 @@ export default function DocumentsScreen() {
     </TouchableOpacity>
   );
 
-  const DocumentItem = ({ item }: { item: any }) => (
-    <TouchableOpacity
-      activeOpacity={0.7}
-      onPress={() => (navigation as any).navigate('DocumentView', { id: item.id })}
-    >
-      <Card style={styles.documentCard} padding={4}>
-        <View style={styles.cardHeader}>
-          <View style={styles.documentIcon}>
-            <Ionicons
-              name={item.type === 'invoice' ? 'receipt' : 'document-text'}
-              size={24}
-              color={colors.primary[600]}
-            />
-          </View>
-          <View style={styles.headerInfo}>
-            <Text style={styles.documentNumber}>{item.document_number}</Text>
-            <Text style={styles.clientName}>{item.client?.name || 'Unknown Client'}</Text>
-          </View>
-          <View style={[styles.statusBadge, { backgroundColor: `${getStatusColor(item.status)}15` }]}>
-            <Text style={[styles.statusText, { color: getStatusColor(item.status) }]}>
-              {item.status}
-            </Text>
-          </View>
-        </View>
+  const DocumentItem = ({ item }: { item: any }) => {
+    const statusColor = getStatusColor(item.status);
+    const statusIcon =
+      item.status.toLowerCase() === 'paid' ? 'checkmark-circle' :
+        item.status.toLowerCase() === 'pending' ? 'time' :
+          item.status.toLowerCase() === 'overdue' ? 'alert-circle' :
+            item.status.toLowerCase() === 'draft' ? 'create' : 'document';
 
-        <View style={styles.divider} />
+    return (
+      <TouchableOpacity
+        activeOpacity={0.7}
+        onPress={() => (navigation as any).navigate('DocumentView', { id: item.id })}
+      >
+        <Card style={styles.documentCard} padding={0}>
+          {/* Colored accent bar */}
+          <View style={[styles.accentBar, { backgroundColor: statusColor }]} />
 
-        <View style={styles.cardFooter}>
-          <Text style={styles.date}>
-            {new Date(item.created_at).toLocaleDateString()}
-          </Text>
-          <Text style={styles.amount}>
-            {item.currency} {parseFloat(item.total).toFixed(2)}
-          </Text>
-        </View>
-      </Card>
-    </TouchableOpacity>
-  );
+          <View style={{ padding: spacing[4] }}>
+            <View style={styles.cardHeader}>
+              <View style={styles.documentIcon}>
+                <LinearGradient
+                  colors={[colors.primary[500], colors.primary[700]]}
+                  style={styles.iconGradient}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                >
+                  <Ionicons
+                    name={item.type === 'invoice' ? 'receipt' : 'document-text'}
+                    size={20}
+                    color="white"
+                  />
+                </LinearGradient>
+              </View>
+              <View style={styles.headerInfo}>
+                <Text style={styles.documentNumber}>{item.document_number}</Text>
+                <Text style={styles.clientName}>{item.client?.name || 'Unknown Client'}</Text>
+              </View>
+              <View style={[styles.statusBadge, { backgroundColor: `${statusColor}15` }]}>
+                <Ionicons name={statusIcon as any} size={14} color={statusColor} style={{ marginRight: 4 }} />
+                <Text style={[styles.statusText, { color: statusColor }]}>
+                  {item.status}
+                </Text>
+              </View>
+            </View>
+
+            <View style={styles.divider} />
+
+            <View style={styles.cardFooter}>
+              <View style={styles.footerLeft}>
+                <Ionicons name="calendar-outline" size={14} color={colors.gray[400]} style={{ marginRight: 4 }} />
+                <Text style={styles.date}>
+                  {new Date(item.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                </Text>
+              </View>
+              <Text style={styles.amount}>
+                {item.currency} {parseFloat(item.total).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </Text>
+            </View>
+          </View>
+        </Card>
+      </TouchableOpacity>
+    );
+  };
 
   return (
     <View style={styles.container}>
@@ -126,8 +158,11 @@ export default function DocumentsScreen() {
       {/* Header */}
       <View style={[styles.header, { paddingTop: insets.top + spacing[4] }]}>
         <Text style={styles.title}>Documents</Text>
-        <TouchableOpacity style={styles.filterButton}>
-          <Ionicons name="filter" size={24} color={colors.primary[600]} />
+        <TouchableOpacity
+          style={[styles.filterButton, activeStatus !== 'ALL' && styles.filterButtonActive]}
+          onPress={() => setShowFilterModal(true)}
+        >
+          <Ionicons name="filter" size={24} color={activeStatus !== 'ALL' ? 'white' : colors.primary[600]} />
         </TouchableOpacity>
       </View>
 
@@ -189,6 +224,66 @@ export default function DocumentsScreen() {
           <Ionicons name="add" size={32} color="white" />
         </LinearGradient>
       </TouchableOpacity>
+
+      {/* Filter Modal */}
+      <Modal
+        visible={showFilterModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowFilterModal(false)}
+      >
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setShowFilterModal(false)}
+        >
+          <View style={styles.filterModalContent}>
+            <View style={styles.filterHeader}>
+              <Text style={styles.filterTitle}>Filter Documents</Text>
+              <TouchableOpacity onPress={() => setShowFilterModal(false)}>
+                <Ionicons name="close" size={24} color={colors.text.primary} />
+              </TouchableOpacity>
+            </View>
+
+            <Text style={styles.filterSectionTitle}>Status</Text>
+            <View style={styles.statusGrid}>
+              {['ALL', 'PAID', 'PENDING', 'OVERDUE', 'DRAFT'].map((status) => (
+                <TouchableOpacity
+                  key={status}
+                  style={[
+                    styles.statusOption,
+                    activeStatus === status && styles.statusOptionActive
+                  ]}
+                  onPress={() => setActiveStatus(status)}
+                >
+                  <Text style={[
+                    styles.statusOptionText,
+                    activeStatus === status && styles.statusOptionTextActive
+                  ]}>
+                    {status.charAt(0) + status.slice(1).toLowerCase()}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <Button
+              title="Apply Filters"
+              onPress={() => setShowFilterModal(false)}
+              gradient
+              style={{ marginTop: spacing[6] }}
+            />
+            <Button
+              title="Reset Filters"
+              onPress={() => {
+                setActiveStatus('ALL');
+                setShowFilterModal(false);
+              }}
+              variant="ghost"
+              style={{ marginTop: spacing[2] }}
+            />
+          </View>
+        </TouchableOpacity>
+      </Modal>
 
       {/* Create Modal */}
       <Modal
@@ -346,20 +441,32 @@ const createStyles = (colors: Colors) => StyleSheet.create({
   documentCard: {
     marginBottom: spacing[4],
     backgroundColor: colors.background.primary,
-    ...shadows.sm,
+    ...shadows.md,
+    borderRadius: borderRadius.xl,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: colors.gray[100],
+  },
+  accentBar: {
+    height: 4,
+    width: '100%',
   },
   cardHeader: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   documentIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: borderRadius.xl,
-    backgroundColor: colors.primary[50],
+    width: 44,
+    height: 44,
+    borderRadius: borderRadius.lg,
+    marginRight: spacing[4],
+    overflow: 'hidden',
+  },
+  iconGradient: {
+    width: '100%',
+    height: '100%',
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: spacing[4],
   },
   headerInfo: {
     flex: 1,
@@ -375,9 +482,11 @@ const createStyles = (colors: Colors) => StyleSheet.create({
     color: colors.text.secondary,
   },
   statusBadge: {
-    paddingVertical: 4,
-    paddingHorizontal: 8,
-    borderRadius: borderRadius.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: borderRadius.full,
   },
   statusText: {
     fontSize: typography.fontSize.xs,
@@ -394,14 +503,19 @@ const createStyles = (colors: Colors) => StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
   },
+  footerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
   date: {
     fontSize: typography.fontSize.sm,
-    color: colors.text.tertiary,
+    color: colors.text.secondary,
+    fontWeight: typography.fontWeight.medium,
   },
   amount: {
-    fontSize: typography.fontSize.lg,
+    fontSize: typography.fontSize.xl,
     fontWeight: typography.fontWeight.bold,
-    color: colors.text.primary,
+    color: colors.primary[600],
   },
   emptyState: {
     alignItems: 'center',
@@ -480,5 +594,59 @@ const createStyles = (colors: Colors) => StyleSheet.create({
     fontSize: typography.fontSize.lg,
     fontWeight: typography.fontWeight.medium,
     color: colors.text.primary,
+  },
+  filterButtonActive: {
+    backgroundColor: colors.primary[600],
+  },
+  filterModalContent: {
+    backgroundColor: colors.background.primary,
+    borderTopLeftRadius: borderRadius.xl,
+    borderTopRightRadius: borderRadius.xl,
+    padding: spacing[6],
+    paddingBottom: spacing[10],
+  },
+  filterHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacing[6],
+  },
+  filterTitle: {
+    fontSize: typography.fontSize.xl,
+    fontWeight: typography.fontWeight.bold,
+    color: colors.text.primary,
+  },
+  filterSectionTitle: {
+    fontSize: typography.fontSize.sm,
+    fontWeight: typography.fontWeight.bold,
+    color: colors.text.secondary,
+    marginBottom: spacing[3],
+    textTransform: 'uppercase',
+  },
+  statusGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing[2],
+  },
+  statusOption: {
+    paddingVertical: spacing[2],
+    paddingHorizontal: spacing[4],
+    borderRadius: borderRadius.md,
+    borderWidth: 1,
+    borderColor: colors.gray[200],
+    backgroundColor: colors.background.primary,
+  },
+  statusOptionActive: {
+    backgroundColor: colors.primary[50],
+    borderColor: colors.primary[600],
+  },
+  statusOptionText: {
+    fontSize: typography.fontSize.sm,
+    color: colors.text.secondary,
+    fontWeight: typography.fontWeight.medium,
+  },
+  statusOptionTextActive: {
+    color: colors.primary[600],
+    fontWeight: typography.fontWeight.bold,
   },
 });

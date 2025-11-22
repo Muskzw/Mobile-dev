@@ -23,7 +23,7 @@ import api from '../api/client';
 import { useTheme } from '../context/ThemeContext';
 import { spacing, typography, borderRadius, shadows, Colors } from '../theme';
 import { Input } from '../components/Input';
-import { Button } from '../components/Button';
+import { Button } from '../components';
 import { Card } from '../components/Card';
 
 export default function ClientsScreen() {
@@ -92,44 +92,58 @@ export default function ClientsScreen() {
       activeOpacity={0.7}
       onPress={() => (navigation as any).navigate('ClientView', { clientId: item.id })}
     >
-      <Card style={styles.clientCard} padding={4}>
-        <View style={styles.cardHeader}>
-          <View style={styles.clientAvatar}>
-            <Text style={styles.avatarText}>{item.name.charAt(0)}</Text>
-          </View>
-          <View style={styles.headerInfo}>
-            <Text style={styles.clientName}>{item.name}</Text>
-            <Text style={styles.clientDocs}>
-              {item.documents_count || 0} Documents
-            </Text>
-          </View>
-        </View>
-
-        <View style={styles.divider} />
-
-        <View style={styles.contactRow}>
-          {item.email && (
-            <TouchableOpacity
-              style={styles.contactItem}
-              onPress={() => handleEmail(item.email)}
+      <Card style={styles.clientCard} padding={0}>
+        <View style={{ padding: spacing[4] }}>
+          <View style={styles.cardHeader}>
+            <LinearGradient
+              colors={colors.gradients.ocean as any}
+              style={styles.clientAvatar}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
             >
-              <View style={[styles.contactIcon, { backgroundColor: colors.primary[50] }]}>
-                <Ionicons name="mail" size={16} color={colors.primary[600]} />
+              <Text style={styles.avatarText}>{item.name.charAt(0).toUpperCase()}</Text>
+            </LinearGradient>
+            <View style={styles.headerInfo}>
+              <Text style={styles.clientName}>{item.name || 'Unknown Client'}</Text>
+              <View style={styles.docCountBadge}>
+                <Ionicons name="document-text" size={12} color={colors.primary[600]} style={{ marginRight: 4 }} />
+                <Text style={styles.clientDocs}>
+                  {item.documents_count ?? 0} Documents
+                </Text>
               </View>
-              <Text style={styles.contactText} numberOfLines={1}>{item.email}</Text>
-            </TouchableOpacity>
-          )}
+            </View>
+            <Ionicons name="chevron-forward" size={20} color={colors.gray[300]} />
+          </View>
 
-          {item.phone && (
-            <TouchableOpacity
-              style={styles.contactItem}
-              onPress={() => handleCall(item.phone)}
-            >
-              <View style={[styles.contactIcon, { backgroundColor: colors.success + '15' }]}>
-                <Ionicons name="call" size={16} color={colors.success} />
+          {(item.email || item.phone) && (
+            <>
+              <View style={styles.divider} />
+              <View style={styles.contactRow}>
+                {item.email && (
+                  <TouchableOpacity
+                    style={styles.contactItem}
+                    onPress={() => handleEmail(item.email)}
+                  >
+                    <View style={[styles.contactIcon, { backgroundColor: colors.primary[50] }]}>
+                      <Ionicons name="mail" size={16} color={colors.primary[600]} />
+                    </View>
+                    <Text style={styles.contactText} numberOfLines={1}>{item.email}</Text>
+                  </TouchableOpacity>
+                )}
+
+                {item.phone && (
+                  <TouchableOpacity
+                    style={styles.contactItem}
+                    onPress={() => handleCall(item.phone)}
+                  >
+                    <View style={[styles.contactIcon, { backgroundColor: colors.success + '15' }]}>
+                      <Ionicons name="call" size={16} color={colors.success} />
+                    </View>
+                    <Text style={styles.contactText} numberOfLines={1}>{item.phone}</Text>
+                  </TouchableOpacity>
+                )}
               </View>
-              <Text style={styles.contactText} numberOfLines={1}>{item.phone}</Text>
-            </TouchableOpacity>
+            </>
           )}
         </View>
       </Card>
@@ -171,13 +185,19 @@ export default function ClientsScreen() {
         }
         ListEmptyComponent={
           <View style={styles.emptyState}>
-            <View style={styles.emptyIcon}>
-              <Ionicons name="people-outline" size={48} color={colors.gray[300]} />
+            <View style={styles.emptyIconContainer}>
+              <Ionicons name="people" size={32} color={colors.secondary[400]} />
             </View>
             <Text style={styles.emptyTitle}>No clients found</Text>
             <Text style={styles.emptySubtitle}>
               Add your first client to start creating quotations
             </Text>
+            <Button
+              title="Add New Client"
+              size="sm"
+              onPress={() => setShowAddModal(true)}
+              style={{ marginTop: spacing[4] }}
+            />
           </View>
         }
       />
@@ -202,7 +222,6 @@ export default function ClientsScreen() {
       <Modal
         visible={showAddModal}
         animationType="slide"
-        presentationStyle="pageSheet"
       >
         <View style={styles.modalContainer}>
           <View style={styles.modalHeader}>
@@ -296,7 +315,11 @@ const createStyles = (colors: Colors) => StyleSheet.create({
   clientCard: {
     marginBottom: spacing[4],
     backgroundColor: colors.background.primary,
-    ...shadows.sm,
+    ...shadows.md,
+    borderRadius: borderRadius.xl,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: colors.gray[100],
   },
   cardHeader: {
     flexDirection: 'row',
@@ -306,15 +329,14 @@ const createStyles = (colors: Colors) => StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: borderRadius.full,
-    backgroundColor: colors.primary[100],
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: spacing[4],
   },
   avatarText: {
-    fontSize: typography.fontSize.xl,
+    fontSize: typography.fontSize.lg,
     fontWeight: typography.fontWeight.bold,
-    color: colors.primary[700],
+    color: 'white',
   },
   headerInfo: {
     flex: 1,
@@ -326,8 +348,18 @@ const createStyles = (colors: Colors) => StyleSheet.create({
     marginBottom: 2,
   },
   clientDocs: {
-    fontSize: typography.fontSize.sm,
+    fontSize: typography.fontSize.xs,
     color: colors.text.secondary,
+    fontWeight: typography.fontWeight.medium,
+  },
+  docCountBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.primary[50],
+    alignSelf: 'flex-start',
+    paddingVertical: 2,
+    paddingHorizontal: 6,
+    borderRadius: borderRadius.md,
   },
   divider: {
     height: 1,
@@ -361,11 +393,11 @@ const createStyles = (colors: Colors) => StyleSheet.create({
     justifyContent: 'center',
     paddingTop: spacing[12],
   },
-  emptyIcon: {
-    width: 80,
-    height: 80,
+  emptyIconContainer: {
+    width: 64,
+    height: 64,
     borderRadius: borderRadius.full,
-    backgroundColor: colors.gray[100],
+    backgroundColor: colors.secondary[50],
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: spacing[4],

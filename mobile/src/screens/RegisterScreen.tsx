@@ -13,9 +13,7 @@ import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import api from '../api/client';
 import { useAuthStore } from '../store/authStore';
-import { Button } from '../components/Button';
-import { Input } from '../components/Input';
-import { Card } from '../components/Card';
+import { Button, Input, Card } from '../components';
 import { useTheme } from '../context/ThemeContext';
 import { spacing, typography, borderRadius, Colors } from '../theme';
 

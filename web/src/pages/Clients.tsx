@@ -104,7 +104,6 @@ export default function Clients() {
             <p className="text-muted-foreground mt-1">Manage your client database</p>
           </div>
           <button
-            <button
             onClick={() => {
               setEditingClient(null);
               setShowModal(true);

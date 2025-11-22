@@ -1,4 +1,3 @@
-import React from 'react';
 import Layout from '../components/Layout';
 import { Check, Star, Zap, Shield } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';

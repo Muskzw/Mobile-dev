@@ -22,15 +22,15 @@ export default function ContactUsScreen() {
     const styles = createStyles(colors);
 
     const handleEmail = () => {
-        Linking.openURL('mailto:support@yourbusiness.com');
+        Linking.openURL('mailto:esitholezw@gmail.com');
     };
 
     const handlePhone = () => {
-        Linking.openURL('tel:+1234567890');
+        Linking.openURL('tel:+263784840335');
     };
 
     const handleWebsite = () => {
-        Linking.openURL('https://yourbusiness.com');
+        Linking.openURL('https://techubzw.lovable.app');
     };
 
     const ContactOption = ({ icon, title, subtitle, onPress, color }: any) => (
@@ -79,7 +79,7 @@ export default function ContactUsScreen() {
                 <ContactOption
                     icon="mail"
                     title="Email Support"
-                    subtitle="support@yourbusiness.com"
+                    subtitle="esitholezw@gmail.com"
                     onPress={handleEmail}
                     color={colors.primary[600]}
                 />
@@ -87,7 +87,7 @@ export default function ContactUsScreen() {
                 <ContactOption
                     icon="call"
                     title="Phone Support"
-                    subtitle="+1 (234) 567-890"
+                    subtitle="+263 78 484 0335"
                     onPress={handlePhone}
                     color={colors.secondary[600]}
                 />
@@ -95,7 +95,7 @@ export default function ContactUsScreen() {
                 <ContactOption
                     icon="globe"
                     title="Website"
-                    subtitle="yourbusiness.com"
+                    subtitle="techubzw.lovable.app"
                     onPress={handleWebsite}
                     color={colors.info[500]}
                 />

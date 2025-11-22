@@ -18,7 +18,7 @@ import { useTheme } from '../context/ThemeContext';
 import { spacing, typography, borderRadius, shadows, Colors } from '../theme';
 import { Card } from '../components/Card';
 import { Input } from '../components/Input';
-import { Button } from '../components/Button';
+import { Button } from '../components';
 
 interface Client {
     id: string;
@@ -179,29 +179,26 @@ export default function ClientViewScreen() {
                 {/* Client Header */}
                 <Card style={styles.clientHeader} padding={6}>
                     <View style={styles.avatarContainer}>
-                        <Text style={styles.avatarText}>{client.name.charAt(0)}</Text>
+                        <Text style={styles.avatarText}>{client.name?.charAt(0) || '?'}</Text>
                     </View>
                     {isEditing ? (
-                        <>
+                        <View style={{ width: '100%' }}>
                             <Input
                                 label="Name"
                                 value={editedClient?.name}
                                 onChangeText={(text) => setEditedClient({ ...editedClient!, name: text })}
-                                style={styles.input}
                             />
                             <Input
                                 label="Email"
                                 value={editedClient?.email}
                                 onChangeText={(text) => setEditedClient({ ...editedClient!, email: text })}
                                 keyboardType="email-address"
-                                style={styles.input}
                             />
                             <Input
                                 label="Phone"
                                 value={editedClient?.phone || ''}
                                 onChangeText={(text) => setEditedClient({ ...editedClient!, phone: text })}
                                 keyboardType="phone-pad"
-                                style={styles.input}
                             />
                             <Input
                                 label="Address"
@@ -209,7 +206,6 @@ export default function ClientViewScreen() {
                                 onChangeText={(text) => setEditedClient({ ...editedClient!, address: text })}
                                 multiline
                                 numberOfLines={2}
-                                style={styles.input}
                             />
                             <View style={styles.editActions}>
                                 <Button
@@ -229,10 +225,10 @@ export default function ClientViewScreen() {
                                     style={{ flex: 1 }}
                                 />
                             </View>
-                        </>
+                        </View>
                     ) : (
                         <>
-                            <Text style={styles.clientName}>{client.name}</Text>
+                            <Text style={styles.clientName}>{client.name || 'Unknown'}</Text>
                             <Text style={styles.clientEmail}>{client.email}</Text>
                             {client.phone && <Text style={styles.clientDetail}>{client.phone}</Text>}
                             {client.address && <Text style={styles.clientDetail}>{client.address}</Text>}

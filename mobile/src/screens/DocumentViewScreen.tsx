@@ -21,6 +21,7 @@ import { useTheme } from '../context/ThemeContext';
 import { spacing, typography, borderRadius, shadows, Colors } from '../theme';
 import { Card } from '../components/Card';
 import { Button } from '../components/Button';
+import { Input } from '../components/Input';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import { useAuthStore } from '../store/authStore';
@@ -37,6 +38,11 @@ export default function DocumentViewScreen() {
   const queryClient = useQueryClient();
   const [downloadLoading, setDownloadLoading] = React.useState(false);
   const [showShareModal, setShowShareModal] = React.useState(false);
+  const [showOptionsModal, setShowOptionsModal] = React.useState(false);
+  const [showEmailModal, setShowEmailModal] = React.useState(false);
+  const [emailSubject, setEmailSubject] = React.useState('');
+  const [emailBody, setEmailBody] = React.useState('');
+  const [sendingEmail, setSendingEmail] = React.useState(false);
 
   const { data: document, isLoading } = useQuery({
     queryKey: ['document', id],
@@ -103,17 +109,21 @@ export default function DocumentViewScreen() {
     }
   };
 
+  const handleStatusUpdate = async (newStatus: string) => {
+    try {
+      await api.put(`/documents/${id}`, { status: newStatus });
+      queryClient.invalidateQueries({ queryKey: ['document', id] });
+      queryClient.invalidateQueries({ queryKey: ['documents'] });
+      setShowOptionsModal(false);
+      Alert.alert('Success', `Document marked as ${newStatus}`);
+    } catch (error) {
+      console.error('Status update error:', error);
+      Alert.alert('Error', 'Failed to update status');
+    }
+  };
+
   const showMenu = () => {
-    Alert.alert(
-      'Document Options',
-      'Choose an action',
-      [
-        { text: 'Edit', onPress: handleEdit },
-        { text: 'Duplicate', onPress: handleDuplicate },
-        { text: 'Delete', onPress: handleDelete, style: 'destructive' },
-        { text: 'Cancel', style: 'cancel' }
-      ]
-    );
+    setShowOptionsModal(true);
   };
 
   // Helper function to download PDF
@@ -160,6 +170,55 @@ export default function DocumentViewScreen() {
       console.error('PDF Download Error:', error);
       Alert.alert('Download Error', `Failed to download PDF: ${error.message || 'Unknown error'}`);
       return null;
+    }
+  };
+
+  // Send Direct Email
+  // Send Direct Email
+  const handleDirectEmail = () => {
+    if (!document?.client?.email) {
+      Alert.alert('Error', 'Client does not have an email address');
+      return;
+    }
+
+    setShowShareModal(false);
+
+    const subjectTemplate = currentCompany?.emailSubjectTemplate || `${document.type} #{documentNumber} from {companyName}`;
+    const bodyTemplate = currentCompany?.emailBodyTemplate || `Dear {clientName},\n\nPlease find attached ${document.type.toLowerCase()} #{documentNumber}.\n\nBest regards,\n{companyName}`;
+
+    const replacements: Record<string, string> = {
+      '{documentNumber}': document.document_number,
+      '{clientName}': document.client.name,
+      '{companyName}': currentCompany?.name || 'Us',
+    };
+
+    let subject = subjectTemplate;
+    let body = bodyTemplate;
+
+    Object.entries(replacements).forEach(([key, value]) => {
+      subject = subject.replace(new RegExp(key, 'g'), value);
+      body = body.replace(new RegExp(key, 'g'), value);
+    });
+
+    setEmailSubject(subject);
+    setEmailBody(body);
+    setShowEmailModal(true);
+  };
+
+  const handleSendEmail = async () => {
+    setSendingEmail(true);
+    try {
+      await api.post(`/documents/${id}/email`, {
+        subject: emailSubject,
+        body: emailBody
+      });
+      Alert.alert('Success', 'Email sent successfully');
+      setShowEmailModal(false);
+    } catch (error) {
+      console.error('Email send error:', error);
+      Alert.alert('Error', 'Failed to send email');
+    } finally {
+      setSendingEmail(false);
     }
   };
 
@@ -294,8 +353,19 @@ export default function DocumentViewScreen() {
 
       <ScrollView contentContainerStyle={styles.content}>
         {/* Status Banner */}
+        {/* Status Banner */}
         <View style={[styles.statusBanner, { backgroundColor: `${getStatusColor(document?.status)}15` }]}>
-          <View style={[styles.statusDot, { backgroundColor: getStatusColor(document?.status) }]} />
+          <Ionicons
+            name={
+              document?.status?.toLowerCase() === 'paid' ? 'checkmark-circle' :
+                document?.status?.toLowerCase() === 'pending' ? 'time' :
+                  document?.status?.toLowerCase() === 'overdue' ? 'alert-circle' :
+                    'document-text'
+            }
+            size={20}
+            color={getStatusColor(document?.status)}
+            style={{ marginRight: 8 }}
+          />
           <Text style={[styles.statusText, { color: getStatusColor(document?.status) }]}>
             {document?.status}
           </Text>
@@ -396,17 +466,44 @@ export default function DocumentViewScreen() {
             </Text>
           </View>
         </Card>
+
+        {/* Terms & Notes */}
+        {(document?.terms || document?.notes) && (
+          <View style={{ marginBottom: spacing[6] }}>
+            <Text style={styles.sectionTitle}>Terms & Notes</Text>
+            <Card style={styles.sectionCard} padding={4}>
+              <Text style={styles.termsText}>{document.terms || document.notes}</Text>
+            </Card>
+          </View>
+        )}
       </ScrollView>
 
       {/* Actions Footer */}
+      {/* Actions Footer */}
       <View style={[styles.footer, { paddingBottom: insets.bottom + spacing[4] }]}>
-        <Button
-          title="Share Document"
-          onPress={() => setShowShareModal(true)}
-          gradient
-          loading={downloadLoading}
-          fullWidth
-        />
+        <View style={styles.footerButtons}>
+          <Button
+            title="Edit"
+            onPress={handleEdit}
+            variant="outline"
+            style={{ flex: 1, marginRight: spacing[3] }}
+            icon={<Ionicons name="create-outline" size={20} color={colors.primary[600]} />}
+          />
+          <Button
+            title="Share"
+            onPress={() => setShowShareModal(true)}
+            gradient
+            loading={downloadLoading}
+            style={{ flex: 2, marginRight: spacing[3] }}
+            icon={<Ionicons name="share-outline" size={20} color="white" />}
+          />
+          <TouchableOpacity
+            style={styles.moreButton}
+            onPress={showMenu}
+          >
+            <Ionicons name="ellipsis-horizontal" size={24} color={colors.text.primary} />
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* Share Modal */}
@@ -423,6 +520,21 @@ export default function DocumentViewScreen() {
         >
           <View style={styles.shareModalContent}>
             <Text style={styles.shareModalTitle}>Share Document</Text>
+
+            <TouchableOpacity
+              style={styles.shareOption}
+              onPress={handleDirectEmail}
+              disabled={downloadLoading}
+            >
+              <View style={[styles.shareIcon, { backgroundColor: colors.primary[50] }]}>
+                <Ionicons name="send" size={24} color={colors.primary[600]} />
+              </View>
+              <View style={styles.shareOptionTextContainer}>
+                <Text style={styles.shareOptionText}>Send Direct Email</Text>
+                <Text style={styles.shareOptionDesc}>Send directly to client</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color={colors.gray[400]} />
+            </TouchableOpacity>
 
             <TouchableOpacity
               style={styles.shareOption}
@@ -472,6 +584,161 @@ export default function DocumentViewScreen() {
             <TouchableOpacity
               style={styles.cancelButton}
               onPress={() => setShowShareModal(false)}
+            >
+              <Text style={styles.cancelButtonText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
+      {/* Email Modal */}
+      <Modal
+        visible={showEmailModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowEmailModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Send Email</Text>
+              <TouchableOpacity onPress={() => setShowEmailModal(false)}>
+                <Ionicons name="close" size={24} color={colors.text.secondary} />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={{ maxHeight: 400 }}>
+              <Text style={styles.label}>To: {document?.client?.email}</Text>
+
+              <Input
+                label="Subject"
+                value={emailSubject}
+                onChangeText={setEmailSubject}
+                placeholder="Subject"
+              />
+
+              <Input
+                label="Message"
+                value={emailBody}
+                onChangeText={setEmailBody}
+                multiline
+                numberOfLines={6}
+                placeholder="Message"
+              />
+            </ScrollView>
+
+            <View style={styles.modalFooter}>
+              <Button
+                title="Cancel"
+                onPress={() => setShowEmailModal(false)}
+                variant="ghost"
+                style={{ flex: 1, marginRight: spacing[2] }}
+              />
+              <Button
+                title="Send"
+                onPress={handleSendEmail}
+                gradient
+                style={{ flex: 1 }}
+                loading={sendingEmail}
+                icon="send"
+              />
+            </View>
+          </View>
+        </View>
+      </Modal>
+      {/* Options Modal */}
+      <Modal
+        visible={showOptionsModal}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setShowOptionsModal(false)}
+      >
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setShowOptionsModal(false)}
+        >
+          <View style={styles.shareModalContent}>
+            <Text style={styles.shareModalTitle}>Document Options</Text>
+
+            <TouchableOpacity
+              style={styles.shareOption}
+              onPress={() => {
+                setShowOptionsModal(false);
+                handleEdit();
+              }}
+            >
+              <View style={[styles.shareIcon, { backgroundColor: colors.primary[50] }]}>
+                <Ionicons name="create-outline" size={24} color={colors.primary[600]} />
+              </View>
+              <View style={styles.shareOptionTextContainer}>
+                <Text style={styles.shareOptionText}>Edit Document</Text>
+                <Text style={styles.shareOptionDesc}>Make changes to this document</Text>
+              </View>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.shareOption}
+              onPress={() => {
+                setShowOptionsModal(false);
+                handleDuplicate();
+              }}
+            >
+              <View style={[styles.shareIcon, { backgroundColor: colors.secondary[50] }]}>
+                <Ionicons name="copy-outline" size={24} color={colors.secondary[600]} />
+              </View>
+              <View style={styles.shareOptionTextContainer}>
+                <Text style={styles.shareOptionText}>Duplicate</Text>
+                <Text style={styles.shareOptionDesc}>Create a copy of this document</Text>
+              </View>
+            </TouchableOpacity>
+
+            {document?.status !== 'PAID' ? (
+              <TouchableOpacity
+                style={styles.shareOption}
+                onPress={() => handleStatusUpdate('PAID')}
+              >
+                <View style={[styles.shareIcon, { backgroundColor: colors.success + '15' }]}>
+                  <Ionicons name="checkmark-circle-outline" size={24} color={colors.success} />
+                </View>
+                <View style={styles.shareOptionTextContainer}>
+                  <Text style={styles.shareOptionText}>Mark as Paid</Text>
+                  <Text style={styles.shareOptionDesc}>Update status to paid</Text>
+                </View>
+              </TouchableOpacity>
+            ) : (
+              <TouchableOpacity
+                style={styles.shareOption}
+                onPress={() => handleStatusUpdate('PENDING')}
+              >
+                <View style={[styles.shareIcon, { backgroundColor: colors.warning + '15' }]}>
+                  <Ionicons name="time-outline" size={24} color={colors.warning} />
+                </View>
+                <View style={styles.shareOptionTextContainer}>
+                  <Text style={styles.shareOptionText}>Mark as Pending</Text>
+                  <Text style={styles.shareOptionDesc}>Update status to pending</Text>
+                </View>
+              </TouchableOpacity>
+            )}
+
+            <TouchableOpacity
+              style={styles.shareOption}
+              onPress={() => {
+                setShowOptionsModal(false);
+                handleDelete();
+              }}
+            >
+              <View style={[styles.shareIcon, { backgroundColor: colors.error + '15' }]}>
+                <Ionicons name="trash-outline" size={24} color={colors.error} />
+              </View>
+              <View style={styles.shareOptionTextContainer}>
+                <Text style={[styles.shareOptionText, { color: colors.error }]}>Delete</Text>
+                <Text style={styles.shareOptionDesc}>Permanently remove this document</Text>
+              </View>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.cancelButton}
+              onPress={() => setShowOptionsModal(false)}
             >
               <Text style={styles.cancelButtonText}>Cancel</Text>
             </TouchableOpacity>
@@ -667,6 +934,11 @@ const createStyles = (colors: Colors) => StyleSheet.create({
     fontWeight: typography.fontWeight.bold,
     color: colors.primary[600],
   },
+  termsText: {
+    fontSize: typography.fontSize.sm,
+    color: colors.text.secondary,
+    lineHeight: 20,
+  },
   footer: {
     position: 'absolute',
     bottom: 0,
@@ -676,6 +948,18 @@ const createStyles = (colors: Colors) => StyleSheet.create({
     padding: spacing[4],
     borderTopWidth: 1,
     borderTopColor: colors.gray[100],
+  },
+  footerButtons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  moreButton: {
+    width: 48,
+    height: 48,
+    borderRadius: borderRadius.lg,
+    backgroundColor: colors.gray[100],
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   modalOverlay: {
     flex: 1,
@@ -733,5 +1017,27 @@ const createStyles = (colors: Colors) => StyleSheet.create({
     fontSize: typography.fontSize.base,
     fontWeight: typography.fontWeight.semibold,
     color: colors.text.secondary,
+  },
+  modalContent: {
+    backgroundColor: colors.background.primary,
+    margin: spacing[4],
+    borderRadius: borderRadius.xl,
+    padding: spacing[4],
+    maxHeight: '80%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacing[4],
+  },
+  modalTitle: {
+    fontSize: typography.fontSize.lg,
+    fontWeight: typography.fontWeight.bold,
+    color: colors.text.primary,
+  },
+  modalFooter: {
+    flexDirection: 'row',
+    marginTop: spacing[4],
   },
 });

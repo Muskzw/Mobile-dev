@@ -115,29 +115,46 @@ export default function ProductsScreen() {
     );
 
     const ProductItem = ({ item }: { item: any }) => (
-        <Card style={styles.productCard} padding={4}>
-            <View style={styles.productHeader}>
-                <View style={styles.iconContainer}>
-                    <Ionicons name="cube-outline" size={20} color={colors.primary[600]} />
+        <Card style={styles.productCard} padding={0}>
+            <View style={{ padding: spacing[4] }}>
+                <View style={styles.productHeader}>
+                    <View style={styles.iconContainer}>
+                        <Ionicons name="cube" size={20} color={colors.primary[600]} />
+                    </View>
+                    <View style={styles.productInfo}>
+                        <Text style={styles.productName}>{item.name}</Text>
+                        <Text style={styles.productPrice}>${parseFloat(item.unit_price).toFixed(2)}</Text>
+                    </View>
                 </View>
-                <View style={styles.productInfo}>
-                    <Text style={styles.productName}>{item.name}</Text>
-                    <Text style={styles.productPrice}>${parseFloat(item.unit_price).toFixed(2)}</Text>
-                </View>
-                <View style={{ flexDirection: 'row' }}>
-                    <TouchableOpacity onPress={() => handleEditProduct(item)} style={{ marginRight: 12 }}>
-                        <Ionicons name="create-outline" size={20} color={colors.primary[600]} />
+
+                {item.description && (
+                    <Text style={styles.productDescription} numberOfLines={2}>
+                        {item.description}
+                    </Text>
+                )}
+
+                <View style={styles.divider} />
+
+                <View style={styles.actionRow}>
+                    <TouchableOpacity
+                        style={styles.actionButton}
+                        onPress={() => handleEditProduct(item)}
+                    >
+                        <Ionicons name="create-outline" size={18} color={colors.primary[600]} />
+                        <Text style={[styles.actionText, { color: colors.primary[600] }]}>Edit</Text>
                     </TouchableOpacity>
-                    <TouchableOpacity onPress={() => handleDeleteProduct(item.id)}>
-                        <Ionicons name="trash-outline" size={20} color={colors.error} />
+
+                    <View style={styles.verticalDivider} />
+
+                    <TouchableOpacity
+                        style={styles.actionButton}
+                        onPress={() => handleDeleteProduct(item.id)}
+                    >
+                        <Ionicons name="trash-outline" size={18} color={colors.error} />
+                        <Text style={[styles.actionText, { color: colors.error }]}>Delete</Text>
                     </TouchableOpacity>
                 </View>
             </View>
-            {item.description && (
-                <Text style={styles.productDescription} numberOfLines={2}>
-                    {item.description}
-                </Text>
-            )}
         </Card>
     );
 
@@ -174,11 +191,23 @@ export default function ProductsScreen() {
                 showsVerticalScrollIndicator={false}
                 ListEmptyComponent={
                     <View style={styles.emptyState}>
-                        <Ionicons name="cube-outline" size={48} color={colors.gray[300]} />
+                        <View style={styles.emptyIconContainer}>
+                            <Ionicons name="cube" size={32} color={colors.primary[400]} />
+                        </View>
                         <Text style={styles.emptyTitle}>No products found</Text>
                         <Text style={styles.emptySubtitle}>
                             Add products to quickly use them in your quotations
                         </Text>
+                        <Button
+                            title="Add New Product"
+                            size="sm"
+                            onPress={() => {
+                                setEditingItem(null);
+                                setNewItem({ name: '', description: '', unitPrice: '' });
+                                setShowAddModal(true);
+                            }}
+                            style={{ marginTop: spacing[4] }}
+                        />
                     </View>
                 }
             />
@@ -304,7 +333,11 @@ const createStyles = (colors: Colors) => StyleSheet.create({
     productCard: {
         marginBottom: spacing[3],
         backgroundColor: colors.background.primary,
-        ...shadows.sm,
+        ...shadows.md,
+        borderRadius: borderRadius.xl,
+        overflow: 'hidden',
+        borderWidth: 1,
+        borderColor: colors.gray[100],
     },
     productHeader: {
         flexDirection: 'row',
@@ -338,10 +371,44 @@ const createStyles = (colors: Colors) => StyleSheet.create({
         color: colors.text.secondary,
         paddingLeft: 52, // Align with text
     },
+    divider: {
+        height: 1,
+        backgroundColor: colors.gray[100],
+        marginVertical: spacing[3],
+    },
+    actionRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-around',
+    },
+    actionButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        padding: spacing[2],
+    },
+    actionText: {
+        fontSize: typography.fontSize.sm,
+        fontWeight: typography.fontWeight.medium,
+        marginLeft: spacing[2],
+    },
+    verticalDivider: {
+        width: 1,
+        height: 20,
+        backgroundColor: colors.gray[200],
+    },
     emptyState: {
         alignItems: 'center',
         justifyContent: 'center',
         paddingTop: spacing[12],
+    },
+    emptyIconContainer: {
+        width: 64,
+        height: 64,
+        borderRadius: borderRadius.full,
+        backgroundColor: colors.primary[50],
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginBottom: spacing[4],
     },
     emptyTitle: {
         fontSize: typography.fontSize.lg,

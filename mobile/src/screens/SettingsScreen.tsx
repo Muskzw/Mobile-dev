@@ -10,6 +10,7 @@ import {
   Image,
   StatusBar,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -39,8 +40,16 @@ export default function SettingsScreen() {
 
   const [companyForm, setCompanyForm] = useState({
     name: currentCompany?.name || '',
-    address: currentCompany?.address || '',
+    contactName: currentCompany?.contact_name || '',
     email: currentCompany?.email || '',
+    phone: currentCompany?.phone || '',
+    address: currentCompany?.address || '',
+    addressLine2: currentCompany?.address_line2 || '',
+    addressLine3: currentCompany?.address_line3 || '',
+    businessLabel: currentCompany?.business_label || 'Tax ID',
+    businessNumber: currentCompany?.business_number || '',
+    businessCategory: currentCompany?.business_category || '',
+    paymentInstructions: currentCompany?.payment_instructions || '',
   });
 
   // Update form when currentCompany changes
@@ -48,8 +57,16 @@ export default function SettingsScreen() {
     if (currentCompany) {
       setCompanyForm({
         name: currentCompany.name,
-        address: currentCompany.address || '',
+        contactName: currentCompany.contact_name || '',
         email: currentCompany.email || '',
+        phone: currentCompany.phone || '',
+        address: currentCompany.address || '',
+        addressLine2: currentCompany.address_line2 || '',
+        addressLine3: currentCompany.address_line3 || '',
+        businessLabel: currentCompany.business_label || 'Tax ID',
+        businessNumber: currentCompany.business_number || '',
+        businessCategory: currentCompany.business_category || '',
+        paymentInstructions: currentCompany.payment_instructions || '',
       });
       if (currentCompany.logo_url) {
         setLogoUri(`${BASE_URL}${currentCompany.logo_url}`);
@@ -97,8 +114,16 @@ export default function SettingsScreen() {
     try {
       const formData = new FormData();
       formData.append('name', companyForm.name);
-      formData.append('address', companyForm.address);
+      formData.append('contact_name', companyForm.contactName);
       formData.append('email', companyForm.email);
+      formData.append('phone', companyForm.phone);
+      formData.append('address', companyForm.address);
+      formData.append('address_line2', companyForm.addressLine2);
+      formData.append('address_line3', companyForm.addressLine3);
+      formData.append('business_label', companyForm.businessLabel);
+      formData.append('business_number', companyForm.businessNumber);
+      formData.append('business_category', companyForm.businessCategory);
+      formData.append('payment_instructions', companyForm.paymentInstructions);
 
       if (logoUri && !logoUri.startsWith('http')) {
         const filename = logoUri.split('/').pop();
@@ -201,23 +226,34 @@ export default function SettingsScreen() {
       <ScrollView contentContainerStyle={styles.content}>
         {/* Profile Section */}
         <View style={styles.profileSection}>
-          <View style={styles.avatar}>
+          <LinearGradient
+            colors={colors.gradients.primary as any}
+            style={styles.avatar}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+          >
             <Text style={styles.avatarText}>
               {user?.fullName?.charAt(0) || user?.email?.charAt(0) || 'U'}
             </Text>
-          </View>
+          </LinearGradient>
           <Text style={styles.userName}>{user?.fullName || 'User'}</Text>
           <Text style={styles.userEmail}>{user?.email}</Text>
           <View style={styles.planBadge}>
+            <LinearGradient
+              colors={['#FFD700', '#FFA500']}
+              style={StyleSheet.absoluteFill}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+            />
             <Text style={styles.planText}>PRO PLAN</Text>
           </View>
         </View>
 
         {/* Company Settings */}
         <Text style={styles.sectionTitle}>Company Details</Text>
-        <Card style={styles.card} padding={4}>
+        <Card style={styles.card} padding={0}>
           {!editingCompany ? (
-            <>
+            <View style={{ padding: spacing[4] }}>
               <View style={styles.companyHeader}>
                 {logoUri ? (
                   <Image source={{ uri: logoUri }} style={styles.companyLogo} />
@@ -228,32 +264,51 @@ export default function SettingsScreen() {
                     </Text>
                   </View>
                 )}
-                <View style={{ flex: 1 }}>
-                  <View style={styles.companyInfoRow}>
-                    <Text style={styles.companyLabel}>Name</Text>
-                    <Text style={styles.companyValue}>{companyForm.name}</Text>
-                  </View>
-                  <View style={styles.divider} />
-                  <View style={styles.companyInfoRow}>
-                    <Text style={styles.companyLabel}>Email</Text>
-                    <Text style={styles.companyValue}>{companyForm.email}</Text>
-                  </View>
+                <View style={{ flex: 1, justifyContent: 'center' }}>
+                  <Text style={styles.companyNameDisplay}>{companyForm.name}</Text>
+                  <Text style={styles.companyEmailDisplay}>{companyForm.email}</Text>
                 </View>
               </View>
 
               <View style={styles.divider} />
-              <View style={styles.companyInfoRow}>
-                <Text style={styles.companyLabel}>Address</Text>
-                <Text style={styles.companyValue}>{companyForm.address || 'Not set'}</Text>
+
+              <View style={styles.detailRow}>
+                <Ionicons name="location-outline" size={18} color={colors.gray[400]} style={{ marginRight: 8 }} />
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.companyAddressDisplay}>{companyForm.address || 'No address set'}</Text>
+                  {companyForm.addressLine2 ? <Text style={styles.companyAddressDisplay}>{companyForm.addressLine2}</Text> : null}
+                  {companyForm.addressLine3 ? <Text style={styles.companyAddressDisplay}>{companyForm.addressLine3}</Text> : null}
+                </View>
               </View>
+
+              <View style={styles.detailRow}>
+                <Ionicons name="call-outline" size={18} color={colors.gray[400]} style={{ marginRight: 8 }} />
+                <Text style={styles.companyAddressDisplay}>{companyForm.phone || 'No phone set'}</Text>
+              </View>
+
+              {companyForm.businessNumber ? (
+                <View style={styles.detailRow}>
+                  <Ionicons name="card-outline" size={18} color={colors.gray[400]} style={{ marginRight: 8 }} />
+                  <Text style={styles.companyAddressDisplay}>{companyForm.businessLabel}: {companyForm.businessNumber}</Text>
+                </View>
+              ) : null}
+
+              {companyForm.paymentInstructions ? (
+                <View style={[styles.detailRow, { alignItems: 'flex-start' }]}>
+                  <Ionicons name="cash-outline" size={18} color={colors.gray[400]} style={{ marginRight: 8, marginTop: 2 }} />
+                  <Text style={styles.companyAddressDisplay}>{companyForm.paymentInstructions}</Text>
+                </View>
+              ) : null}
+
               <Button
                 title="Edit Details"
                 onPress={() => setEditingCompany(true)}
                 variant="outline"
                 size="sm"
                 style={{ marginTop: spacing[4] }}
+                icon={<Ionicons name="create-outline" size={16} color={colors.primary[600]} />}
               />
-            </>
+            </View>
           ) : (
             <View>
               <TouchableOpacity onPress={pickImage} style={styles.logoPicker}>
@@ -278,11 +333,59 @@ export default function SettingsScreen() {
                 onChangeText={(text) => setCompanyForm({ ...companyForm, email: text })}
               />
               <Input
-                label="Address"
+                label="Address Line 1"
                 value={companyForm.address}
                 onChangeText={(text) => setCompanyForm({ ...companyForm, address: text })}
+              />
+              <Input
+                label="Address Line 2"
+                value={companyForm.addressLine2}
+                onChangeText={(text) => setCompanyForm({ ...companyForm, addressLine2: text })}
+              />
+              <Input
+                label="Address Line 3"
+                value={companyForm.addressLine3}
+                onChangeText={(text) => setCompanyForm({ ...companyForm, addressLine3: text })}
+              />
+              <Input
+                label="Contact Name"
+                value={companyForm.contactName}
+                onChangeText={(text) => setCompanyForm({ ...companyForm, contactName: text })}
+              />
+              <Input
+                label="Phone Number"
+                value={companyForm.phone}
+                onChangeText={(text) => setCompanyForm({ ...companyForm, phone: text })}
+                keyboardType="phone-pad"
+              />
+              <View style={{ flexDirection: 'row', gap: spacing[4] }}>
+                <View style={{ flex: 1 }}>
+                  <Input
+                    label="Business Label (e.g. VAT)"
+                    value={companyForm.businessLabel}
+                    onChangeText={(text) => setCompanyForm({ ...companyForm, businessLabel: text })}
+                  />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Input
+                    label="Business Number"
+                    value={companyForm.businessNumber}
+                    onChangeText={(text) => setCompanyForm({ ...companyForm, businessNumber: text })}
+                  />
+                </View>
+              </View>
+              <Input
+                label="Business Category"
+                value={companyForm.businessCategory}
+                onChangeText={(text) => setCompanyForm({ ...companyForm, businessCategory: text })}
+              />
+              <Input
+                label="Payment Instructions"
+                value={companyForm.paymentInstructions}
+                onChangeText={(text) => setCompanyForm({ ...companyForm, paymentInstructions: text })}
                 multiline
-                numberOfLines={2}
+                numberOfLines={4}
+                style={{ height: 100, textAlignVertical: 'top' }}
               />
               <View style={styles.editActions}>
                 <Button
@@ -395,7 +498,6 @@ const createStyles = (colors: Colors) => StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: borderRadius.full,
-    backgroundColor: colors.primary[100],
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: spacing[4],
@@ -406,7 +508,7 @@ const createStyles = (colors: Colors) => StyleSheet.create({
   avatarText: {
     fontSize: typography.fontSize['3xl'],
     fontWeight: typography.fontWeight.bold,
-    color: colors.primary[600],
+    color: 'white',
   },
   userName: {
     fontSize: typography.fontSize.xl,
@@ -420,10 +522,10 @@ const createStyles = (colors: Colors) => StyleSheet.create({
     marginBottom: spacing[3],
   },
   planBadge: {
-    backgroundColor: colors.primary[600],
     paddingHorizontal: spacing[3],
     paddingVertical: spacing[1],
     borderRadius: borderRadius.full,
+    overflow: 'hidden',
   },
   planText: {
     color: 'white',
@@ -518,6 +620,27 @@ const createStyles = (colors: Colors) => StyleSheet.create({
     textAlign: 'right',
     flex: 1,
     marginLeft: spacing[4],
+  },
+  companyNameDisplay: {
+    fontSize: typography.fontSize.lg,
+    fontWeight: typography.fontWeight.bold,
+    color: colors.text.primary,
+    marginBottom: 2,
+  },
+  companyEmailDisplay: {
+    fontSize: typography.fontSize.sm,
+    color: colors.text.secondary,
+  },
+  detailRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: spacing[3],
+  },
+  companyAddressDisplay: {
+    fontSize: typography.fontSize.sm,
+    color: colors.text.secondary,
+    flex: 1,
+    lineHeight: 20,
   },
   editActions: {
     flexDirection: 'row',

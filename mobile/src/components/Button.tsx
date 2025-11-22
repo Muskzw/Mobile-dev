@@ -6,8 +6,10 @@ import {
     ActivityIndicator,
     ViewStyle,
     TextStyle,
+    View,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons } from '@expo/vector-icons';
 import { spacing, borderRadius, shadows, Colors } from '../theme';
 import { useTheme } from '../context/ThemeContext';
 
@@ -20,6 +22,7 @@ interface ButtonProps {
     loading?: boolean;
     fullWidth?: boolean;
     gradient?: boolean;
+    icon?: keyof typeof Ionicons.glyphMap | React.ReactNode;
     style?: ViewStyle;
     textStyle?: TextStyle;
 }
@@ -33,6 +36,7 @@ export const Button: React.FC<ButtonProps> = ({
     loading = false,
     fullWidth = false,
     gradient = false,
+    icon,
     style,
     textStyle,
 }) => {
@@ -56,15 +60,30 @@ export const Button: React.FC<ButtonProps> = ({
         ...(textStyle ? [textStyle] : []),
     ];
 
+    const getIconColor = () => {
+        if (disabled) return colors.gray[500];
+        if (variant === 'outline' || variant === 'ghost') return colors.primary[600];
+        return colors.text.inverse;
+    };
+
     const content = (
         <>
-            {loading && (
+            {loading ? (
                 <ActivityIndicator
-                    color={variant === 'outline' || variant === 'ghost' ? colors.primary[600] : colors.text.inverse}
+                    color={getIconColor()}
                     style={styles.loader}
                     size="small"
                 />
-            )}
+            ) : React.isValidElement(icon) ? (
+                <View style={styles.loader}>{icon}</View>
+            ) : icon ? (
+                <Ionicons
+                    name={icon as any}
+                    size={20}
+                    color={getIconColor()}
+                    style={styles.loader}
+                />
+            ) : null}
             <Text style={textStyles}>{title}</Text>
         </>
     );

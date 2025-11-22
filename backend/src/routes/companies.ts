@@ -31,7 +31,7 @@ const upload = multer({
     const allowedTypes = /jpeg|jpg|png/;
     const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
     const mimetype = allowedTypes.test(file.mimetype);
-    
+
     if (mimetype && extname) {
       return cb(null, true);
     }
@@ -53,34 +53,49 @@ router.post('/', authenticate, upload.single('logo'), [
 
     const {
       name,
+      contactName,
       address,
+      addressLine2,
+      addressLine3,
       phone,
       email,
       taxNumber,
       registrationNumber,
+      businessLabel,
+      businessNumber,
+      businessCategory,
       currency,
-      brandColor
+      brandColor,
+      paymentInstructions
     } = req.body;
 
     const logoUrl = req.file ? `/uploads/logos/${req.file.filename}` : null;
 
     const result = await pool.query(
       `INSERT INTO companies (
-        user_id, name, logo_url, address, phone, email, 
-        tax_number, registration_number, currency, brand_color
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+        user_id, name, contact_name, logo_url, address, address_line2, address_line3,
+        phone, email, tax_number, registration_number, business_label, business_number,
+        business_category, currency, brand_color, payment_instructions
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
       RETURNING *`,
       [
         req.userId,
         name,
+        contactName || null,
         logoUrl,
         address || null,
+        addressLine2 || null,
+        addressLine3 || null,
         phone || null,
         email || null,
         taxNumber || null,
         registrationNumber || null,
+        businessLabel || null,
+        businessNumber || null,
+        businessCategory || null,
         currency || 'USD',
-        brandColor || '#3B82F6'
+        brandColor || '#3B82F6',
+        paymentInstructions || null
       ]
     );
 
@@ -129,13 +144,20 @@ router.put('/:id', authenticate, upload.single('logo'), async (req: AuthRequest,
   try {
     const {
       name,
+      contactName,
       address,
+      addressLine2,
+      addressLine3,
       phone,
       email,
       taxNumber,
       registrationNumber,
+      businessLabel,
+      businessNumber,
+      businessCategory,
       currency,
-      brandColor
+      brandColor,
+      paymentInstructions
     } = req.body;
 
     // Check ownership
@@ -154,27 +176,41 @@ router.put('/:id', authenticate, upload.single('logo'), async (req: AuthRequest,
     const result = await pool.query(
       `UPDATE companies SET
         name = COALESCE($1, name),
-        logo_url = COALESCE($2, logo_url),
-        address = COALESCE($3, address),
-        phone = COALESCE($4, phone),
-        email = COALESCE($5, email),
-        tax_number = COALESCE($6, tax_number),
-        registration_number = COALESCE($7, registration_number),
-        currency = COALESCE($8, currency),
-        brand_color = COALESCE($9, brand_color),
+        contact_name = COALESCE($2, contact_name),
+        logo_url = COALESCE($3, logo_url),
+        address = COALESCE($4, address),
+        address_line2 = COALESCE($5, address_line2),
+        address_line3 = COALESCE($6, address_line3),
+        phone = COALESCE($7, phone),
+        email = COALESCE($8, email),
+        tax_number = COALESCE($9, tax_number),
+        registration_number = COALESCE($10, registration_number),
+        business_label = COALESCE($11, business_label),
+        business_number = COALESCE($12, business_number),
+        business_category = COALESCE($13, business_category),
+        currency = COALESCE($14, currency),
+        brand_color = COALESCE($15, brand_color),
+        payment_instructions = COALESCE($16, payment_instructions),
         updated_at = CURRENT_TIMESTAMP
-      WHERE id = $10 AND user_id = $11
+      WHERE id = $17 AND user_id = $18
       RETURNING *`,
       [
         name || null,
+        contactName || null,
         logoUrl,
         address || null,
+        addressLine2 || null,
+        addressLine3 || null,
         phone || null,
         email || null,
         taxNumber || null,
         registrationNumber || null,
+        businessLabel || null,
+        businessNumber || null,
+        businessCategory || null,
         currency || null,
         brandColor || null,
+        paymentInstructions || null,
         req.params.id,
         req.userId
       ]

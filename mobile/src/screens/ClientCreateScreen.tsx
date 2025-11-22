@@ -18,7 +18,7 @@ import api from '../api/client';
 import { useAuthStore } from '../store/authStore';
 import { useTheme } from '../context/ThemeContext';
 import { spacing, typography, borderRadius, shadows, Colors } from '../theme';
-import { Button } from '../components/Button';
+import { Button } from '../components';
 import { Input } from '../components/Input';
 import { Card } from '../components/Card';
 

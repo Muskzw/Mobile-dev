@@ -8,7 +8,9 @@ import {
   TouchableOpacity,
   RefreshControl,
   Dimensions,
+  ActivityIndicator,
 } from 'react-native';
+import { LineChart } from 'react-native-chart-kit';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
@@ -19,6 +21,7 @@ import { useAuthStore } from '../store/authStore';
 import { useTheme } from '../context/ThemeContext';
 import { spacing, typography, borderRadius, shadows, Colors } from '../theme';
 import { Card } from '../components/Card';
+import { Button } from '../components';
 
 const { width } = Dimensions.get('window');
 
@@ -33,6 +36,59 @@ export default function DashboardScreen() {
     queryKey: ['dashboard-stats'],
     queryFn: async () => {
       const response = await api.get('/dashboard/stats');
+      return response.data;
+    }
+  });
+
+  const { data: chartData } = useQuery({
+    queryKey: ['financial-chart'],
+    queryFn: async () => {
+      try {
+        const response = await api.get('/documents?type=INVOICE&limit=100');
+        const docs = response.data || [];
+
+        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        const today = new Date();
+        const last6Months: { month: string; year: number; value: number }[] = [];
+        for (let i = 5; i >= 0; i--) {
+          const d = new Date(today.getFullYear(), today.getMonth() - i, 1);
+          last6Months.push({
+            month: months[d.getMonth()],
+            year: d.getFullYear(),
+            value: 0
+          });
+        }
+
+        docs.forEach((doc: any) => {
+          if (doc.status !== 'DRAFT' && doc.status !== 'CANCELLED') {
+            const date = new Date(doc.issue_date || doc.created_at);
+            const month = months[date.getMonth()];
+            const year = date.getFullYear();
+
+            const period = last6Months.find(p => p.month === month && p.year === year);
+            if (period) {
+              period.value += parseFloat(doc.total);
+            }
+          }
+        });
+
+        return {
+          labels: last6Months.map(m => m.month),
+          datasets: [{
+            data: last6Months.map(m => m.value)
+          }]
+        };
+      } catch (e) {
+        console.error('Chart data error', e);
+        return null;
+      }
+    }
+  });
+
+  const { data: recentDocuments } = useQuery({
+    queryKey: ['recent-documents'],
+    queryFn: async () => {
+      const response = await api.get('/documents?limit=3&sort=created_at:desc');
       return response.data;
     }
   });
@@ -133,6 +189,46 @@ export default function DashboardScreen() {
           />
         </View>
 
+        {/* Financial Chart */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Income Overview</Text>
+          <Card style={styles.chartCard} padding={0}>
+            {chartData ? (
+              <LineChart
+                data={chartData}
+                width={width - spacing[12]}
+                height={220}
+                yAxisLabel="$"
+                chartConfig={{
+                  backgroundColor: colors.background.primary,
+                  backgroundGradientFrom: colors.background.primary,
+                  backgroundGradientTo: colors.background.primary,
+                  decimalPlaces: 0,
+                  color: (opacity = 1) => colors.primary[500],
+                  labelColor: (opacity = 1) => colors.text.secondary,
+                  style: {
+                    borderRadius: 16
+                  },
+                  propsForDots: {
+                    r: "4",
+                    strokeWidth: "2",
+                    stroke: colors.primary[600]
+                  }
+                }}
+                bezier
+                style={{
+                  marginVertical: 8,
+                  borderRadius: 16
+                }}
+              />
+            ) : (
+              <View style={{ height: 220, alignItems: 'center', justifyContent: 'center' }}>
+                <ActivityIndicator color={colors.primary[500]} />
+              </View>
+            )}
+          </Card>
+        </View>
+
         {/* Quick Actions */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Quick Actions</Text>
@@ -176,35 +272,90 @@ export default function DashboardScreen() {
           </View>
 
           <Card style={styles.recentCard} padding={0}>
-            {[1, 2, 3].map((_, index) => (
-              <TouchableOpacity
-                key={index}
-                style={[
-                  styles.recentItem,
-                  index !== 2 && styles.recentItemBorder
-                ]}
-              >
-                <View style={[styles.recentIcon, { backgroundColor: index === 0 ? (isDark ? colors.primary[900] : '#EEF2FF') : (isDark ? colors.secondary[900] : '#F0FDF4') }]}>
-                  <Ionicons
-                    name={index === 0 ? "document-text" : "checkmark-circle"}
-                    size={20}
-                    color={index === 0 ? colors.primary[600] : colors.secondary[600]}
-                  />
+            {recentDocuments && recentDocuments.length > 0 ? (
+              recentDocuments.map((doc: any, index: number) => {
+                const isInvoice = doc.type === 'INVOICE';
+                const iconName = isInvoice ? 'receipt' : 'document-text';
+                const iconColor = isInvoice ? colors.secondary[600] : colors.primary[600];
+                const bgColor = isInvoice
+                  ? (isDark ? colors.secondary[900] : '#F0FDF4')
+                  : (isDark ? colors.primary[900] : '#EEF2FF');
+
+                const timeAgo = (date: string) => {
+                  const now = new Date().getTime();
+                  const created = new Date(date).getTime();
+                  const diff = now - created;
+                  const hours = Math.floor(diff / (1000 * 60 * 60));
+                  const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+
+                  if (days > 0) return `${days} day${days > 1 ? 's' : ''} ago`;
+                  if (hours > 0) return `${hours} hour${hours > 1 ? 's' : ''} ago`;
+                  return 'Just now';
+                };
+
+                return (
+                  <TouchableOpacity
+                    key={doc.id}
+                    style={[
+                      styles.recentItem,
+                      index !== recentDocuments.length - 1 && styles.recentItemBorder
+                    ]}
+                    onPress={() => (navigation as any).navigate('DocumentView', { id: doc.id })}
+                  >
+                    <View style={[styles.recentIcon, { backgroundColor: bgColor }]}>
+                      <Ionicons name={iconName} size={20} color={iconColor} />
+                    </View>
+                    <View style={styles.recentInfo}>
+                      <Text style={styles.recentTitle}>
+                        {doc.type} {doc.document_number}
+                      </Text>
+                      <Text style={styles.recentTime}>{timeAgo(doc.created_at)}</Text>
+                    </View>
+                    <Ionicons name="chevron-forward" size={20} color={colors.gray[400]} />
+                  </TouchableOpacity>
+                );
+              })
+            ) : (
+              <View style={{ padding: spacing[8], alignItems: 'center' }}>
+                <View style={{
+                  width: 64,
+                  height: 64,
+                  borderRadius: borderRadius.full,
+                  backgroundColor: colors.primary[50],
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  marginBottom: spacing[4]
+                }}>
+                  <Ionicons name="document-text" size={32} color={colors.primary[400]} />
                 </View>
-                <View style={styles.recentInfo}>
-                  <Text style={styles.recentTitle}>
-                    {index === 0 ? 'Quotation #1023 created' : 'Invoice #INV-001 paid'}
-                  </Text>
-                  <Text style={styles.recentTime}>2 hours ago</Text>
-                </View>
-                <Ionicons name="chevron-forward" size={20} color={colors.gray[400]} />
-              </TouchableOpacity>
-            ))}
+                <Text style={{
+                  fontSize: typography.fontSize.base,
+                  fontWeight: typography.fontWeight.semibold,
+                  color: colors.text.primary,
+                  marginBottom: spacing[1]
+                }}>
+                  No recent activity
+                </Text>
+                <Text style={{
+                  fontSize: typography.fontSize.sm,
+                  color: colors.text.secondary,
+                  textAlign: 'center',
+                  marginBottom: spacing[6]
+                }}>
+                  Create your first quotation or invoice to get started
+                </Text>
+                <Button
+                  title="Create First Document"
+                  size="sm"
+                  onPress={() => navigation.navigate('DocumentCreate' as never)}
+                />
+              </View>
+            )}
           </Card>
         </View>
 
-      </ScrollView>
-    </View>
+      </ScrollView >
+    </View >
   );
 }
 
@@ -316,6 +467,12 @@ const createStyles = (colors: Colors) => StyleSheet.create({
     fontSize: typography.fontSize.sm,
     color: colors.primary[600],
     fontWeight: typography.fontWeight.semibold,
+  },
+  chartCard: {
+    backgroundColor: colors.background.primary,
+    ...shadows.sm,
+    overflow: 'hidden',
+    alignItems: 'center',
   },
   actionsCard: {
     backgroundColor: colors.background.primary,

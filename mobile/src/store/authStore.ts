@@ -16,6 +16,18 @@ interface Company {
   logo_url?: string;
   currency: string;
   brand_color: string;
+  taxRate?: number;
+  terms?: string;
+  emailSubjectTemplate?: string;
+  emailBodyTemplate?: string;
+  contact_name?: string;
+  phone?: string;
+  address_line2?: string;
+  address_line3?: string;
+  business_label?: string;
+  business_number?: string;
+  business_category?: string;
+  payment_instructions?: string;
 }
 
 interface AuthState {

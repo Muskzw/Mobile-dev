@@ -53,8 +53,8 @@ router.post('/', [
 router.delete('/:id', async (req: AuthRequest, res: Response) => {
   try {
     const result = await pool.query(
-      'DELETE FROM saved_items WHERE id = $1 AND company_id = $2 RETURNING id',
-      [req.params.id, req.companyId]
+      'DELETE FROM saved_items WHERE id = $1 AND (user_id = $2 OR company_id = $3) RETURNING id',
+      [req.params.id, req.userId, req.companyId || null]
     );
 
     if (result.rows.length === 0) {
@@ -89,9 +89,9 @@ router.put('/:id', [
         tax_rate = COALESCE($4, tax_rate),
         category = COALESCE($5, category),
         updated_at = CURRENT_TIMESTAMP
-      WHERE id = $6 AND company_id = $7
+      WHERE id = $6 AND (user_id = $7 OR company_id = $8)
       RETURNING *`,
-      [name, description, unitPrice, taxRate, category, req.params.id, req.companyId]
+      [name, description, unitPrice, taxRate, category, req.params.id, req.userId, req.companyId || null]
     );
 
     if (result.rows.length === 0) {

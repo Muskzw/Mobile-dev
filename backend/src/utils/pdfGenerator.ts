@@ -1,8 +1,10 @@
 import PDFDocument from 'pdfkit';
+import path from 'path';
+import fs from 'fs';
 
 export async function generatePDF(document: any, company: any, client: any | null): Promise<Buffer> {
   return new Promise((resolve, reject) => {
-    const doc = new PDFDocument({ margin: 50 });
+    const doc = new PDFDocument({ margin: 50, size: 'A4' });
     const buffers: Buffer[] = [];
 
     doc.on('data', buffers.push.bind(buffers));
@@ -12,111 +14,175 @@ export async function generatePDF(document: any, company: any, client: any | nul
     });
     doc.on('error', reject);
 
-    // Header with company logo
+    // Colors
+    const primaryColor = company.brand_color || '#4F46E5';
+    const secondaryColor = '#6B7280';
+    const lightGray = '#F3F4F6';
+
+    // Logo & Company Name
     if (company.logo_url) {
-      // In production, you'd load the actual image file
-      doc.fontSize(20).text(company.name || 'Company', 50, 50);
-    } else {
-      doc.fontSize(20).text(company.name || 'Company', 50, 50);
-    }
+      const logoPath = path.join(process.cwd(), company.logo_url.startsWith('/') ? company.logo_url.slice(1) : company.logo_url);
 
-    // Company details
-    doc.fontSize(10)
-       .text(company.address || '', 50, 80)
-       .text(`Phone: ${company.phone || ''}`, 50, 95)
-       .text(`Email: ${company.email || ''}`, 50, 110);
-
-    // Document type and number
-    const docType = document.type.charAt(0).toUpperCase() + document.type.slice(1).replace('_', ' ');
-    doc.fontSize(18)
-       .text(docType, 400, 50)
-       .fontSize(12)
-       .text(`Number: ${document.document_number}`, 400, 75)
-       .text(`Date: ${new Date(document.issue_date).toLocaleDateString()}`, 400, 90);
-
-    if (document.due_date) {
-      doc.text(`Due Date: ${new Date(document.due_date).toLocaleDateString()}`, 400, 105);
-    }
-
-    // Client details
-    if (client) {
-      doc.fontSize(12)
-         .text('Bill To:', 50, 150)
-         .fontSize(10)
-         .text(client.name || '', 50, 170)
-         .text(client.address || '', 50, 185)
-         .text(`Email: ${client.email || ''}`, 50, 200)
-         .text(`Phone: ${client.phone || ''}`, 50, 215);
-    }
-
-    // Items table
-    let yPos = 250;
-    doc.fontSize(12).text('Items', 50, yPos);
-    yPos += 20;
-
-    // Table header
-    doc.fontSize(10)
-       .text('Description', 50, yPos)
-       .text('Qty', 300, yPos)
-       .text('Price', 350, yPos)
-       .text('Total', 450, yPos);
-    
-    yPos += 15;
-    doc.moveTo(50, yPos).lineTo(550, yPos).stroke();
-
-    // Items
-    document.items.forEach((item: any) => {
-      yPos += 15;
-      doc.fontSize(9)
-         .text(item.name || '', 50, yPos, { width: 240 })
-         .text(item.quantity.toString(), 300, yPos)
-         .text(`${document.currency} ${parseFloat(item.unit_price).toFixed(2)}`, 350, yPos)
-         .text(`${document.currency} ${parseFloat(item.total).toFixed(2)}`, 450, yPos);
-      
-      if (item.description) {
-        yPos += 10;
-        doc.fontSize(8).text(item.description, 50, yPos, { width: 240 });
+      if (fs.existsSync(logoPath)) {
+        try {
+          doc.image(logoPath, 50, 40, { width: 70, height: 70 });
+        } catch (e) {
+          console.error('Error loading logo:', e);
+        }
       }
+    }
+
+    // Company Details (Left side)
+    doc.fillColor('#111827').fontSize(16).font('Helvetica-Bold')
+      .text(company.name || 'Company', 130, 50);
+
+    doc.fillColor(secondaryColor).fontSize(9).font('Helvetica')
+      .text(company.address || '', 130, 70, { width: 200 })
+      .text(company.phone || '', 130, 85)
+      .text(company.email || '', 130, 95);
+
+    // Document Type (Right side)
+    const docType = document.type.replace('_', ' ');
+    doc.fillColor(primaryColor).fontSize(22).font('Helvetica-Bold')
+      .text(docType.charAt(0).toUpperCase() + docType.slice(1), 400, 50, { align: 'right', width: 150 });
+
+    // Quotation/Invoice Number
+    doc.fillColor('#111827').fontSize(9).font('Helvetica-Bold')
+      .text('Quotation#', 400, 85, { align: 'right', width: 70 })
+      .text('Date:', 400, 100, { align: 'right', width: 70 });
+
+    doc.font('Helvetica').fontSize(9)
+      .text(document.document_number, 475, 85, { align: 'left', width: 75 })
+      .text(new Date(document.issue_date).toLocaleDateString(), 475, 100, { align: 'left', width: 75 });
+
+    // Horizontal line separator
+    doc.moveTo(50, 125).lineTo(550, 125).stroke();
+
+    // Bill To section
+    doc.fillColor('#111827').fontSize(11).font('Helvetica-Bold')
+      .text('Bill To:', 50, 140);
+
+    if (client) {
+      doc.fillColor(secondaryColor).fontSize(9).font('Helvetica')
+        .text(client.name || '', 50, 155)
+        .text(client.address || '', 50, 168, { width: 250 })
+        .text(client.email || '', 50, 181)
+        .text(client.phone || '', 50, 194);
+    }
+
+    // Items Table
+    let y = 230;
+
+    // Table Header
+    doc.rect(50, y, 500, 25).fillAndStroke(primaryColor, primaryColor);
+    doc.fillColor('white').fontSize(9).font('Helvetica-Bold');
+    doc.text('#', 55, y + 8);
+    doc.text('DESCRIPTION', 80, y + 8);
+    doc.text('QTY', 350, y + 8, { width: 50, align: 'center' });
+    doc.text('PRICE', 410, y + 8, { width: 60, align: 'right' });
+    doc.text('TOTAL', 480, y + 8, { width: 65, align: 'right' });
+
+    y += 25;
+
+    // Table Rows
+    doc.fillColor('#374151').font('Helvetica');
+    document.items.forEach((item: any, i: number) => {
+      const rowY = y;
+      const rowHeight = item.description && item.description !== item.name ? 35 : 25;
+
+      // Alternating row background
+      if (i % 2 === 0) {
+        doc.rect(50, rowY, 500, rowHeight).fill(lightGray);
+      }
+
+      // Item number
+      doc.fillColor('#374151').fontSize(9).font('Helvetica')
+        .text((i + 1).toString(), 55, rowY + 6);
+
+      // Item name
+      doc.fillColor('#111827').fontSize(9).font('Helvetica-Bold')
+        .text(item.name || item.description, 80, rowY + 6, { width: 260 });
+
+      // Item description/details (if different from name)
+      if (item.description && item.description !== item.name) {
+        doc.fillColor(secondaryColor).fontSize(7).font('Helvetica')
+          .text(item.description, 80, rowY + 18, { width: 260 });
+      }
+
+      // Quantity
+      doc.fillColor('#374151').fontSize(9).font('Helvetica')
+        .text(item.quantity.toString(), 350, rowY + 8, { width: 50, align: 'center' });
+
+      // Price
+      doc.text(parseFloat(item.unit_price).toFixed(2), 410, rowY + 8, { width: 60, align: 'right' });
+
+      // Total
+      doc.font('Helvetica-Bold')
+        .text(parseFloat(item.total).toFixed(2), 480, rowY + 8, { width: 65, align: 'right' });
+
+      y += rowHeight;
     });
 
-    yPos += 20;
-    doc.moveTo(50, yPos).lineTo(550, yPos).stroke();
+    // Bottom border for table
+    doc.moveTo(50, y).lineTo(550, y).strokeColor('#E5E7EB').stroke();
 
-    // Totals
-    yPos += 20;
-    doc.fontSize(10)
-       .text('Subtotal:', 400, yPos)
-       .text(`${document.currency} ${parseFloat(document.subtotal).toFixed(2)}`, 450, yPos);
+    // Totals Section - FIXED to stay within page margins
+    // Page: 612 width, 50 margins each side = content area 50-562
+    y += 20;
+    const labelX = 380;
+    const valueX = 455;
 
-    if (parseFloat(document.tax_rate) > 0) {
-      yPos += 15;
-      doc.text(`Tax (${document.tax_rate}%):`, 400, yPos)
-         .text(`${document.currency} ${parseFloat(document.tax_amount).toFixed(2)}`, 450, yPos);
+    // Subtotal
+    doc.fillColor(secondaryColor).fontSize(9).font('Helvetica-Bold')
+      .text('GRAND TOTAL:', labelX, y, { width: 70, align: 'right' });
+    doc.fillColor('#111827').fontSize(9).font('Helvetica')
+      .text(`${document.currency} ${parseFloat(document.subtotal).toFixed(2)}`, valueX, y, { width: 95, align: 'right' });
+
+    // Tax
+    if (parseFloat(document.tax_rate || 0) > 0) {
+      y += 15;
+      doc.fillColor(secondaryColor).fontSize(9).font('Helvetica-Bold')
+        .text(`Tax (${document.tax_rate}%):`, labelX, y, { width: 70, align: 'right' });
+      doc.fillColor('#111827').fontSize(9).font('Helvetica')
+        .text(`${document.currency} ${parseFloat(document.tax_amount).toFixed(2)}`, valueX, y, { width: 95, align: 'right' });
     }
 
-    yPos += 15;
-    doc.fontSize(12)
-       .text('Total:', 400, yPos)
-       .text(`${document.currency} ${parseFloat(document.total).toFixed(2)}`, 450, yPos);
+    y += 20;
 
-    // Notes and terms
-    if (document.notes) {
-      yPos += 40;
-      doc.fontSize(10)
-         .text('Notes:', 50, yPos)
-         .fontSize(9)
-         .text(document.notes, 50, yPos + 15, { width: 500 });
-    }
+    // Total highlight box
+    doc.rect(370, y - 5, 180, 25).fillAndStroke(lightGray, '#E5E7EB');
+    doc.fillColor(primaryColor).fontSize(11).font('Helvetica-Bold')
+      .text('Total:', labelX, y + 3, { width: 70, align: 'right' });
+    doc.fontSize(11).font('Helvetica-Bold')
+      .text(`${document.currency} ${parseFloat(document.total).toFixed(2)}`, valueX, y + 3, { width: 95, align: 'right' });
 
-    if (document.terms) {
-      yPos += 60;
-      doc.fontSize(10)
-         .text('Terms & Conditions:', 50, yPos)
-         .fontSize(9)
-         .text(document.terms, 50, yPos + 15, { width: 500 });
-    }
+    // Footer Section
+    const footerY = 680;
+
+    // Payment Instructions
+    doc.fillColor('#111827').fontSize(9).font('Helvetica-Bold')
+      .text('Payment Instructions:', 50, footerY);
+
+    const paymentInstructions = company.payment_instructions ||
+      `Payment accepted via bank transfer, cash, or mobile money.\\nPlease include invoice number in payment reference.`;
+
+    doc.fillColor(secondaryColor).fontSize(8).font('Helvetica')
+      .text(paymentInstructions, 50, footerY + 15, { width: 250 });
+
+    // Authorized Signature Section
+    doc.fillColor('#111827').fontSize(9).font('Helvetica-Bold')
+      .text(`For, ${company.name || 'COMPANY'}`, 350, footerY);
+
+    // Signature line
+    doc.moveTo(350, footerY + 40).lineTo(500, footerY + 40).stroke();
+
+    doc.fillColor(secondaryColor).fontSize(8).font('Helvetica')
+      .text('AUTHORIZED SIGNATURE', 350, footerY + 45, { align: 'center', width: 150 });
+
+    // Page number at bottom
+    doc.fillColor('#9CA3AF').fontSize(7).font('Helvetica')
+      .text('Page 1 of 1', 50, 780, { align: 'right', width: 500 });
 
     doc.end();
   });
 }
-
