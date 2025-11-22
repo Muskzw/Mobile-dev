@@ -371,11 +371,15 @@ router.put('/:id', async (req: AuthRequest, res: Response) => {
     }
 
     updateFields.push(`updated_at = CURRENT_TIMESTAMP`);
+
+    // Add WHERE clause parameters
+    const whereId = paramCount++;
+    const whereCompanyId = paramCount++;
     updateValues.push(req.params.id, req.companyId);
 
     await pool.query(
       `UPDATE documents SET ${updateFields.join(', ')}
-       WHERE id = $${paramCount++} AND company_id = $${paramCount++}
+       WHERE id = $${whereId} AND company_id = $${whereCompanyId}
        RETURNING *`,
       updateValues
     );

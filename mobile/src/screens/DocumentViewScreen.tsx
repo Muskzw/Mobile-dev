@@ -692,10 +692,10 @@ export default function DocumentViewScreen() {
               </View>
             </TouchableOpacity>
 
-            {document?.status !== 'PAID' ? (
+            {document?.status !== 'paid' ? (
               <TouchableOpacity
                 style={styles.shareOption}
-                onPress={() => handleStatusUpdate('PAID')}
+                onPress={() => handleStatusUpdate('paid')}
               >
                 <View style={[styles.shareIcon, { backgroundColor: colors.success + '15' }]}>
                   <Ionicons name="checkmark-circle-outline" size={24} color={colors.success} />
@@ -708,14 +708,14 @@ export default function DocumentViewScreen() {
             ) : (
               <TouchableOpacity
                 style={styles.shareOption}
-                onPress={() => handleStatusUpdate('PENDING')}
+                onPress={() => handleStatusUpdate('draft')}
               >
                 <View style={[styles.shareIcon, { backgroundColor: colors.warning + '15' }]}>
                   <Ionicons name="time-outline" size={24} color={colors.warning} />
                 </View>
                 <View style={styles.shareOptionTextContainer}>
-                  <Text style={styles.shareOptionText}>Mark as Pending</Text>
-                  <Text style={styles.shareOptionDesc}>Update status to pending</Text>
+                  <Text style={styles.shareOptionText}>Mark as Draft</Text>
+                  <Text style={styles.shareOptionDesc}>Update status to draft</Text>
                 </View>
               </TouchableOpacity>
             )}

@@ -43,17 +43,31 @@ export async function generatePDF(document: any, company: any, client: any | nul
 
     // Document Type (Right side)
     const docType = document.type.replace('_', ' ');
+    const docTypeLabel = docType.charAt(0).toUpperCase() + docType.slice(1);
     doc.fillColor(primaryColor).fontSize(22).font('Helvetica-Bold')
-      .text(docType.charAt(0).toUpperCase() + docType.slice(1), 400, 50, { align: 'right', width: 150 });
+      .text(docTypeLabel, 400, 50, { align: 'right', width: 150 });
 
-    // Quotation/Invoice Number
+    // Document Number (matches document type)
+    const docNumberLabel = docType === 'quotation' ? 'Quotation#' :
+      docType === 'invoice' ? 'Invoice#' :
+        docType === 'proforma' ? 'Proforma#' : 'Document#';
+
     doc.fillColor('#111827').fontSize(9).font('Helvetica-Bold')
-      .text('Quotation#', 400, 85, { align: 'right', width: 70 })
+      .text(docNumberLabel, 400, 85, { align: 'right', width: 70 })
       .text('Date:', 400, 100, { align: 'right', width: 70 });
+
+    // Add due date for invoices
+    if (document.due_date && (document.type === 'invoice' || document.type === 'proforma')) {
+      doc.text('Due Date:', 400, 115, { align: 'right', width: 70 });
+    }
 
     doc.font('Helvetica').fontSize(9)
       .text(document.document_number, 475, 85, { align: 'left', width: 75 })
       .text(new Date(document.issue_date).toLocaleDateString(), 475, 100, { align: 'left', width: 75 });
+
+    if (document.due_date && (document.type === 'invoice' || document.type === 'proforma')) {
+      doc.text(new Date(document.due_date).toLocaleDateString(), 475, 115, { align: 'left', width: 75 });
+    }
 
     // Horizontal line separator
     doc.moveTo(50, 125).lineTo(550, 125).stroke();
@@ -134,7 +148,7 @@ export async function generatePDF(document: any, company: any, client: any | nul
 
     // Subtotal
     doc.fillColor(secondaryColor).fontSize(9).font('Helvetica-Bold')
-      .text('GRAND TOTAL:', labelX, y, { width: 70, align: 'right' });
+      .text('Subtotal:', labelX, y, { width: 70, align: 'right' });
     doc.fillColor('#111827').fontSize(9).font('Helvetica')
       .text(`${document.currency} ${parseFloat(document.subtotal).toFixed(2)}`, valueX, y, { width: 95, align: 'right' });
 
@@ -147,7 +161,10 @@ export async function generatePDF(document: any, company: any, client: any | nul
         .text(`${document.currency} ${parseFloat(document.tax_amount).toFixed(2)}`, valueX, y, { width: 95, align: 'right' });
     }
 
-    y += 20;
+    y += 15;
+    // Separator line
+    doc.moveTo(370, y).lineTo(550, y).strokeColor('#E5E7EB').stroke();
+    y += 10;
 
     // Total highlight box
     doc.rect(370, y - 5, 180, 25).fillAndStroke(lightGray, '#E5E7EB');
@@ -157,21 +174,35 @@ export async function generatePDF(document: any, company: any, client: any | nul
       .text(`${document.currency} ${parseFloat(document.total).toFixed(2)}`, valueX, y + 3, { width: 95, align: 'right' });
 
     // Footer Section
-    const footerY = 680;
+    let footerY = y + 40;
 
-    // Payment Instructions
+    // Terms & Conditions (if available)
+    if (document.terms || company.terms) {
+      doc.fillColor('#111827').fontSize(9).font('Helvetica-Bold')
+        .text('Terms & Conditions:', 50, footerY);
+
+      const terms = document.terms || company.terms || '';
+      doc.fillColor(secondaryColor).fontSize(8).font('Helvetica')
+        .text(terms, 50, footerY + 15, { width: 500, lineGap: 2 });
+
+      footerY += 60;
+    }
+
+    // Payment Instructions Section
+    if (footerY < 650) footerY = 650; // Ensure consistent placement
+
     doc.fillColor('#111827').fontSize(9).font('Helvetica-Bold')
       .text('Payment Instructions:', 50, footerY);
 
     const paymentInstructions = company.payment_instructions ||
-      `Payment accepted via bank transfer, cash, or mobile money.\\nPlease include invoice number in payment reference.`;
+      `Payment accepted via bank transfer, cash, or mobile money.\nPlease include ${docNumberLabel.replace('#', '')} number in payment reference.`;
 
     doc.fillColor(secondaryColor).fontSize(8).font('Helvetica')
-      .text(paymentInstructions, 50, footerY + 15, { width: 250 });
+      .text(paymentInstructions, 50, footerY + 15, { width: 250, lineGap: 2 });
 
     // Authorized Signature Section
     doc.fillColor('#111827').fontSize(9).font('Helvetica-Bold')
-      .text(`For, ${company.name || 'COMPANY'}`, 350, footerY);
+      .text(`For ${company.name || 'Company'}`, 350, footerY);
 
     // Signature line
     doc.moveTo(350, footerY + 40).lineTo(500, footerY + 40).stroke();

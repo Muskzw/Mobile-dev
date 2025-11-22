@@ -44,7 +44,7 @@ export default function DashboardScreen() {
     queryKey: ['financial-chart'],
     queryFn: async () => {
       try {
-        const response = await api.get('/documents?type=INVOICE&limit=100');
+        const response = await api.get('/documents?type=invoice&limit=100');
         const docs = response.data || [];
 
         const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -60,7 +60,8 @@ export default function DashboardScreen() {
         }
 
         docs.forEach((doc: any) => {
-          if (doc.status !== 'DRAFT' && doc.status !== 'CANCELLED') {
+          // Only count invoices that have been paid for accurate income tracking
+          if (doc.status === 'paid') {
             const date = new Date(doc.issue_date || doc.created_at);
             const month = months[date.getMonth()];
             const year = date.getFullYear();
