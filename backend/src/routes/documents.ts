@@ -5,6 +5,7 @@ import pool from '../database/connection';
 import { body, validationResult } from 'express-validator';
 import { generatePDF } from '../utils/pdfGenerator';
 import { sendDocumentEmail } from '../utils/emailService';
+import { canPerformAction, incrementDocumentCount } from '../utils/subscriptions';
 
 const router = express.Router();
 
@@ -76,6 +77,23 @@ router.post('/', [
     if (!errors.isEmpty()) {
       console.error('Document validation errors:', JSON.stringify(errors.array(), null, 2));
       return res.status(400).json({ errors: errors.array() });
+    }
+
+    // Check subscription limits
+    const userResult = await pool.query(
+      'SELECT * FROM users WHERE id = $1',
+      [req.userId]
+    );
+    const user = userResult.rows[0];
+
+    const permissionCheck = canPerformAction(user, 'createDocument');
+    if (!permissionCheck.allowed) {
+      return res.status(403).json({
+        error: permissionCheck.reason,
+        upgradeRequired: true,
+        currentTier: user.subscription_tier,
+        documentsUsed: user.documents_created_this_month
+      });
     }
 
     const {
@@ -189,6 +207,9 @@ router.post('/', [
 
       // Commit the transaction
       await client.query('COMMIT');
+
+      // Increment document counter for free tier tracking
+      await incrementDocumentCount(pool, Number(req.userId));
 
       // Fetch complete document with items
       const completeDoc = await getDocumentWithItems(document.id);

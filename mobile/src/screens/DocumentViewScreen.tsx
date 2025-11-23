@@ -346,9 +346,7 @@ export default function DocumentViewScreen() {
           <Ionicons name="arrow-back" size={24} color={colors.text.primary} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Document Details</Text>
-        <TouchableOpacity style={styles.menuButton} onPress={showMenu}>
-          <Ionicons name="ellipsis-horizontal" size={24} color={colors.text.primary} />
-        </TouchableOpacity>
+        <View style={{ width: 40 }} />
       </View>
 
       <ScrollView contentContainerStyle={styles.content}>
@@ -957,7 +955,9 @@ const createStyles = (colors: Colors) => StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: borderRadius.lg,
-    backgroundColor: colors.gray[100],
+    backgroundColor: `${colors.primary[600]}15`,
+    borderWidth: 1,
+    borderColor: colors.primary[600],
     alignItems: 'center',
     justifyContent: 'center',
   },
