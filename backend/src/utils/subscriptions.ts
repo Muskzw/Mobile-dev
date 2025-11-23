@@ -121,7 +121,7 @@ export async function resetMonthlyCounters(pool: any) {
 }
 
 // Increment document counter
-export async function incrementDocumentCount(pool: any, userId: number) {
+export async function incrementDocumentCount(pool: any, userId: string) {
     await pool.query(`
     UPDATE users 
     SET documents_created_this_month = documents_created_this_month + 1

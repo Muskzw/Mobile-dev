@@ -209,7 +209,7 @@ router.post('/', [
       await client.query('COMMIT');
 
       // Increment document counter for free tier tracking
-      await incrementDocumentCount(pool, Number(req.userId));
+      await incrementDocumentCount(pool, req.userId!);
 
       // Fetch complete document with items
       const completeDoc = await getDocumentWithItems(document.id);
@@ -534,7 +534,7 @@ router.post('/:id/duplicate', async (req: AuthRequest, res: Response) => {
     }
 
     // Increment document counter for free tier tracking
-    await incrementDocumentCount(pool, Number(req.userId));
+    await incrementDocumentCount(pool, req.userId!);
 
     const duplicatedDoc = await getDocumentWithItems(newDoc.id);
     res.status(201).json(duplicatedDoc);
@@ -665,7 +665,7 @@ router.post('/:id/convert', [
     );
 
     // Increment document counter for free tier tracking
-    await incrementDocumentCount(pool, Number(req.userId));
+    await incrementDocumentCount(pool, req.userId!);
 
     const convertedDoc = await getDocumentWithItems(newDoc.id);
     res.status(201).json(convertedDoc);
@@ -717,7 +717,11 @@ router.get('/:id/pdf', async (req: AuthRequest, res: Response) => {
       client = clientResult.rows[0];
     }
 
-    const pdfBuffer = await generatePDF(document, company, client);
+    // Get user subscription tier for watermark
+    const userResult = await pool.query('SELECT subscription_tier FROM users WHERE id = $1', [req.userId]);
+    const user = userResult.rows[0];
+
+    const pdfBuffer = await generatePDF(document, company, client, user);
 
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename="${document.document_number}.pdf"`);

@@ -2,7 +2,7 @@ import PDFDocument from 'pdfkit';
 import path from 'path';
 import fs from 'fs';
 
-export async function generatePDF(document: any, company: any, client: any | null): Promise<Buffer> {
+export async function generatePDF(document: any, company: any, client: any | null, user?: any): Promise<Buffer> {
   return new Promise((resolve, reject) => {
     const doc = new PDFDocument({ margin: 50, size: 'A4' });
     const buffers: Buffer[] = [];
@@ -209,6 +209,22 @@ export async function generatePDF(document: any, company: any, client: any | nul
 
     doc.fillColor(secondaryColor).fontSize(8).font('Helvetica')
       .text('AUTHORIZED SIGNATURE', 350, footerY + 45, { align: 'center', width: 150 });
+
+    // Watermark for free tier users
+    const isFreeTier = !user || user.subscription_tier === 'free';
+    if (isFreeTier) {
+      const watermarkY = 760;
+
+      // Subtle background box
+      doc.rect(50, watermarkY - 5, 500, 20)
+        .fillAndStroke('#FEF3C7', '#F59E0B');
+
+      // Watermark text
+      doc.fillColor('#92400E').fontSize(9).font('Helvetica-Bold')
+        .text('📄 Created with Quotation Maker', 180, watermarkY, { continued: true })
+        .fillColor('#B45309').fontSize(8).font('Helvetica')
+        .text(' - Upgrade to Premium to remove this watermark', { link: 'https://yourapp.com/upgrade' });
+    }
 
     // Page number at bottom
     doc.fillColor('#9CA3AF').fontSize(7).font('Helvetica')
