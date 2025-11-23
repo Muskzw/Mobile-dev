@@ -463,6 +463,23 @@ router.delete('/:id', async (req: AuthRequest, res: Response) => {
 // Duplicate document
 router.post('/:id/duplicate', async (req: AuthRequest, res: Response) => {
   try {
+    // Check subscription limits FIRST
+    const userResult = await pool.query(
+      'SELECT * FROM users WHERE id = $1',
+      [req.userId]
+    );
+    const user = userResult.rows[0];
+
+    const permissionCheck = canPerformAction(user, 'createDocument');
+    if (!permissionCheck.allowed) {
+      return res.status(403).json({
+        error: permissionCheck.reason,
+        upgradeRequired: true,
+        currentTier: user.subscription_tier,
+        documentsUsed: user.documents_created_this_month
+      });
+    }
+
     const original = await getDocumentWithItems(req.params.id);
 
     if (!original || original.company_id !== req.companyId) {
@@ -516,6 +533,9 @@ router.post('/:id/duplicate', async (req: AuthRequest, res: Response) => {
       );
     }
 
+    // Increment document counter for free tier tracking
+    await incrementDocumentCount(pool, Number(req.userId));
+
     const duplicatedDoc = await getDocumentWithItems(newDoc.id);
     res.status(201).json(duplicatedDoc);
   } catch (error) {
@@ -532,6 +552,23 @@ router.post('/:id/convert', [
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       return res.status(400).json({ errors: errors.array() });
+    }
+
+    // Check subscription limits FIRST
+    const userResult = await pool.query(
+      'SELECT * FROM users WHERE id = $1',
+      [req.userId]
+    );
+    const user = userResult.rows[0];
+
+    const permissionCheck = canPerformAction(user, 'createDocument');
+    if (!permissionCheck.allowed) {
+      return res.status(403).json({
+        error: permissionCheck.reason,
+        upgradeRequired: true,
+        currentTier: user.subscription_tier,
+        documentsUsed: user.documents_created_this_month
+      });
     }
 
     const { targetType } = req.body;
@@ -626,6 +663,9 @@ router.post('/:id/convert', [
         original.id
       ]
     );
+
+    // Increment document counter for free tier tracking
+    await incrementDocumentCount(pool, Number(req.userId));
 
     const convertedDoc = await getDocumentWithItems(newDoc.id);
     res.status(201).json(convertedDoc);
