@@ -14,6 +14,7 @@ import aiRoutes from './routes/ai';
 import dashboardRoutes from './routes/dashboard';
 import settingsRoutes from './routes/settings';
 import savedItemsRoutes from './routes/saved-items';
+import webhookRoutes from './routes/webhooks';
 
 dotenv.config();
 
@@ -70,6 +71,7 @@ app.use('/api/ai', aiRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/saved-items', savedItemsRoutes);
+app.use('/webhooks', webhookRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {

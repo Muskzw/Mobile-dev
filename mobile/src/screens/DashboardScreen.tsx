@@ -28,7 +28,7 @@ const { width } = Dimensions.get('window');
 export default function DashboardScreen() {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
-  const { user } = useAuthStore();
+  const { user, currentCompany } = useAuthStore();
   const { colors, isDark } = useTheme();
   const styles = createStyles(colors);
 
@@ -147,7 +147,7 @@ export default function DashboardScreen() {
         {/* Header Section */}
         <View style={styles.header}>
           <View>
-            <Text style={styles.greeting}>Hello, {user?.fullName?.split(' ')[0] || 'User'} 👋</Text>
+            <Text style={styles.greeting}>Hello, {currentCompany?.name || user?.fullName?.split(' ')[0] || 'User'} 👋</Text>
             <Text style={styles.subtitle}>Here's your business overview</Text>
           </View>
           <TouchableOpacity style={styles.profileButton} onPress={() => navigation.navigate('Settings' as never)}>

@@ -27,6 +27,7 @@ import SettingsScreen from './src/screens/SettingsScreen';
 import ForgotPasswordScreen from './src/screens/ForgotPasswordScreen';
 import PrivacyPolicyScreen from './src/screens/PrivacyPolicyScreen';
 import TermsOfServiceScreen from './src/screens/TermsOfServiceScreen';
+import { initializePurchases } from './src/services/revenuecat';
 
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -38,8 +39,11 @@ const initAuth = async () => {
     const stored = await AsyncStorage.getItem('auth-storage');
     if (stored) {
       const parsed = JSON.parse(stored);
-      if (parsed.state?.token) {
+      if (parsed.state?.token && parsed.state?.user?.id) {
         useAuthStore.setState(parsed.state);
+
+        // Initialize RevenueCat with user ID
+        await initializePurchases(parsed.state.user.id.toString());
       }
     }
   } catch (error) {

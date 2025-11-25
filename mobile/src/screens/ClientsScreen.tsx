@@ -13,12 +13,14 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  ActivityIndicator,
 } from 'react-native';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import * as Contacts from 'expo-contacts';
 import api from '../api/client';
 import { useTheme } from '../context/ThemeContext';
 import { spacing, typography, borderRadius, shadows, Colors } from '../theme';
@@ -31,10 +33,14 @@ export default function ClientsScreen() {
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
   const { colors, isDark } = useTheme();
-  const styles = createStyles(colors);
+  const styles = createStyles(colors, isDark);
   const [searchQuery, setSearchQuery] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showImportModal, setShowImportModal] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [importingContacts, setImportingContacts] = useState(false);
+  const [deviceContacts, setDeviceContacts] = useState<any[]>([]);
+  const [selectedContacts, setSelectedContacts] = useState<Set<string>>(new Set());
   const [newClient, setNewClient] = useState({ name: '', email: '', phone: '', address: '' });
 
   const { data: clients, isLoading, refetch } = useQuery({
@@ -74,6 +80,80 @@ export default function ClientsScreen() {
     }
   };
 
+  const handleImportFromContacts = async () => {
+    try {
+      // Request permission
+      const { status } = await Contacts.requestPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission Denied', 'We need contacts permission to import your contacts');
+        return;
+      }
+
+      setImportingContacts(true);
+      const { data } = await Contacts.getContactsAsync({
+        fields: [Contacts.Fields.Name, Contacts.Fields.Emails, Contacts.Fields.PhoneNumbers],
+      });
+
+      if (data.length > 0) {
+        const contactsWithEmail = data.filter(contact => contact.emails && contact.emails.length > 0);
+        setDeviceContacts(contactsWithEmail);
+        setShowImportModal(true);
+      } else {
+        Alert.alert('No Contacts', 'No contacts found on your device');
+      }
+    } catch (error) {
+      console.error('Failed to import contacts:', error);
+      Alert.alert('Error', 'Failed to import contacts');
+    } finally {
+      setImportingContacts(false);
+    }
+  };
+
+  const toggleContactSelection = (contactId: string) => {
+    const newSelection = new Set(selectedContacts);
+    if (newSelection.has(contactId)) {
+      newSelection.delete(contactId);
+    } else {
+      newSelection.add(contactId);
+    }
+    setSelectedContacts(newSelection);
+  };
+
+  const handleBulkImport = async () => {
+    if (selectedContacts.size === 0) {
+      Alert.alert('No Selection', 'Please select at least one contact to import');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const contactsToImport = deviceContacts.filter(c => selectedContacts.has(c.id));
+
+      for (const contact of contactsToImport) {
+        const clientData = {
+          name: contact.name || 'Unknown',
+          email: contact.emails?.[0]?.email || '',
+          phone: contact.phoneNumbers?.[0]?.number || undefined,
+        };
+
+        try {
+          await api.post('/clients', clientData);
+        } catch (err) {
+          console.warn(`Failed to import ${clientData.name}:`, err);
+        }
+      }
+
+      queryClient.invalidateQueries({ queryKey: ['clients'] });
+      setShowImportModal(false);
+      setSelectedContacts(new Set());
+      Alert.alert('Success', `Imported ${selectedContacts.size} contact(s)`);
+    } catch (error) {
+      Alert.alert('Error', 'Failed to import contacts');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const filteredClients = clients?.filter((client: any) =>
     client.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     client.email?.toLowerCase().includes(searchQuery.toLowerCase())
@@ -106,7 +186,7 @@ export default function ClientsScreen() {
             <View style={styles.headerInfo}>
               <Text style={styles.clientName}>{item.name || 'Unknown Client'}</Text>
               <View style={styles.docCountBadge}>
-                <Ionicons name="document-text" size={12} color={colors.primary[600]} style={{ marginRight: 4 }} />
+                <Ionicons name="document-text" size={12} color={isDark ? colors.primary[300] : colors.primary[600]} style={{ marginRight: 4 }} />
                 <Text style={styles.clientDocs}>
                   {item.documents_count ?? 0} Documents
                 </Text>
@@ -124,8 +204,8 @@ export default function ClientsScreen() {
                     style={styles.contactItem}
                     onPress={() => handleEmail(item.email)}
                   >
-                    <View style={[styles.contactIcon, { backgroundColor: colors.primary[50] }]}>
-                      <Ionicons name="mail" size={16} color={colors.primary[600]} />
+                    <View style={[styles.contactIcon, { backgroundColor: isDark ? colors.primary[900] + '80' : colors.primary[50] }]}>
+                      <Ionicons name="mail" size={16} color={isDark ? colors.primary[300] : colors.primary[600]} />
                     </View>
                     <Text style={styles.contactText} numberOfLines={1}>{item.email}</Text>
                   </TouchableOpacity>
@@ -160,6 +240,22 @@ export default function ClientsScreen() {
       {/* Header */}
       <View style={[styles.header, { paddingTop: insets.top + spacing[4] }]}>
         <Text style={styles.title}>Clients</Text>
+        <TouchableOpacity
+          onPress={handleImportFromContacts}
+          style={styles.importButton}
+          disabled={importingContacts}
+        >
+          {importingContacts ? (
+            <ActivityIndicator size="small" color={colors.primary[600]} />
+          ) : (
+            <>
+              <Ionicons name="people" size={20} color={colors.primary[600]} />
+              <Text style={[styles.importText, { color: colors.primary[600] }]}>
+                Import
+              </Text>
+            </>
+          )}
+        </TouchableOpacity>
       </View>
 
       {/* Search */}
@@ -186,7 +282,7 @@ export default function ClientsScreen() {
         ListEmptyComponent={
           <View style={styles.emptyState}>
             <View style={styles.emptyIconContainer}>
-              <Ionicons name="people" size={32} color={colors.secondary[400]} />
+              <Ionicons name="people" size={32} color={isDark ? colors.secondary[300] : colors.secondary[400]} />
             </View>
             <Text style={styles.emptyTitle}>No clients found</Text>
             <Text style={styles.emptySubtitle}>
@@ -280,11 +376,75 @@ export default function ClientsScreen() {
           </KeyboardAvoidingView>
         </View>
       </Modal>
+
+      {/* Import Contacts Modal */}
+      <Modal
+        visible={showImportModal}
+        animationType="slide"
+      >
+        <View style={styles.modalContainer}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>Import Contacts</Text>
+            <TouchableOpacity onPress={() => {
+              setShowImportModal(false);
+              setSelectedContacts(new Set());
+            }}>
+              <Text style={styles.closeText}>Close</Text>
+            </TouchableOpacity>
+          </View>
+
+          <View style={{ padding: spacing[4], backgroundColor: colors.background.secondary }}>
+            <Text style={[styles.importHint, { color: colors.text.secondary }]}>
+              Select contacts to import ({selectedContacts.size} selected)
+            </Text>
+          </View>
+
+          <FlatList
+            data={deviceContacts}
+            keyExtractor={(item) => item.id}
+            renderItem={({ item }) => (
+              <TouchableOpacity
+                onPress={() => toggleContactSelection(item.id)}
+                style={styles.contactItem}
+              >
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.contactName, { color: colors.text.primary }]}>
+                    {item.name || 'Unknown'}
+                  </Text>
+                  <Text style={[styles.contactEmail, { color: colors.text.secondary }]}>
+                    {item.emails?.[0]?.email || 'No email'}
+                  </Text>
+                </View>
+                <View style={[
+                  styles.checkbox,
+                  { borderColor: colors.gray[300] },
+                  selectedContacts.has(item.id) && { backgroundColor: colors.primary[600], borderColor: colors.primary[600] }
+                ]}>
+                  {selectedContacts.has(item.id) && (
+                    <Ionicons name="checkmark" size={16} color="#fff" />
+                  )}
+                </View>
+              </TouchableOpacity>
+            )}
+            contentContainerStyle={{ paddingBottom: spacing[20] }}
+          />
+
+          <View style={[styles.modalFooter, { backgroundColor: colors.background.primary }]}>
+            <Button
+              title={`Import ${selectedContacts.size} Contact(s)`}
+              onPress={handleBulkImport}
+              gradient
+              loading={loading}
+              disabled={selectedContacts.size === 0}
+            />
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
 
-const createStyles = (colors: Colors) => StyleSheet.create({
+const createStyles = (colors: Colors, isDark: boolean) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background.secondary,
@@ -319,7 +479,7 @@ const createStyles = (colors: Colors) => StyleSheet.create({
     borderRadius: borderRadius.xl,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: colors.gray[100],
+    borderColor: isDark ? colors.gray[800] : colors.gray[100],
   },
   cardHeader: {
     flexDirection: 'row',
@@ -349,13 +509,13 @@ const createStyles = (colors: Colors) => StyleSheet.create({
   },
   clientDocs: {
     fontSize: typography.fontSize.xs,
-    color: colors.text.secondary,
+    color: isDark ? colors.primary[300] : colors.text.secondary,
     fontWeight: typography.fontWeight.medium,
   },
   docCountBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.primary[50],
+    backgroundColor: isDark ? colors.primary[900] + '80' : colors.primary[50],
     alignSelf: 'flex-start',
     paddingVertical: 2,
     paddingHorizontal: 6,
@@ -363,7 +523,7 @@ const createStyles = (colors: Colors) => StyleSheet.create({
   },
   divider: {
     height: 1,
-    backgroundColor: colors.gray[100],
+    backgroundColor: isDark ? colors.gray[800] : colors.gray[100],
     marginVertical: spacing[4],
   },
   contactRow: {
@@ -397,7 +557,7 @@ const createStyles = (colors: Colors) => StyleSheet.create({
     width: 64,
     height: 64,
     borderRadius: borderRadius.full,
-    backgroundColor: colors.secondary[50],
+    backgroundColor: isDark ? colors.secondary[900] + '80' : colors.secondary[50],
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: spacing[4],
@@ -438,7 +598,7 @@ const createStyles = (colors: Colors) => StyleSheet.create({
     padding: spacing[4],
     backgroundColor: colors.background.primary,
     borderBottomWidth: 1,
-    borderBottomColor: colors.gray[100],
+    borderBottomColor: isDark ? colors.gray[800] : colors.gray[100],
   },
   modalTitle: {
     fontSize: typography.fontSize.lg,
@@ -451,5 +611,51 @@ const createStyles = (colors: Colors) => StyleSheet.create({
   },
   modalContent: {
     padding: spacing[6],
+  },
+  importButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing[2],
+    paddingHorizontal: spacing[3],
+    paddingVertical: spacing[2],
+    borderRadius: borderRadius.lg,
+    backgroundColor: colors.primary[50],
+  },
+  importText: {
+    fontSize: typography.fontSize.sm,
+    fontWeight: typography.fontWeight.semibold,
+  },
+  importHint: {
+    fontSize: typography.fontSize.sm,
+    textAlign: 'center',
+  },
+  contactItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: spacing[4],
+    backgroundColor: colors.background.primary,
+    borderBottomWidth: 1,
+    borderBottomColor: isDark ? colors.gray[800] : colors.gray[100],
+  },
+  contactName: {
+    fontSize: typography.fontSize.base,
+    fontWeight: typography.fontWeight.medium,
+    marginBottom: spacing[1],
+  },
+  contactEmail: {
+    fontSize: typography.fontSize.sm,
+  },
+  checkbox: {
+    width: 24,
+    height: 24,
+    borderRadius: borderRadius.sm,
+    borderWidth: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalFooter: {
+    padding: spacing[4],
+    borderTopWidth: 1,
+    borderTopColor: isDark ? colors.gray[800] : colors.gray[100],
   },
 });

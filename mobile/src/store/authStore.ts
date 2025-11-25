@@ -6,6 +6,7 @@ interface User {
   id: string;
   email: string;
   fullName?: string;
+  subscription_tier?: string;
 }
 
 interface Company {

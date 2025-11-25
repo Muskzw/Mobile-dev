@@ -258,5 +258,47 @@ router.post('/reset-password', [
   }
 });
 
+// Update subscription (called after RevenueCat purchase)
+router.put('/users/subscription', authenticate, async (req: AuthRequest, res: Response) => {
+  try {
+    const { tier, subscriptionId } = req.body;
+    const userId = req.userId;
+
+    if (!['free', 'premium', 'business'].includes(tier)) {
+      return res.status(400).json({ error: 'Invalid subscription tier' });
+    }
+
+    await pool.query(
+      `UPDATE users 
+       SET subscription_tier = $1,
+           subscription_started_at = CASE WHEN $1 != 'free' THEN NOW() ELSE subscription_started_at END,
+           updated_at = NOW()
+       WHERE id = $2`,
+      [tier, userId]
+    );
+
+    // Reset document counter if upgrading from free
+    if (tier !== 'free') {
+      await pool.query(
+        `UPDATE users SET documents_created_this_month = 0 WHERE id = $1`,
+        [userId]
+      );
+    }
+
+    const updatedUser = await pool.query(
+      'SELECT id, email, full_name, subscription_tier, subscription_started_at FROM users WHERE id = $1',
+      [userId]
+    );
+
+    res.json({
+      message: 'Subscription updated successfully',
+      user: updatedUser.rows[0],
+    });
+  } catch (error) {
+    console.error('Subscription update error:', error);
+    res.status(500).json({ error: 'Failed to update subscription' });
+  }
+});
+
 export default router;
 

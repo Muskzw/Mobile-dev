@@ -89,6 +89,7 @@ router.post('/', [
     const permissionCheck = canPerformAction(user, 'createDocument');
     if (!permissionCheck.allowed) {
       return res.status(403).json({
+        code: 'SUBSCRIPTION_LIMIT_REACHED',
         error: permissionCheck.reason,
         upgradeRequired: true,
         currentTier: user.subscription_tier,
@@ -473,6 +474,7 @@ router.post('/:id/duplicate', async (req: AuthRequest, res: Response) => {
     const permissionCheck = canPerformAction(user, 'createDocument');
     if (!permissionCheck.allowed) {
       return res.status(403).json({
+        code: 'SUBSCRIPTION_LIMIT_REACHED',
         error: permissionCheck.reason,
         upgradeRequired: true,
         currentTier: user.subscription_tier,
@@ -564,6 +566,7 @@ router.post('/:id/convert', [
     const permissionCheck = canPerformAction(user, 'createDocument');
     if (!permissionCheck.allowed) {
       return res.status(403).json({
+        code: 'SUBSCRIPTION_LIMIT_REACHED',
         error: permissionCheck.reason,
         upgradeRequired: true,
         currentTier: user.subscription_tier,

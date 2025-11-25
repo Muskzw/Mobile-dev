@@ -16,20 +16,32 @@
     ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.quotationmaker.app"
+      "bundleIdentifier": "com.quotationmaker.app",
+      "infoPlist": {
+        "NSContactsUsageDescription": "We need access to your contacts to import them as clients"
+      }
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#3B82F6"
       },
-      "package": "com.quotationmaker.app"
+      "package": "com.quotationmaker.app",
+      "permissions": [
+        "READ_CONTACTS"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
-      "expo-notifications"
+      "expo-notifications",
+      [
+        "expo-contacts",
+        {
+          "contactsPermission": "Allow Quotation Maker to access your contacts to import clients."
+        }
+      ]
     ]
   }
 }

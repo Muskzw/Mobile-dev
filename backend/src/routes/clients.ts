@@ -41,7 +41,11 @@ router.get('/', async (req: AuthRequest, res: Response) => {
   try {
     // In single-tenant mode, filter by user_id
     const result = await pool.query(
-      'SELECT * FROM clients WHERE user_id = $1 OR company_id = $2 ORDER BY name ASC',
+      `SELECT c.*, 
+        (SELECT COUNT(*)::int FROM documents WHERE client_id = c.id) as documents_count
+       FROM clients c 
+       WHERE user_id = $1 OR company_id = $2 
+       ORDER BY name ASC`,
       [req.userId, req.companyId || null]
     );
     res.json(result.rows);

@@ -24,6 +24,7 @@ import { spacing, typography, borderRadius, shadows, Colors } from '../theme';
 import { Button } from '../components/Button';
 import { Input } from '../components/Input';
 import { Card } from '../components/Card';
+import UpgradeModal from '../components/UpgradeModal';
 
 interface Client {
   id: string;
@@ -63,6 +64,11 @@ export default function DocumentCreateScreen({ route }: any) {
   const [currency, setCurrency] = useState(currentCompany?.currency || 'USD');
   const [terms, setTerms] = useState(currentCompany?.terms || '');
   const [showCurrencyModal, setShowCurrencyModal] = useState(false);
+
+  // Upgrade Modal State
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [upgradeReason, setUpgradeReason] = useState('');
+  const [documentsUsed, setDocumentsUsed] = useState(0);
 
   // Queries
   const { data: clients } = useQuery({
@@ -205,6 +211,14 @@ export default function DocumentCreateScreen({ route }: any) {
       console.error('Create document error:', error);
       console.error('Error response:', error.response?.data);
       console.error('Error status:', error.response?.status);
+
+      // Check for subscription limit
+      if (error.response?.status === 403 && error.response?.data?.upgradeRequired) {
+        setUpgradeReason(error.response.data.error);
+        setDocumentsUsed(error.response.data.documentsUsed || 5);
+        setShowUpgradeModal(true);
+        return;
+      }
 
       let errorMessage = `Failed to create ${type.toLowerCase()}`;
       if (error.response?.data?.error) {
@@ -580,6 +594,15 @@ export default function DocumentCreateScreen({ route }: any) {
           </View>
         </TouchableOpacity>
       </Modal>
+
+      {/* Upgrade Modal */}
+      <UpgradeModal
+        visible={showUpgradeModal}
+        onClose={() => setShowUpgradeModal(false)}
+        currentTier="free"
+        documentsUsed={documentsUsed}
+        reason={upgradeReason}
+      />
     </View>
   );
 }
