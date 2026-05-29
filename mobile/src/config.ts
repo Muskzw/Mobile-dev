@@ -9,3 +9,8 @@ export const API_URL = __DEV__
     : 'https://your-api-domain.com/api';
 
 export const BASE_URL = API_URL.replace('/api', '');
+
+// Google OAuth Web Client ID (type "Web application" in Google Developer Console)
+// Required for ID Token verification on the backend.
+export const GOOGLE_WEB_CLIENT_ID = '831442403630-q8p3kmjce8ct0ua5rvf6qr3og4sq81k0.apps.googleusercontent.com';
+

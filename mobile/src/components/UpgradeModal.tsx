@@ -78,7 +78,7 @@ export default function UpgradeModal({
         setLoading(true);
         try {
             const offers = await getOfferings();
-            if (offers?.current?.availablePackages?.length > 0) {
+            if (offers?.current?.availablePackages && offers.current.availablePackages.length > 0) {
                 setOfferings(offers);
                 setRevenueCatReady(true);
             } else {

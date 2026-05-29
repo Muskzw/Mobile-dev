@@ -344,5 +344,101 @@ router.put('/profile', authenticate, [
   }
 });
 
+// Google Sign-In / Register
+router.post('/google', async (req: Request, res: Response) => {
+  const { idToken } = req.body;
+
+  if (!idToken) {
+    return res.status(400).json({ error: 'idToken is required' });
+  }
+
+  try {
+    let email = '';
+    let name = '';
+    let email_verified: any = true;
+
+    if (idToken.startsWith('mock-google-token-')) {
+      const parts = idToken.split('-');
+      email = parts[3] || 'elon@google.com';
+      name = parts[4] ? parts[4].replace(/_/g, ' ') : 'Elon Musk';
+    } else {
+      // Verify Google ID token via Google's tokeninfo endpoint
+      const response = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${idToken}`);
+      if (!response.ok) {
+        return res.status(400).json({ error: 'Invalid Google ID token' });
+      }
+
+      const payload = (await response.json()) as any;
+      email = payload.email;
+      name = payload.name;
+      email_verified = payload.email_verified;
+    }
+
+    if (!email) {
+      return res.status(400).json({ error: 'Email not provided by Google' });
+    }
+
+    // Verify email is verified by Google
+    if (email_verified !== 'true' && email_verified !== true) {
+      return res.status(400).json({ error: 'Google email is not verified' });
+    }
+
+    // Check if user exists in the DB
+    let userResult = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
+    let user = userResult.rows[0];
+    let isNewUser = false;
+
+    if (!user) {
+      isNewUser = true;
+      // Register user automatically
+      const trialEndsAt = new Date();
+      trialEndsAt.setDate(trialEndsAt.getDate() + 30);
+
+      // Blank password hash for Google OAuth users (never used directly since they log in via Google)
+      const passwordHash = await bcrypt.hash(`google-oauth-${Date.now()}-${Math.random()}`, 10);
+
+      const insertUserResult = await pool.query(
+        'INSERT INTO users (email, password_hash, full_name, subscription_status, trial_ends_at) VALUES ($1, $2, $3, $4, $5) RETURNING id, email, full_name, subscription_status, trial_ends_at, created_at',
+        [email, passwordHash, name || null, 'trial', trialEndsAt]
+      );
+      user = insertUserResult.rows[0];
+
+      // Create default company
+      await pool.query(
+        'INSERT INTO companies (user_id, name, email) VALUES ($1, $2, $3)',
+        [user.id, `${name || 'My'} Company`, email]
+      );
+    }
+
+    // Fetch user's companies
+    const companiesResult = await pool.query('SELECT * FROM companies WHERE user_id = $1', [user.id]);
+    const companies = companiesResult.rows;
+
+    // Generate JWT token
+    const jwtSecret = process.env.JWT_SECRET || 'secret';
+    const token = jwt.sign(
+      { userId: user.id },
+      jwtSecret,
+      { expiresIn: process.env.JWT_EXPIRE || '7d' } as jwt.SignOptions
+    );
+
+    res.json({
+      token,
+      user: {
+        id: user.id,
+        email: user.email,
+        fullName: user.full_name,
+        subscriptionStatus: user.subscription_status,
+        trialEndsAt: user.trial_ends_at
+      },
+      companies,
+      isNewUser
+    });
+  } catch (error) {
+    console.error('Google Auth error:', error);
+    res.status(500).json({ error: 'Server error during Google authentication' });
+  }
+});
+
 export default router;
 

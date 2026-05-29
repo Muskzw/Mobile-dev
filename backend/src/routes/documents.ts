@@ -329,7 +329,9 @@ router.put('/:id', async (req: AuthRequest, res: Response) => {
       notes,
       terms,
       taxRate,
-      status
+      status,
+      payment_method,
+      paid_at
     } = req.body;
 
     // Validate status if provided
@@ -394,6 +396,19 @@ router.put('/:id', async (req: AuthRequest, res: Response) => {
     if (status) {
       updateFields.push(`status = $${paramCount++}`);
       updateValues.push(status);
+      // Auto-set paid_at when marking as paid (if not explicitly provided)
+      if (status === 'paid' && !paid_at) {
+        updateFields.push(`paid_at = $${paramCount++}`);
+        updateValues.push(new Date().toISOString());
+      }
+    }
+    if (payment_method !== undefined) {
+      updateFields.push(`payment_method = $${paramCount++}`);
+      updateValues.push(payment_method);
+    }
+    if (paid_at !== undefined) {
+      updateFields.push(`paid_at = $${paramCount++}`);
+      updateValues.push(paid_at);
     }
     if (req.body.metadata !== undefined) {
       updateFields.push(`metadata = $${paramCount++}`);
@@ -590,7 +605,7 @@ router.post('/:id/convert', [
       });
     }
 
-    const { targetType } = req.body;
+    const { targetType, paymentMethod, paymentReference } = req.body;
     const original = await getDocumentWithItems(req.params.id);
 
     if (!original || original.company_id !== req.companyId) {
@@ -605,25 +620,34 @@ router.post('/:id/convert', [
     // Generate new document number for the target type
     const newDocNumber = await generateDocumentNumber(targetType, req.companyId!);
 
-    // Determine appropriate status for the new document type
+    // Determine appropriate status and payment details for the new document type
     let newStatus = 'draft';
-    if (targetType === 'invoice' && original.type === 'quotation' && original.status === 'accepted') {
-      newStatus = 'draft'; // Invoice starts as draft even if quote was accepted
+    let paidAt: string | null = null;
+    let newPaymentMethod: string | null = null;
+
+    if (targetType === 'receipt') {
+      // Receipts are always paid — they ARE proof of payment
+      newStatus = 'paid';
+      paidAt = new Date().toISOString();
+      newPaymentMethod = paymentMethod || null;
+    } else if (targetType === 'invoice' && original.type === 'quotation' && original.status === 'accepted') {
+      newStatus = 'draft';
     }
 
     // Create converted document
     const docResult = await pool.query(
       `INSERT INTO documents (
         company_id, client_id, type, document_number, issue_date, due_date,
-        subtotal, tax_rate, tax_amount, total, currency, notes, terms, status, metadata
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+        subtotal, tax_rate, tax_amount, total, currency, notes, terms, status,
+        payment_method, paid_at, metadata
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
       RETURNING *`,
       [
         original.company_id,
         original.client_id,
         targetType,
         newDocNumber,
-        new Date().toISOString().split('T')[0], // New issue date
+        new Date().toISOString().split('T')[0],
         original.due_date,
         original.subtotal,
         original.tax_rate,
@@ -633,11 +657,14 @@ router.post('/:id/convert', [
         original.notes,
         original.terms,
         newStatus,
+        newPaymentMethod,
+        paidAt,
         {
           ...original.metadata,
           convertedFrom: original.id,
           convertedFromType: original.type,
-          convertedFromNumber: original.document_number
+          convertedFromNumber: original.document_number,
+          ...(paymentReference ? { paymentReference } : {})
         }
       ]
     );

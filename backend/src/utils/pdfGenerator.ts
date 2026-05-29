@@ -47,10 +47,12 @@ export async function generatePDF(document: any, company: any, client: any | nul
     doc.fillColor(primaryColor).fontSize(22).font('Helvetica-Bold')
       .text(docTypeLabel, 400, 50, { align: 'right', width: 150 });
 
-    // Document Number (matches document type)
-    const docNumberLabel = docType === 'quotation' ? 'Quotation#' :
-      docType === 'invoice' ? 'Invoice#' :
-        docType === 'proforma' ? 'Proforma#' : 'Document#';
+    // Document Number label (type-specific)
+    const docNumberLabel =
+      document.type === 'quotation' ? 'Quotation#' :
+      document.type === 'invoice'   ? 'Invoice#' :
+      document.type === 'receipt'   ? 'Receipt#' :
+      document.type === 'proforma'  ? 'Proforma#' : 'Document#';
 
     doc.fillColor('#111827').fontSize(9).font('Helvetica-Bold')
       .text(docNumberLabel, 400, 85, { align: 'right', width: 70 })
@@ -99,14 +101,14 @@ export async function generatePDF(document: any, company: any, client: any | nul
     y += 25;
 
     // Table Rows
-    document.items.forEach((item: any, i: number) => {
+    const positiveItems = (document.items || []).filter((item: any) => parseFloat(item.unit_price || '0') >= 0);
+    positiveItems.forEach((item: any, i: number) => {
       const rowY = y;
       const rowHeight = item.description && item.description !== item.name ? 35 : 25;
 
-      const isDiscount = parseFloat(item.unit_price || '0') < 0;
-      const rowColor = isDiscount ? '#B91C1C' : '#374151';
-      const nameColor = isDiscount ? '#B91C1C' : '#111827';
-      const descColor = isDiscount ? '#EF4444' : secondaryColor;
+      const rowColor = '#374151';
+      const nameColor = '#111827';
+      const descColor = secondaryColor;
 
       // Alternating row background
       if (i % 2 === 0) {
@@ -114,7 +116,7 @@ export async function generatePDF(document: any, company: any, client: any | nul
       }
 
       // Item number
-      doc.fillColor(rowColor).fontSize(9).font(isDiscount ? 'Helvetica-Bold' : 'Helvetica')
+      doc.fillColor(rowColor).fontSize(9).font('Helvetica')
         .text((i + 1).toString(), 55, rowY + 6);
 
       // Item name
@@ -128,16 +130,16 @@ export async function generatePDF(document: any, company: any, client: any | nul
       }
 
       // Quantity
-      doc.fillColor(rowColor).fontSize(9).font(isDiscount ? 'Helvetica-Bold' : 'Helvetica')
+      doc.fillColor(rowColor).fontSize(9).font('Helvetica')
         .text(item.quantity.toString(), 350, rowY + 8, { width: 50, align: 'center' });
 
       // Price
-      doc.fillColor(rowColor).fontSize(9).font(isDiscount ? 'Helvetica-Bold' : 'Helvetica')
-        .text((isDiscount ? '-' : '') + Math.abs(parseFloat(item.unit_price)).toFixed(2), 410, rowY + 8, { width: 60, align: 'right' });
+      doc.fillColor(rowColor).fontSize(9).font('Helvetica')
+        .text(parseFloat(item.unit_price).toFixed(2), 410, rowY + 8, { width: 60, align: 'right' });
 
       // Total
       doc.fillColor(rowColor).fontSize(9).font('Helvetica-Bold')
-        .text((isDiscount ? '-' : '') + Math.abs(parseFloat(item.total)).toFixed(2), 480, rowY + 8, { width: 65, align: 'right' });
+        .text(parseFloat(item.total).toFixed(2), 480, rowY + 8, { width: 65, align: 'right' });
 
       y += rowHeight;
     });
@@ -151,11 +153,28 @@ export async function generatePDF(document: any, company: any, client: any | nul
     const labelX = 380;
     const valueX = 455;
 
+    const grossSubtotal = (document.items || [])
+      .filter((item: any) => parseFloat(item.unit_price || '0') >= 0)
+      .reduce((sum: number, item: any) => sum + parseFloat(item.total || '0'), 0);
+
+    const discountTotal = (document.items || [])
+      .filter((item: any) => parseFloat(item.unit_price || '0') < 0)
+      .reduce((sum: number, item: any) => sum + Math.abs(parseFloat(item.total || '0')), 0);
+
     // Subtotal
     doc.fillColor(secondaryColor).fontSize(9).font('Helvetica-Bold')
       .text('Subtotal:', labelX, y, { width: 70, align: 'right' });
     doc.fillColor('#111827').fontSize(9).font('Helvetica')
-      .text(`${document.currency} ${parseFloat(document.subtotal).toFixed(2)}`, valueX, y, { width: 95, align: 'right' });
+      .text(`${document.currency} ${grossSubtotal.toFixed(2)}`, valueX, y, { width: 95, align: 'right' });
+
+    // Discount (if any)
+    if (discountTotal > 0) {
+      y += 15;
+      doc.fillColor('#B91C1C').fontSize(9).font('Helvetica-Bold')
+        .text('Discount:', labelX, y, { width: 70, align: 'right' });
+      doc.fillColor('#B91C1C').fontSize(9).font('Helvetica')
+        .text(`-${document.currency} ${discountTotal.toFixed(2)}`, valueX, y, { width: 95, align: 'right' });
+    }
 
     // Tax
     if (parseFloat(document.tax_rate || 0) > 0) {
@@ -181,7 +200,86 @@ export async function generatePDF(document: any, company: any, client: any | nul
     // Footer Section
     let footerY = y + 40;
 
-    // Terms & Conditions (if available)
+    // ── PAYMENT EVIDENCE (receipts & paid invoices) ──────────────────────────
+    const isReceipt = document.type === 'receipt';
+    const isPaidInvoice = document.type === 'invoice' && document.status === 'paid';
+
+    if (isReceipt || isPaidInvoice) {
+      // Discount line in totals (if any items have negative price)
+      const discountTotal = (document.items || []).reduce((sum: number, item: any) => {
+        return parseFloat(item.unit_price) < 0 ? sum + Math.abs(parseFloat(item.total)) : sum;
+      }, 0);
+      if (discountTotal > 0) {
+        // Insert discount above the divider (already drawn), just annotate
+      }
+
+      // Green PAID stamp
+      doc.save();
+      doc.rotate(-15, { origin: [300, footerY - 30] });
+      doc.rect(180, footerY - 60, 130, 36).stroke('#059669');
+      doc.fillColor('#059669').fontSize(20).font('Helvetica-Bold')
+        .text('PAID', 185, footerY - 52, { width: 120, align: 'center' });
+      doc.restore();
+
+      // Payment Evidence box
+      doc.rect(50, footerY, 500, 5).fill('#059669'); // green header bar
+      footerY += 8;
+
+      doc.fillColor('#059669').fontSize(10).font('Helvetica-Bold')
+        .text('PAYMENT EVIDENCE', 50, footerY);
+      footerY += 18;
+
+      // Two-column layout for payment details
+      const payMethod = (document.payment_method || 'Not specified')
+        .replace(/_/g, ' ')
+        .replace(/\b\w/g, (c: string) => c.toUpperCase());
+
+      const paidDate = document.paid_at
+        ? new Date(document.paid_at).toLocaleDateString('en-US', { day: 'numeric', month: 'long', year: 'numeric' })
+        : new Date().toLocaleDateString('en-US', { day: 'numeric', month: 'long', year: 'numeric' });
+
+      const paidTime = document.paid_at
+        ? new Date(document.paid_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
+        : '';
+
+      // Payment details grid
+      doc.fillColor(secondaryColor).fontSize(8).font('Helvetica-Bold').text('Payment Method:', 50, footerY);
+      doc.fillColor('#111827').fontSize(8).font('Helvetica').text(payMethod, 155, footerY);
+
+      doc.fillColor(secondaryColor).fontSize(8).font('Helvetica-Bold').text('Amount Paid:', 310, footerY);
+      doc.fillColor('#059669').fontSize(8).font('Helvetica-Bold')
+        .text(`${document.currency} ${parseFloat(document.total).toFixed(2)}`, 390, footerY);
+      footerY += 15;
+
+      doc.fillColor(secondaryColor).fontSize(8).font('Helvetica-Bold').text('Date Paid:', 50, footerY);
+      doc.fillColor('#111827').fontSize(8).font('Helvetica').text(paidDate + (paidTime ? '  ' + paidTime : ''), 155, footerY);
+
+      doc.fillColor(secondaryColor).fontSize(8).font('Helvetica-Bold').text('Document No.:', 310, footerY);
+      doc.fillColor('#111827').fontSize(8).font('Helvetica').text(document.document_number, 390, footerY);
+      footerY += 15;
+
+      // Reference / transaction ID
+      const payRef = document.metadata?.paymentReference;
+      if (payRef) {
+        doc.fillColor(secondaryColor).fontSize(8).font('Helvetica-Bold').text('Transaction Ref:', 50, footerY);
+        doc.fillColor('#111827').fontSize(8).font('Helvetica').text(payRef, 155, footerY);
+        footerY += 15;
+      }
+
+      // Converted from invoice
+      if (document.metadata?.convertedFromNumber) {
+        doc.fillColor(secondaryColor).fontSize(8).font('Helvetica-Bold').text('Issued from Invoice:', 50, footerY);
+        doc.fillColor('#111827').fontSize(8).font('Helvetica').text(document.metadata.convertedFromNumber, 155, footerY);
+        footerY += 15;
+      }
+
+      // Closing line
+      doc.moveTo(50, footerY + 5).lineTo(550, footerY + 5).strokeColor('#059669').lineWidth(0.5).stroke();
+      doc.lineWidth(1); // reset
+      footerY += 20;
+    }
+
+    // Terms & Conditions
     if (document.terms || company.terms) {
       doc.fillColor('#111827').fontSize(9).font('Helvetica-Bold')
         .text('Terms & Conditions:', 50, footerY);
@@ -193,27 +291,34 @@ export async function generatePDF(document: any, company: any, client: any | nul
       footerY += 60;
     }
 
-    // Payment Instructions Section
-    if (footerY < 650) footerY = 650; // Ensure consistent placement
+    // Payment Instructions — skip for receipts (already paid)
+    if (!isReceipt) {
+      if (footerY < 650) footerY = 650;
 
-    doc.fillColor('#111827').fontSize(9).font('Helvetica-Bold')
-      .text('Payment Instructions:', 50, footerY);
+      doc.fillColor('#111827').fontSize(9).font('Helvetica-Bold')
+        .text('Payment Instructions:', 50, footerY);
 
-    const paymentInstructions = company.payment_instructions ||
-      `Payment accepted via bank transfer, cash, or mobile money.\nPlease include ${docNumberLabel.replace('#', '')} number in payment reference.`;
+      const paymentInstructions = company.payment_instructions ||
+        `Payment accepted via bank transfer, cash, or mobile money.\nPlease include ${docNumberLabel.replace('#', '')} number in payment reference.`;
 
-    doc.fillColor(secondaryColor).fontSize(8).font('Helvetica')
-      .text(paymentInstructions, 50, footerY + 15, { width: 250, lineGap: 2 });
+      doc.fillColor(secondaryColor).fontSize(8).font('Helvetica')
+        .text(paymentInstructions, 50, footerY + 15, { width: 250, lineGap: 2 });
 
-    // Authorized Signature Section
-    doc.fillColor('#111827').fontSize(9).font('Helvetica-Bold')
-      .text(`For ${company.name || 'Company'}`, 350, footerY);
-
-    // Signature line
-    doc.moveTo(350, footerY + 40).lineTo(500, footerY + 40).stroke();
-
-    doc.fillColor(secondaryColor).fontSize(8).font('Helvetica')
-      .text('AUTHORIZED SIGNATURE', 350, footerY + 45, { align: 'center', width: 150 });
+      // Authorized Signature
+      doc.fillColor('#111827').fontSize(9).font('Helvetica-Bold')
+        .text(`For ${company.name || 'Company'}`, 350, footerY);
+      doc.moveTo(350, footerY + 40).lineTo(500, footerY + 40).stroke();
+      doc.fillColor(secondaryColor).fontSize(8).font('Helvetica')
+        .text('AUTHORIZED SIGNATURE', 350, footerY + 45, { align: 'center', width: 150 });
+    } else {
+      // For receipts: authorized signature at the bottom of payment evidence
+      if (footerY < 620) footerY = 620;
+      doc.fillColor('#111827').fontSize(9).font('Helvetica-Bold')
+        .text(`For ${company.name || 'Company'}`, 350, footerY);
+      doc.moveTo(350, footerY + 40).lineTo(500, footerY + 40).stroke();
+      doc.fillColor(secondaryColor).fontSize(8).font('Helvetica')
+        .text('AUTHORIZED SIGNATURE', 350, footerY + 45, { align: 'center', width: 150 });
+    }
 
     // Watermark for free tier users
     const isFreeTier = !user || user.subscription_tier === 'free';

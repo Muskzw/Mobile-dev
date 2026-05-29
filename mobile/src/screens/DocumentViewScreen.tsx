@@ -48,6 +48,13 @@ export default function DocumentViewScreen() {
   const [showUpgradeModal, setShowUpgradeModal] = React.useState(false);
   const [upgradeReason, setUpgradeReason] = React.useState('');
   const [documentsUsed, setDocumentsUsed] = React.useState(0);
+  // Payment receipt modal state
+  const [showPaymentModal, setShowPaymentModal] = React.useState(false);
+  const [paymentMethod, setPaymentMethod] = React.useState('cash');
+  const [paymentReference, setPaymentReference] = React.useState('');
+  const [convertingToReceipt, setConvertingToReceipt] = React.useState(false);
+  // Footer height measurement — ensures scroll content never hides behind footer
+  const [footerHeight, setFooterHeight] = React.useState(120);
 
   const { data: document, isLoading } = useQuery({
     queryKey: ['document', id],
@@ -144,6 +151,13 @@ export default function DocumentViewScreen() {
         return;
       }
 
+      // Convert invoice to receipt — show payment details modal first
+      if (newStatus === 'convert_to_receipt') {
+        setShowOptionsModal(false);
+        setShowPaymentModal(true);
+        return;
+      }
+
       await api.put(`/documents/${id}`, { status: newStatus });
       queryClient.invalidateQueries({ queryKey: ['document', id] });
       queryClient.invalidateQueries({ queryKey: ['documents'] });
@@ -174,7 +188,7 @@ export default function DocumentViewScreen() {
     if (status === 'draft') {
       actions.push({ label: 'Mark Sent', status: 'sent', color: colors.primary[600], icon: 'send-outline' });
     }
-    if (status !== 'paid' && (type === 'invoice' || type === 'receipt' || type === 'proforma')) {
+    if (status !== 'paid' && (type === 'invoice' || type === 'proforma')) {
       actions.push({ label: 'Mark Paid', status: 'paid', color: colors.success, icon: 'checkmark-circle-outline' });
     }
     if (type === 'quotation' && status !== 'accepted' && status !== 'rejected') {
@@ -184,7 +198,54 @@ export default function DocumentViewScreen() {
     if (status === 'accepted' && type === 'quotation') {
       actions.push({ label: 'Convert to Invoice', status: 'convert', color: colors.secondary[600], icon: 'receipt-outline' });
     }
+    // Invoice paid or sent → can issue a receipt as proof of payment
+    if (type === 'invoice' && (status === 'paid' || status === 'sent')) {
+      actions.push({ label: 'Issue Receipt', status: 'convert_to_receipt', color: '#059669', icon: 'checkmark-done-outline' });
+    }
     return actions;
+  };
+
+  // Handle converting invoice to receipt with payment details
+  const handleConvertToReceipt = async () => {
+    setConvertingToReceipt(true);
+    try {
+      const response = await api.post(`/documents/${id}/convert`, {
+        targetType: 'receipt',
+        paymentMethod,
+        paymentReference,
+      });
+      const newDoc = response.data;
+      queryClient.invalidateQueries({ queryKey: ['documents'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
+      setShowPaymentModal(false);
+
+      // Also mark original invoice as paid
+      await api.put(`/documents/${id}`, {
+        status: 'paid',
+        payment_method: paymentMethod,
+      });
+      queryClient.invalidateQueries({ queryKey: ['document', id] });
+
+      Alert.alert('✅ Receipt Issued!', `Receipt ${newDoc.document_number} has been created as proof of payment.`, [
+        {
+          text: 'View Receipt',
+          onPress: () => (navigation as any).push('DocumentView', { id: newDoc.id }),
+        },
+        { text: 'OK', style: 'cancel' },
+      ]);
+    } catch (error: any) {
+      console.error('Convert to receipt error:', error);
+      if (error.response?.status === 403 && error.response?.data?.upgradeRequired) {
+        setShowPaymentModal(false);
+        setUpgradeReason(error.response.data.error || 'Upgrade to issue receipts');
+        setDocumentsUsed(error.response.data.documentsUsed || 5);
+        setShowUpgradeModal(true);
+      } else {
+        Alert.alert('Error', 'Failed to create receipt. Please try again.');
+      }
+    } finally {
+      setConvertingToReceipt(false);
+    }
   };
 
   const showMenu = () => {
@@ -414,7 +475,7 @@ export default function DocumentViewScreen() {
         <View style={{ width: 40 }} />
       </View>
 
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView contentContainerStyle={[styles.content, { paddingBottom: footerHeight + spacing[4] }]}>
         {/* Status Banner */}
         {/* Status Banner */}
         <View style={[styles.statusBanner, { backgroundColor: `${getStatusColor(document?.status)}15` }]}>
@@ -489,47 +550,73 @@ export default function DocumentViewScreen() {
         {/* Items */}
         <Text style={styles.sectionTitle}>Items</Text>
         <Card style={styles.sectionCard} padding={0}>
-          {document?.items?.map((item: any, index: number) => {
-            const isDiscount = parseFloat(item.unit_price) < 0;
-            return (
+          {document?.items
+            ?.filter((item: any) => parseFloat(item.unit_price) >= 0)
+            .map((item: any, index: number, arr: any[]) => (
               <View key={index} style={[
                 styles.itemRow,
-                index !== document.items.length - 1 && styles.itemBorder
+                index !== arr.length - 1 && styles.itemBorder
               ]}>
                 <View style={styles.itemInfo}>
                   <Text style={styles.itemName}>{item.description}</Text>
                   <Text style={styles.itemQuantity}>
-                    {isDiscount ? (
-                      <Text style={{ color: colors.error, fontWeight: typography.fontWeight.semibold }}>
-                        Discount Applied
-                      </Text>
-                    ) : (
-                      `${item.quantity} x ${document.currency} ${parseFloat(item.unit_price).toFixed(2)}`
-                    )}
+                    {`${item.quantity} x ${document.currency} ${parseFloat(item.unit_price).toFixed(2)}`}
                   </Text>
                 </View>
-                <Text style={[styles.itemTotal, isDiscount && { color: colors.error }]}>
-                  {isDiscount ? '-' : ''}{document.currency} {Math.abs(parseFloat(item.total)).toFixed(2)}
+                <Text style={styles.itemTotal}>
+                  {document.currency} {parseFloat(item.total).toFixed(2)}
                 </Text>
               </View>
-            );
-          })}
+            ))}
         </Card>
 
         {/* Totals */}
         <Card style={styles.sectionCard} padding={6}>
-          <View style={styles.totalRow}>
-            <Text style={styles.totalLabel}>Subtotal</Text>
-            <Text style={styles.totalValue}>
-              {document?.currency} {parseFloat(document?.subtotal || 0).toFixed(2)}
-            </Text>
-          </View>
-          <View style={styles.totalRow}>
-            <Text style={styles.totalLabel}>Tax ({document?.tax_rate}%)</Text>
-            <Text style={styles.totalValue}>
-              {document?.currency} {parseFloat(document?.tax_amount || 0).toFixed(2)}
-            </Text>
-          </View>
+          {(() => {
+            const grossSubtotal = (document?.items || [])
+              .filter((item: any) => parseFloat(item.unit_price) >= 0)
+              .reduce((sum: number, item: any) => sum + parseFloat(item.total || 0), 0);
+
+            const discountTotal = (document?.items || [])
+              .filter((item: any) => parseFloat(item.unit_price) < 0)
+              .reduce((sum: number, item: any) => sum + Math.abs(parseFloat(item.total || 0)), 0);
+
+            return (
+              <>
+                {/* Subtotal (before discount) */}
+                <View style={styles.totalRow}>
+                  <Text style={styles.totalLabel}>Subtotal</Text>
+                  <Text style={styles.totalValue}>
+                    {document?.currency} {grossSubtotal.toFixed(2)}
+                  </Text>
+                </View>
+
+                {/* Discount — only shown when items have a negative unit_price */}
+                {discountTotal > 0 && (
+                  <View style={[styles.totalRow, styles.discountRow]}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                      <Ionicons name="pricetag-outline" size={14} color={colors.error} />
+                      <Text style={[styles.totalLabel, { color: colors.error }]}>Discount</Text>
+                    </View>
+                    <Text style={[styles.totalValue, { color: colors.error }]}>
+                      - {document?.currency} {discountTotal.toFixed(2)}
+                    </Text>
+                  </View>
+                )}
+
+                {/* Tax */}
+                {parseFloat(document?.tax_rate || 0) > 0 && (
+                  <View style={styles.totalRow}>
+                    <Text style={styles.totalLabel}>Tax ({document?.tax_rate}%)</Text>
+                    <Text style={styles.totalValue}>
+                      {document?.currency} {parseFloat(document?.tax_amount || 0).toFixed(2)}
+                    </Text>
+                  </View>
+                )}
+              </>
+            );
+          })()}
+
           <View style={styles.divider} />
           <View style={styles.totalRow}>
             <Text style={styles.grandTotalLabel}>Total</Text>
@@ -538,6 +625,97 @@ export default function DocumentViewScreen() {
             </Text>
           </View>
         </Card>
+
+        {/* Payment Evidence — shown on receipts and paid invoices */}
+        {(document?.type === 'receipt' || (document?.type === 'invoice' && document?.status === 'paid')) && (
+          <View style={{ marginBottom: spacing[6] }}>
+            <Text style={styles.sectionTitle}>Payment Evidence</Text>
+            <Card style={styles.sectionCard} padding={5}>
+              <View style={styles.paymentEvidenceGrid}>
+                {/* Status chip */}
+                <View style={[styles.paymentStatusChip, { backgroundColor: '#05966915' }]}>
+                  <Ionicons name="checkmark-circle" size={18} color="#059669" />
+                  <Text style={[styles.paymentStatusText, { color: '#059669' }]}>Payment Confirmed</Text>
+                </View>
+
+                {/* Payment details grid */}
+                <View style={styles.paymentDetailRow}>
+                  <View style={styles.paymentDetailItem}>
+                    <Text style={styles.paymentDetailLabel}>Document Type</Text>
+                    <Text style={styles.paymentDetailValue}>
+                      {document?.type?.charAt(0).toUpperCase() + document?.type?.slice(1)}
+                    </Text>
+                  </View>
+                  <View style={styles.paymentDetailItem}>
+                    <Text style={styles.paymentDetailLabel}>Reference No.</Text>
+                    <Text style={styles.paymentDetailValue}>{document?.document_number}</Text>
+                  </View>
+                </View>
+
+                <View style={styles.paymentDetailRow}>
+                  <View style={styles.paymentDetailItem}>
+                    <Text style={styles.paymentDetailLabel}>Payment Method</Text>
+                    <View style={[styles.methodBadge, { backgroundColor: colors.primary[600] + '15' }]}>
+                      <Ionicons
+                        name={
+                          document?.payment_method === 'cash' ? 'cash-outline' :
+                          document?.payment_method === 'bank_transfer' ? 'business-outline' :
+                          document?.payment_method === 'card' ? 'card-outline' :
+                          document?.payment_method === 'mobile_money' ? 'phone-portrait-outline' :
+                          'wallet-outline'
+                        }
+                        size={14}
+                        color={colors.primary[600]}
+                      />
+                      <Text style={[styles.methodText, { color: colors.primary[600] }]}>
+                        {document?.payment_method
+                          ? document.payment_method.replace(/_/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase())
+                          : 'Not specified'}
+                      </Text>
+                    </View>
+                  </View>
+                  <View style={styles.paymentDetailItem}>
+                    <Text style={styles.paymentDetailLabel}>Amount Paid</Text>
+                    <Text style={[styles.paymentDetailValue, { color: '#059669', fontWeight: '700' }]}>
+                      {document?.currency} {parseFloat(document?.total || 0).toFixed(2)}
+                    </Text>
+                  </View>
+                </View>
+
+                {document?.paid_at && (
+                  <View style={styles.paymentDetailRow}>
+                    <View style={styles.paymentDetailItem}>
+                      <Text style={styles.paymentDetailLabel}>Date Paid</Text>
+                      <Text style={styles.paymentDetailValue}>
+                        {new Date(document.paid_at).toLocaleDateString('en-US', {
+                          day: 'numeric', month: 'long', year: 'numeric'
+                        })}
+                      </Text>
+                    </View>
+                    <View style={styles.paymentDetailItem}>
+                      <Text style={styles.paymentDetailLabel}>Time</Text>
+                      <Text style={styles.paymentDetailValue}>
+                        {new Date(document.paid_at).toLocaleTimeString('en-US', {
+                          hour: '2-digit', minute: '2-digit'
+                        })}
+                      </Text>
+                    </View>
+                  </View>
+                )}
+
+                {/* Converted from info */}
+                {document?.metadata?.convertedFrom && (
+                  <View style={[styles.convertedFromBox, { backgroundColor: colors.background.secondary }]}>
+                    <Ionicons name="link-outline" size={14} color={colors.text.secondary} />
+                    <Text style={[styles.convertedFromText, { color: colors.text.secondary }]}>
+                      Issued from Invoice {document?.metadata?.convertedFromNumber}
+                    </Text>
+                  </View>
+                )}
+              </View>
+            </Card>
+          </View>
+        )}
 
         {/* Terms & Notes */}
         {(document?.terms || document?.notes) && (
@@ -551,7 +729,10 @@ export default function DocumentViewScreen() {
       </ScrollView>
 
       {/* Actions Footer */}
-      <View style={[styles.footer, { paddingBottom: insets.bottom + spacing[4] }]}>
+      <View
+        style={[styles.footer, { paddingBottom: insets.bottom + spacing[4] }]}
+        onLayout={(e) => setFooterHeight(e.nativeEvent.layout.height)}
+      >
         {/* Quick Status Actions */}
         {getStatusActions().length > 0 && (
           <View style={styles.statusActions}>
@@ -845,6 +1026,105 @@ export default function DocumentViewScreen() {
         documentsUsed={documentsUsed}
         reason={upgradeReason}
       />
+
+      {/* Payment Details Modal — for converting invoice to receipt */}
+      <Modal
+        visible={showPaymentModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowPaymentModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { maxHeight: '80%' }]}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Issue Receipt</Text>
+              <TouchableOpacity onPress={() => setShowPaymentModal(false)}>
+                <Ionicons name="close" size={24} color={colors.text.secondary} />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={{ flexGrow: 0 }} showsVerticalScrollIndicator={false}>
+              <Text style={[styles.label, { marginBottom: spacing[4], color: colors.text.secondary }]}>
+                Record how payment was received to generate an official receipt.
+              </Text>
+
+              {/* Payment Method */}
+              <Text style={[styles.label, { marginBottom: spacing[2] }]}>Payment Method</Text>
+              <View style={styles.paymentMethodGrid}>
+                {[
+                  { id: 'cash', label: 'Cash', icon: 'cash-outline' },
+                  { id: 'bank_transfer', label: 'Bank Transfer', icon: 'business-outline' },
+                  { id: 'card', label: 'Card', icon: 'card-outline' },
+                  { id: 'mobile_money', label: 'Mobile Money', icon: 'phone-portrait-outline' },
+                  { id: 'cheque', label: 'Cheque', icon: 'document-text-outline' },
+                  { id: 'other', label: 'Other', icon: 'wallet-outline' },
+                ].map((method) => (
+                  <TouchableOpacity
+                    key={method.id}
+                    style={[
+                      styles.paymentMethodBtn,
+                      {
+                        borderColor: paymentMethod === method.id ? colors.primary[600] : colors.gray[300],
+                        backgroundColor: paymentMethod === method.id ? colors.primary[600] + '12' : colors.background.secondary,
+                      }
+                    ]}
+                    onPress={() => setPaymentMethod(method.id)}
+                  >
+                    <Ionicons
+                      name={method.icon as any}
+                      size={20}
+                      color={paymentMethod === method.id ? colors.primary[600] : colors.text.secondary}
+                    />
+                    <Text style={[
+                      styles.paymentMethodText,
+                      { color: paymentMethod === method.id ? colors.primary[600] : colors.text.secondary }
+                    ]}>
+                      {method.label}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              {/* Reference / Transaction ID */}
+              <Input
+                label="Reference / Transaction ID (optional)"
+                value={paymentReference}
+                onChangeText={setPaymentReference}
+                placeholder="e.g. TXN123456 or cheque number"
+                style={{ marginTop: spacing[4] }}
+              />
+
+              {/* Summary */}
+              <View style={[styles.paymentSummaryBox, { backgroundColor: '#05966910', borderColor: '#05966930' }]}>
+                <Ionicons name="checkmark-circle" size={18} color="#059669" />
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.paymentSummaryTitle, { color: '#059669' }]}>Amount to receipt</Text>
+                  <Text style={[styles.paymentSummaryAmount, { color: colors.text.primary }]}>
+                    {document?.currency} {parseFloat(document?.total || 0).toFixed(2)}
+                  </Text>
+                </View>
+              </View>
+            </ScrollView>
+
+            <View style={styles.modalFooter}>
+              <Button
+                title="Cancel"
+                onPress={() => setShowPaymentModal(false)}
+                variant="ghost"
+                style={{ flex: 1, marginRight: spacing[2] }}
+              />
+              <Button
+                title="Issue Receipt"
+                onPress={handleConvertToReceipt}
+                gradient
+                style={{ flex: 2 }}
+                loading={convertingToReceipt}
+                icon={<Ionicons name="checkmark-done" size={18} color="white" />}
+              />
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -879,7 +1159,6 @@ const createStyles = (colors: Colors) => StyleSheet.create({
   },
   content: {
     padding: spacing[6],
-    paddingBottom: 100,
   },
   statusBanner: {
     flexDirection: 'row',
@@ -1160,5 +1439,112 @@ const createStyles = (colors: Colors) => StyleSheet.create({
   modalFooter: {
     flexDirection: 'row',
     marginTop: spacing[4],
+  },
+  // Discount row in totals
+  discountRow: {
+    marginBottom: spacing[2],
+  },
+  // Payment evidence card
+  paymentEvidenceGrid: {
+    gap: spacing[3],
+  },
+  paymentStatusChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing[2],
+    paddingVertical: spacing[2],
+    paddingHorizontal: spacing[3],
+    borderRadius: borderRadius.full,
+    alignSelf: 'flex-start',
+    marginBottom: spacing[1],
+  },
+  paymentStatusText: {
+    fontSize: typography.fontSize.sm,
+    fontWeight: typography.fontWeight.semibold,
+  },
+  paymentDetailRow: {
+    flexDirection: 'row',
+    gap: spacing[4],
+  },
+  paymentDetailItem: {
+    flex: 1,
+    gap: spacing[1],
+  },
+  paymentDetailLabel: {
+    fontSize: typography.fontSize.xs,
+    color: colors.text.secondary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    fontWeight: typography.fontWeight.medium,
+  },
+  paymentDetailValue: {
+    fontSize: typography.fontSize.sm,
+    fontWeight: typography.fontWeight.semibold,
+    color: colors.text.primary,
+  },
+  methodBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing[1],
+    paddingVertical: spacing[1],
+    paddingHorizontal: spacing[2],
+    borderRadius: borderRadius.md,
+    alignSelf: 'flex-start',
+  },
+  methodText: {
+    fontSize: typography.fontSize.xs,
+    fontWeight: typography.fontWeight.semibold,
+  },
+  convertedFromBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing[2],
+    paddingVertical: spacing[2],
+    paddingHorizontal: spacing[3],
+    borderRadius: borderRadius.md,
+    marginTop: spacing[1],
+  },
+  convertedFromText: {
+    fontSize: typography.fontSize.xs,
+    flex: 1,
+  },
+  // Payment method selection grid
+  paymentMethodGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing[2],
+    marginBottom: spacing[2],
+  },
+  paymentMethodBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing[2],
+    paddingVertical: spacing[3],
+    paddingHorizontal: spacing[3],
+    borderRadius: borderRadius.lg,
+    borderWidth: 1.5,
+    minWidth: '30%',
+  },
+  paymentMethodText: {
+    fontSize: typography.fontSize.xs,
+    fontWeight: typography.fontWeight.medium,
+  },
+  paymentSummaryBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing[3],
+    padding: spacing[4],
+    borderRadius: borderRadius.xl,
+    borderWidth: 1,
+    marginTop: spacing[4],
+  },
+  paymentSummaryTitle: {
+    fontSize: typography.fontSize.xs,
+    fontWeight: typography.fontWeight.medium,
+    marginBottom: spacing[1],
+  },
+  paymentSummaryAmount: {
+    fontSize: typography.fontSize.xl,
+    fontWeight: typography.fontWeight.bold,
   },
 });

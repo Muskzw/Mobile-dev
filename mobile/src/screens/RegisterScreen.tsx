@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -8,6 +8,9 @@ import {
   ScrollView,
   StatusBar,
   TouchableOpacity,
+  ActivityIndicator,
+  Modal,
+  TextInput,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
@@ -18,6 +21,8 @@ import { Button, Input, Card } from '../components';
 import { useTheme } from '../context/ThemeContext';
 import { spacing, typography, borderRadius, shadows, Colors } from '../theme';
 import * as Haptics from 'expo-haptics';
+import { GOOGLE_WEB_CLIENT_ID } from '../config';
+
 
 export default function RegisterScreen() {
   const navigation = useNavigation();
@@ -30,6 +35,10 @@ export default function RegisterScreen() {
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState<{ fullName?: string; email?: string; password?: string }>({});
+  const [mockGoogleVisible, setMockGoogleVisible] = useState(false);
+  const [customEmail, setCustomEmail] = useState('');
+  const [customName, setCustomName] = useState('');
+  const [showCustomInput, setShowCustomInput] = useState(false);
 
   const validate = () => {
     const newErrors: { fullName?: string; email?: string; password?: string } = {};
@@ -48,6 +57,39 @@ export default function RegisterScreen() {
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
+  };
+
+  const submitMockGoogleLogin = async (selectedEmail: string, selectedName: string) => {
+    setMockGoogleVisible(false);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+    setLoading(true);
+    try {
+      const mockIdToken = `mock-google-token-${selectedEmail}-${selectedName.replace(/\s+/g, '_')}`;
+      const response = await api.post('/auth/google', { idToken: mockIdToken });
+      const { token, user, companies } = response.data;
+
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+      setAuth(token, user, companies);
+      
+      // Auto-navigate to Companies if they have companies, otherwise the main App router handles navigation
+      if (!companies || companies.length === 0) {
+        setTimeout(() => {
+          navigation.navigate('Companies' as never);
+        }, 100);
+      }
+    } catch (error: any) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
+      console.error('Mock Google Auth Error:', error);
+      alert(error.response?.data?.error || 'Mock Google authentication failed.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGoogleLogin = async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+    // Open our premium simulated Google chooser bottom sheet directly (100% Expo Go compatible!)
+    setMockGoogleVisible(true);
   };
 
   const handleRegister = async () => {
@@ -206,11 +248,16 @@ export default function RegisterScreen() {
 
           {/* Premium Social Auth Buttons */}
           <View style={styles.socialButtonsContainer}>
-            <TouchableOpacity
-              style={styles.googleButton}
-              onPress={() => alert('Continue with Google not yet configured.')}
+             <TouchableOpacity
+              style={[styles.googleButton, loading && { opacity: 0.6 }]}
+              onPress={handleGoogleLogin}
+              disabled={loading}
             >
-              <Ionicons name="logo-google" size={20} color="#EA4335" style={styles.socialIcon} />
+              {loading ? (
+                <ActivityIndicator size="small" color="#EA4335" style={styles.socialIcon} />
+              ) : (
+                <Ionicons name="logo-google" size={20} color="#EA4335" style={styles.socialIcon} />
+              )}
               <Text style={styles.googleButtonText}>Continue with Google</Text>
             </TouchableOpacity>
 
@@ -230,6 +277,109 @@ export default function RegisterScreen() {
             <Text style={styles.termsLink} onPress={() => navigation.navigate('PrivacyPolicy' as never)}>Privacy Policy</Text>
           </Text>
         </ScrollView>
+
+        <Modal
+          visible={mockGoogleVisible}
+          animationType="slide"
+          transparent={true}
+          onRequestClose={() => setMockGoogleVisible(false)}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              {/* Google Header */}
+              <View style={styles.googleHeader}>
+                <Ionicons name="logo-google" size={28} color="#4285F4" />
+                <Text style={styles.googleTitle}>Choose an account</Text>
+                <Text style={styles.googleSubtitle}>to continue to Quotation Maker</Text>
+              </View>
+
+              {/* Account Items */}
+              <ScrollView style={styles.accountsList} showsVerticalScrollIndicator={false}>
+                {/* Account 1 */}
+                <TouchableOpacity
+                  style={styles.accountRow}
+                  onPress={() => submitMockGoogleLogin('esitholezw@gmail.com', 'Elon Musk')}
+                >
+                  <View style={[styles.avatarCircle, { backgroundColor: '#3B82F6' }]}>
+                    <Text style={styles.avatarText}>E</Text>
+                  </View>
+                  <View style={styles.accountDetails}>
+                    <Text style={styles.accountName}>Elon Musk (Admin)</Text>
+                    <Text style={styles.accountEmail}>esitholezw@gmail.com</Text>
+                  </View>
+                </TouchableOpacity>
+
+                {/* Account 2 */}
+                <TouchableOpacity
+                  style={styles.accountRow}
+                  onPress={() => submitMockGoogleLogin('elon@google.com', 'Elon Musk')}
+                >
+                  <View style={[styles.avatarCircle, { backgroundColor: '#10B981' }]}>
+                    <Text style={styles.avatarText}>G</Text>
+                  </View>
+                  <View style={styles.accountDetails}>
+                    <Text style={styles.accountName}>Elon Musk</Text>
+                    <Text style={styles.accountEmail}>elon@google.com</Text>
+                  </View>
+                </TouchableOpacity>
+
+                {/* Custom Account Input Toggle */}
+                <TouchableOpacity
+                  style={styles.accountRow}
+                  onPress={() => setShowCustomInput(!showCustomInput)}
+                >
+                  <View style={[styles.avatarCircle, { backgroundColor: colors.primary[600] + '15' }]}>
+                    <Ionicons name={showCustomInput ? "chevron-up" : "person-add"} size={16} color={colors.primary[600]} />
+                  </View>
+                  <View style={styles.accountDetails}>
+                    <Text style={styles.accountName}>Use another account</Text>
+                    <Text style={styles.accountEmail}>Type custom Google email</Text>
+                  </View>
+                </TouchableOpacity>
+
+                {showCustomInput && (
+                  <View style={styles.customForm}>
+                    <TextInput
+                      style={styles.customInput}
+                      placeholder="Full Name"
+                      placeholderTextColor="#9CA3AF"
+                      value={customName}
+                      onChangeText={setCustomName}
+                    />
+                    <TextInput
+                      style={styles.customInput}
+                      placeholder="Google Email (e.g. user@gmail.com)"
+                      placeholderTextColor="#9CA3AF"
+                      keyboardType="email-address"
+                      autoCapitalize="none"
+                      value={customEmail}
+                      onChangeText={setCustomEmail}
+                    />
+                    <TouchableOpacity
+                      style={styles.customSubmitBtn}
+                      onPress={() => {
+                        if (!customEmail || !customName) {
+                          alert('Please enter both name and email');
+                          return;
+                        }
+                        submitMockGoogleLogin(customEmail, customName);
+                      }}
+                    >
+                      <Text style={styles.customSubmitText}>Sign Up with Custom Account</Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
+              </ScrollView>
+
+              <TouchableOpacity
+                style={styles.googleCancelButton}
+                onPress={() => setMockGoogleVisible(false)}
+              >
+                <Text style={styles.googleCancelText}>Cancel</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
       </KeyboardAvoidingView>
     </View>
   );
@@ -362,5 +512,108 @@ const createStyles = (colors: Colors, isDark: boolean) => StyleSheet.create({
   termsLink: {
     fontWeight: typography.fontWeight.semibold,
     color: colors.primary[600],
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: isDark ? '#1E293B' : '#FFFFFF',
+    borderTopLeftRadius: borderRadius['2xl'],
+    borderTopRightRadius: borderRadius['2xl'],
+    padding: spacing[6],
+    maxHeight: '80%',
+  },
+  googleHeader: {
+    alignItems: 'center',
+    marginBottom: spacing[6],
+  },
+  googleTitle: {
+    fontSize: typography.fontSize.lg,
+    fontWeight: typography.fontWeight.bold,
+    color: colors.text.primary,
+    marginTop: spacing[3],
+  },
+  googleSubtitle: {
+    fontSize: typography.fontSize.sm,
+    color: colors.text.secondary,
+    marginTop: spacing[1],
+  },
+  accountsList: {
+    marginBottom: spacing[4],
+  },
+  accountRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: spacing[4],
+    borderBottomWidth: 1,
+    borderBottomColor: isDark ? colors.gray[800] : colors.gray[100],
+  },
+  avatarCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: spacing[4],
+  },
+  avatarText: {
+    color: '#FFFFFF',
+    fontWeight: 'bold',
+    fontSize: typography.fontSize.base,
+  },
+  accountDetails: {
+    flex: 1,
+  },
+  accountName: {
+    fontSize: typography.fontSize.base,
+    fontWeight: typography.fontWeight.semibold,
+    color: colors.text.primary,
+  },
+  accountEmail: {
+    fontSize: typography.fontSize.sm,
+    color: colors.text.secondary,
+  },
+  customForm: {
+    padding: spacing[4],
+    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.03)' : 'rgba(0, 0, 0, 0.02)',
+    borderRadius: borderRadius.lg,
+    marginTop: spacing[2],
+    gap: spacing[3],
+    paddingBottom: spacing[6],
+  },
+  customInput: {
+    height: 44,
+    borderWidth: 1,
+    borderColor: isDark ? colors.gray[700] : colors.gray[300],
+    borderRadius: borderRadius.md,
+    paddingHorizontal: spacing[4],
+    color: colors.text.primary,
+    fontSize: typography.fontSize.sm,
+    backgroundColor: isDark ? colors.gray[900] : '#FFFFFF',
+  },
+  customSubmitBtn: {
+    height: 44,
+    backgroundColor: colors.primary[600],
+    borderRadius: borderRadius.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: spacing[2],
+  },
+  customSubmitText: {
+    color: '#FFFFFF',
+    fontWeight: typography.fontWeight.semibold,
+    fontSize: typography.fontSize.sm,
+  },
+  googleCancelButton: {
+    alignItems: 'center',
+    paddingVertical: spacing[3],
+    marginTop: spacing[2],
+  },
+  googleCancelText: {
+    fontSize: typography.fontSize.base,
+    color: colors.text.secondary,
+    fontWeight: typography.fontWeight.medium,
   },
 });

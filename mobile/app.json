@@ -41,7 +41,8 @@
         {
           "contactsPermission": "Allow Quotation Maker to access your contacts to import clients."
         }
-      ]
+      ],
+      "@react-native-google-signin/google-signin"
     ]
   }
 }
