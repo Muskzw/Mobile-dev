@@ -73,6 +73,16 @@ app.use('/api/settings', settingsRoutes);
 app.use('/api/saved-items', savedItemsRoutes);
 app.use('/webhooks', webhookRoutes);
 
+// Root Welcome
+app.get('/', (req, res) => {
+  res.json({
+    status: 'active',
+    message: 'AI Quotation Maker Backend API',
+    version: '1.0.0',
+    database: 'connected (Neon Cloud)',
+  });
+});
+
 // Health check
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', message: 'API is running' });
