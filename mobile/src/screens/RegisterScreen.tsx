@@ -7,6 +7,7 @@ import {
   Platform,
   ScrollView,
   StatusBar,
+  TouchableOpacity,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
@@ -15,13 +16,13 @@ import api from '../api/client';
 import { useAuthStore } from '../store/authStore';
 import { Button, Input, Card } from '../components';
 import { useTheme } from '../context/ThemeContext';
-import { spacing, typography, borderRadius, Colors } from '../theme';
+import { spacing, typography, borderRadius, shadows, Colors } from '../theme';
 
 export default function RegisterScreen() {
   const navigation = useNavigation();
   const { setAuth } = useAuthStore();
   const { colors, isDark } = useTheme();
-  const styles = createStyles(colors);
+  const styles = createStyles(colors, isDark);
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -96,131 +97,142 @@ export default function RegisterScreen() {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="light-content" />
-      <LinearGradient
-        colors={colors.gradients.primary as any}
-        style={styles.gradient}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
+      <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.keyboardView}
       >
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          style={styles.keyboardView}
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
         >
-          <ScrollView
-            contentContainerStyle={styles.scrollContent}
-            showsVerticalScrollIndicator={false}
-            keyboardShouldPersistTaps="handled"
-          >
-            {/* Header */}
-            <View style={styles.header}>
-              <View style={styles.logoContainer}>
-                <LinearGradient
-                  colors={['rgba(255,255,255,0.3)', 'rgba(255,255,255,0.1)']}
-                  style={styles.logoGradient}
-                >
-                  <Ionicons name="document-text" size={40} color={colors.text.inverse} />
-                </LinearGradient>
-              </View>
-              <Text style={styles.title}>Create Account</Text>
-              <Text style={styles.subtitle}>
-                Start creating professional quotations today
-              </Text>
+          {/* Header */}
+          <View style={styles.header}>
+            <View style={styles.logoContainer}>
+              <Ionicons name="document-text" size={32} color={colors.primary[600]} />
             </View>
-
-            {/* Form Card */}
-            <Card style={styles.formCard} padding={6}>
-              <Input
-                label="Full Name"
-                placeholder="John Doe"
-                value={fullName}
-                onChangeText={(text) => {
-                  setFullName(text);
-                  setErrors({ ...errors, fullName: undefined });
-                }}
-                error={errors.fullName}
-                icon={<Ionicons name="person-outline" size={20} color={colors.gray[500]} />}
-                autoCapitalize="words"
-              />
-
-              <Input
-                label="Email Address"
-                placeholder="john@example.com"
-                value={email}
-                onChangeText={(text) => {
-                  setEmail(text);
-                  setErrors({ ...errors, email: undefined });
-                }}
-                error={errors.email}
-                icon={<Ionicons name="mail-outline" size={20} color={colors.gray[500]} />}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                autoComplete="email"
-              />
-
-              <Input
-                label="Password"
-                placeholder="••••••••"
-                value={password}
-                onChangeText={(text) => {
-                  setPassword(text);
-                  setErrors({ ...errors, password: undefined });
-                }}
-                error={errors.password}
-                icon={<Ionicons name="lock-closed-outline" size={20} color={colors.gray[500]} />}
-                rightIcon={
-                  <Ionicons
-                    name={showPassword ? 'eye-off-outline' : 'eye-outline'}
-                    size={20}
-                    color={colors.gray[500]}
-                    onPress={() => setShowPassword(!showPassword)}
-                  />
-                }
-                secureTextEntry={!showPassword}
-              />
-
-              <Button
-                title={loading ? 'Creating Account...' : 'Create Account'}
-                onPress={handleRegister}
-                loading={loading}
-                disabled={loading}
-                gradient
-                size="lg"
-                fullWidth
-                style={styles.button}
-              />
-
-              <View style={styles.footer}>
-                <Text style={styles.footerText}>Already have an account?</Text>
-                <Button
-                  title="Sign In"
-                  onPress={() => navigation.navigate('Login' as never)}
-                  variant="ghost"
-                  size="sm"
-                />
-              </View>
-            </Card>
-
-            {/* Terms */}
-            <Text style={styles.terms}>
-              By creating an account, you agree to our{'\n'}
-              <Text style={styles.termsLink}>Terms of Service</Text> and{' '}
-              <Text style={styles.termsLink}>Privacy Policy</Text>
+            <Text style={styles.title}>Create Account</Text>
+            <Text style={styles.subtitle}>
+              Start creating professional quotations today
             </Text>
-          </ScrollView>
-        </KeyboardAvoidingView>
-      </LinearGradient>
+          </View>
+
+          {/* Form Card */}
+          <Card style={styles.formCard} padding={6}>
+            <Input
+              label="Full Name"
+              placeholder="John Doe"
+              value={fullName}
+              onChangeText={(text) => {
+                setFullName(text);
+                setErrors({ ...errors, fullName: undefined });
+              }}
+              error={errors.fullName}
+              icon={<Ionicons name="person-outline" size={20} color={colors.gray[500]} />}
+              autoCapitalize="words"
+            />
+
+            <Input
+              label="Email Address"
+              placeholder="john@example.com"
+              value={email}
+              onChangeText={(text) => {
+                setEmail(text);
+                setErrors({ ...errors, email: undefined });
+              }}
+              error={errors.email}
+              icon={<Ionicons name="mail-outline" size={20} color={colors.gray[500]} />}
+              keyboardType="email-address"
+              autoCapitalize="none"
+              autoComplete="email"
+            />
+
+            <Input
+              label="Password"
+              placeholder="••••••••"
+              value={password}
+              onChangeText={(text) => {
+                setPassword(text);
+                setErrors({ ...errors, password: undefined });
+              }}
+              error={errors.password}
+              icon={<Ionicons name="lock-closed-outline" size={20} color={colors.gray[500]} />}
+              rightIcon={
+                <Ionicons
+                  name={showPassword ? 'eye-off-outline' : 'eye-outline'}
+                  size={20}
+                  color={colors.gray[500]}
+                  onPress={() => setShowPassword(!showPassword)}
+                />
+              }
+              secureTextEntry={!showPassword}
+            />
+
+            <Button
+              title={loading ? 'Creating Account...' : 'Create Account'}
+              onPress={handleRegister}
+              loading={loading}
+              disabled={loading}
+              gradient
+              size="lg"
+              fullWidth
+              style={styles.button}
+            />
+
+            <View style={styles.footer}>
+              <Text style={styles.footerText}>Already have an account?</Text>
+              <Button
+                title="Sign In"
+                onPress={() => navigation.navigate('Login' as never)}
+                variant="ghost"
+                size="sm"
+              />
+            </View>
+          </Card>
+
+          {/* Alternative Signup */}
+          <View style={styles.divider}>
+            <View style={styles.dividerLine} />
+            <Text style={styles.dividerText}>Or sign up with</Text>
+            <View style={styles.dividerLine} />
+          </View>
+
+          {/* Premium Social Auth Buttons */}
+          <View style={styles.socialButtonsContainer}>
+            <TouchableOpacity
+              style={styles.googleButton}
+              onPress={() => alert('Continue with Google not yet configured.')}
+            >
+              <Ionicons name="logo-google" size={20} color="#EA4335" style={styles.socialIcon} />
+              <Text style={styles.googleButtonText}>Continue with Google</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.appleButton}
+              onPress={() => alert('Continue with Apple not yet configured.')}
+            >
+              <Ionicons name="logo-apple" size={20} color={isDark ? '#000000' : '#FFFFFF'} style={styles.socialIcon} />
+              <Text style={styles.appleButtonText}>Continue with Apple</Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Terms */}
+          <Text style={styles.terms}>
+            By creating an account, you agree to our{'\n'}
+            <Text style={styles.termsLink} onPress={() => navigation.navigate('TermsOfService' as never)}>Terms of Service</Text> and{' '}
+            <Text style={styles.termsLink} onPress={() => navigation.navigate('PrivacyPolicy' as never)}>Privacy Policy</Text>
+          </Text>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </View>
   );
 }
 
-const createStyles = (colors: Colors) => StyleSheet.create({
+const createStyles = (colors: Colors, isDark: boolean) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.primary[600],
-  },
-  gradient: {
-    flex: 1,
+    backgroundColor: isDark ? '#0B0F19' : '#FAFAFA',
   },
   keyboardView: {
     flex: 1,
@@ -230,35 +242,43 @@ const createStyles = (colors: Colors) => StyleSheet.create({
     paddingHorizontal: spacing[6],
     paddingTop: spacing[16],
     paddingBottom: spacing[8],
+    justifyContent: 'center',
   },
   header: {
     alignItems: 'center',
     marginBottom: spacing[8],
   },
   logoContainer: {
-    marginBottom: spacing[6],
-  },
-  logoGradient: {
-    width: 80,
-    height: 80,
-    borderRadius: borderRadius['2xl'],
+    width: 64,
+    height: 64,
+    borderRadius: borderRadius.full,
+    backgroundColor: isDark ? 'rgba(99, 102, 241, 0.15)' : 'rgba(99, 102, 241, 0.1)',
     alignItems: 'center',
     justifyContent: 'center',
+    marginBottom: spacing[4],
+    borderWidth: 1,
+    borderColor: isDark ? 'rgba(99, 102, 241, 0.3)' : 'rgba(99, 102, 241, 0.15)',
   },
   title: {
     fontSize: typography.fontSize['3xl'],
     fontWeight: typography.fontWeight.bold,
-    color: colors.text.inverse,
+    color: colors.text.primary,
     marginBottom: spacing[2],
   },
   subtitle: {
     fontSize: typography.fontSize.base,
-    color: 'rgba(255,255,255,0.8)',
+    color: colors.text.secondary,
     textAlign: 'center',
+    paddingHorizontal: spacing[4],
   },
   formCard: {
     marginBottom: spacing[6],
-    backgroundColor: colors.background.primary,
+    backgroundColor: isDark ? colors.gray[900] : '#FFFFFF',
+    borderWidth: 1,
+    borderColor: isDark ? colors.gray[800] : colors.gray[200],
+    borderRadius: borderRadius.xl,
+    padding: spacing[6],
+    ...shadows.md,
   },
   button: {
     marginTop: spacing[2],
@@ -274,14 +294,67 @@ const createStyles = (colors: Colors) => StyleSheet.create({
     color: colors.text.secondary,
     marginRight: spacing[2],
   },
+  divider: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: spacing[6],
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: isDark ? colors.gray[800] : colors.gray[200],
+  },
+  dividerText: {
+    marginHorizontal: spacing[4],
+    fontSize: typography.fontSize.sm,
+    color: colors.text.secondary,
+  },
+  socialButtonsContainer: {
+    gap: spacing[3],
+    marginBottom: spacing[6],
+  },
+  googleButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    height: 52,
+    borderRadius: borderRadius.lg,
+    backgroundColor: isDark ? colors.gray[800] : '#FFFFFF',
+    borderWidth: 1,
+    borderColor: isDark ? colors.gray[700] : colors.gray[200],
+    ...shadows.sm,
+  },
+  googleButtonText: {
+    fontSize: typography.fontSize.base,
+    fontWeight: typography.fontWeight.semibold,
+    color: isDark ? '#FFFFFF' : colors.gray[800],
+  },
+  appleButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    height: 52,
+    borderRadius: borderRadius.lg,
+    backgroundColor: isDark ? '#FFFFFF' : '#000000',
+    ...shadows.sm,
+  },
+  appleButtonText: {
+    fontSize: typography.fontSize.base,
+    fontWeight: typography.fontWeight.semibold,
+    color: isDark ? '#000000' : '#FFFFFF',
+  },
+  socialIcon: {
+    marginRight: spacing[3],
+  },
   terms: {
     fontSize: typography.fontSize.xs,
-    color: 'rgba(255,255,255,0.7)',
+    color: colors.text.secondary,
     textAlign: 'center',
     lineHeight: typography.lineHeight.relaxed * typography.fontSize.xs,
+    marginTop: spacing[4],
   },
   termsLink: {
     fontWeight: typography.fontWeight.semibold,
-    color: colors.text.inverse,
+    color: colors.primary[600],
   },
 });

@@ -15,7 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import api from '../api/client';
 import { useTheme } from '../context/ThemeContext';
-import { spacing, typography, borderRadius, Colors } from '../theme';
+import { spacing, typography, borderRadius, shadows, Colors } from '../theme';
 import { Input } from '../components/Input';
 import { Button } from '../components/Button';
 import { Card } from '../components/Card';
@@ -24,7 +24,7 @@ export default function ForgotPasswordScreen() {
     const navigation = useNavigation();
     const insets = useSafeAreaInsets();
     const { colors, isDark } = useTheme();
-    const styles = createStyles(colors);
+    const styles = createStyles(colors, isDark);
     const [email, setEmail] = useState('');
     const [loading, setLoading] = useState(false);
     const [sent, setSent] = useState(false);
@@ -61,10 +61,7 @@ export default function ForgotPasswordScreen() {
     };
 
     return (
-        <LinearGradient
-            colors={isDark ? ['#1F2937', '#111827'] : colors.gradients.primary as any}
-            style={styles.container}
-        >
+        <View style={styles.container}>
             <StatusBar
                 barStyle={isDark ? "light-content" : "dark-content"}
                 backgroundColor="transparent"
@@ -83,7 +80,9 @@ export default function ForgotPasswordScreen() {
 
                     {/* Header */}
                     <View style={styles.header}>
-                        <Ionicons name="lock-closed-outline" size={64} color={colors.primary[500]} />
+                        <View style={styles.logoContainer}>
+                            <Ionicons name="lock-closed-outline" size={32} color={colors.primary[600]} />
+                        </View>
                         <Text style={styles.title}>Forgot Password?</Text>
                         <Text style={styles.subtitle}>
                             No worries! Enter your email address and we'll send you instructions to reset your password.
@@ -128,13 +127,14 @@ export default function ForgotPasswordScreen() {
                     </Text>
                 </View>
             </KeyboardAvoidingView>
-        </LinearGradient>
+        </View>
     );
 }
 
-const createStyles = (colors: Colors) => StyleSheet.create({
+const createStyles = (colors: Colors, isDark: boolean) => StyleSheet.create({
     container: {
         flex: 1,
+        backgroundColor: isDark ? '#0B0F19' : '#FAFAFA',
     },
     keyboardView: {
         flex: 1,
@@ -146,7 +146,7 @@ const createStyles = (colors: Colors) => StyleSheet.create({
     },
     backButton: {
         position: 'absolute',
-        top: spacing[4],
+        top: spacing[4] + 10,
         left: spacing[6],
         padding: spacing[2],
         zIndex: 10,
@@ -155,11 +155,22 @@ const createStyles = (colors: Colors) => StyleSheet.create({
         alignItems: 'center',
         marginBottom: spacing[8],
     },
+    logoContainer: {
+        width: 64,
+        height: 64,
+        borderRadius: borderRadius.full,
+        backgroundColor: isDark ? 'rgba(99, 102, 241, 0.15)' : 'rgba(99, 102, 241, 0.1)',
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginBottom: spacing[4],
+        borderWidth: 1,
+        borderColor: isDark ? 'rgba(99, 102, 241, 0.3)' : 'rgba(99, 102, 241, 0.15)',
+    },
     title: {
         fontSize: typography.fontSize['3xl'],
         fontWeight: typography.fontWeight.bold,
         color: colors.text.primary,
-        marginTop: spacing[4],
+        marginTop: spacing[2],
         marginBottom: spacing[2],
     },
     subtitle: {
@@ -171,6 +182,12 @@ const createStyles = (colors: Colors) => StyleSheet.create({
     },
     card: {
         marginBottom: spacing[6],
+        backgroundColor: isDark ? colors.gray[900] : '#FFFFFF',
+        borderWidth: 1,
+        borderColor: isDark ? colors.gray[800] : colors.gray[200],
+        borderRadius: borderRadius.xl,
+        padding: spacing[6],
+        ...shadows.md,
     },
     resetButton: {
         marginTop: spacing[4],

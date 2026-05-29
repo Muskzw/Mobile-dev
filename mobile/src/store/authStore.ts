@@ -36,8 +36,10 @@ interface AuthState {
   user: User | null;
   companies: Company[];
   currentCompany: Company | null;
+  hasCompletedOnboarding: boolean;
   setAuth: (token: string, user: User, companies: Company[]) => void;
   setCurrentCompany: (company: Company) => void;
+  setHasCompletedOnboarding: (completed: boolean) => void;
   logout: () => void;
 }
 
@@ -48,11 +50,15 @@ export const useAuthStore = create<AuthState>()(
       user: null,
       companies: [],
       currentCompany: null,
+      hasCompletedOnboarding: false,
       setAuth: (token, user, companies) => {
         set({ token, user, companies, currentCompany: companies[0] || null });
       },
       setCurrentCompany: (company) => {
         set({ currentCompany: company });
+      },
+      setHasCompletedOnboarding: (completed) => {
+        set({ hasCompletedOnboarding: completed });
       },
       logout: () => {
         set({ token: null, user: null, companies: [], currentCompany: null });

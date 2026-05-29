@@ -16,13 +16,13 @@ import api from '../api/client';
 import { useAuthStore } from '../store/authStore';
 import { Button, Input, Card } from '../components';
 import { useTheme } from '../context/ThemeContext';
-import { spacing, typography, borderRadius, Colors } from '../theme';
+import { spacing, typography, borderRadius, shadows, Colors } from '../theme';
 
 export default function LoginScreen() {
   const navigation = useNavigation();
   const { setAuth, setCurrentCompany } = useAuthStore();
   const { colors, isDark } = useTheme();
-  const styles = createStyles(colors);
+  const styles = createStyles(colors, isDark);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -83,134 +83,129 @@ export default function LoginScreen() {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="light-content" />
-      <LinearGradient
-        colors={colors.gradients.ocean as any}
-        style={styles.gradient}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
+      <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.keyboardView}
       >
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          style={styles.keyboardView}
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
         >
-          <ScrollView
-            contentContainerStyle={styles.scrollContent}
-            showsVerticalScrollIndicator={false}
-            keyboardShouldPersistTaps="handled"
-          >
-            {/* Header */}
-            <View style={styles.header}>
-              <View style={styles.logoContainer}>
-                <LinearGradient
-                  colors={['rgba(255,255,255,0.3)', 'rgba(255,255,255,0.1)']}
-                  style={styles.logoGradient}
-                >
-                  <Ionicons name="document-text" size={40} color={colors.text.inverse} />
-                </LinearGradient>
-              </View>
-              <Text style={styles.title}>Welcome Back</Text>
-              <Text style={styles.subtitle}>
-                Sign in to continue managing your quotations
-              </Text>
+          {/* Header */}
+          <View style={styles.header}>
+            <View style={styles.logoContainer}>
+              <Ionicons name="document-text" size={32} color={colors.primary[600]} />
             </View>
+            <Text style={styles.title}>Welcome Back</Text>
+            <Text style={styles.subtitle}>
+              Sign in to continue managing your quotations
+            </Text>
+          </View>
 
-            {/* Form Card */}
-            <Card style={styles.formCard} padding={6}>
-              <Input
-                label="Email Address"
-                placeholder="john@example.com"
-                value={email}
-                onChangeText={(text) => {
-                  setEmail(text);
-                  setErrors({ ...errors, email: undefined });
-                }}
-                error={errors.email}
-                icon={<Ionicons name="mail-outline" size={20} color={colors.gray[500]} />}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                autoComplete="email"
-              />
+          {/* Form Card */}
+          <Card style={styles.formCard} padding={6}>
+            <Input
+              label="Email Address"
+              placeholder="john@example.com"
+              value={email}
+              onChangeText={(text) => {
+                setEmail(text);
+                setErrors({ ...errors, email: undefined });
+              }}
+              error={errors.email}
+              icon={<Ionicons name="mail-outline" size={20} color={colors.gray[500]} />}
+              keyboardType="email-address"
+              autoCapitalize="none"
+              autoComplete="email"
+            />
 
-              <Input
-                label="Password"
-                placeholder="••••••••"
-                value={password}
-                onChangeText={(text) => {
-                  setPassword(text);
-                  setErrors({ ...errors, password: undefined });
-                }}
-                error={errors.password}
-                icon={<Ionicons name="lock-closed-outline" size={20} color={colors.gray[500]} />}
-                rightIcon={
-                  <Ionicons
-                    name={showPassword ? 'eye-off-outline' : 'eye-outline'}
-                    size={20}
-                    color={colors.gray[500]}
-                    onPress={() => setShowPassword(!showPassword)}
-                  />
-                }
-                secureTextEntry={!showPassword}
-              />
-
-              <TouchableOpacity
-                style={styles.forgotPassword}
-                onPress={() => navigation.navigate('ForgotPassword' as never)}
-              >
-                <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
-              </TouchableOpacity>
-
-              <Button
-                title={loading ? 'Signing In...' : 'Sign In'}
-                onPress={handleLogin}
-                loading={loading}
-                disabled={loading}
-                gradient
-                size="lg"
-                fullWidth
-                style={styles.button}
-              />
-
-              <View style={styles.footer}>
-                <Text style={styles.footerText}>Don't have an account?</Text>
-                <Button
-                  title="Create Account"
-                  onPress={() => navigation.navigate('Register' as never)}
-                  variant="ghost"
-                  size="sm"
+            <Input
+              label="Password"
+              placeholder="••••••••"
+              value={password}
+              onChangeText={(text) => {
+                setPassword(text);
+                setErrors({ ...errors, password: undefined });
+              }}
+              error={errors.password}
+              icon={<Ionicons name="lock-closed-outline" size={20} color={colors.gray[500]} />}
+              rightIcon={
+                <Ionicons
+                  name={showPassword ? 'eye-off-outline' : 'eye-outline'}
+                  size={20}
+                  color={colors.gray[500]}
+                  onPress={() => setShowPassword(!showPassword)}
                 />
-              </View>
-            </Card>
+              }
+              secureTextEntry={!showPassword}
+            />
 
-            {/* Alternative Login */}
-            <View style={styles.divider}>
-              <View style={styles.dividerLine} />
-              <Text style={styles.dividerText}>Or continue with</Text>
-              <View style={styles.dividerLine} />
-            </View>
+            <TouchableOpacity
+              style={styles.forgotPassword}
+              onPress={() => navigation.navigate('ForgotPassword' as never)}
+            >
+              <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
+            </TouchableOpacity>
 
-            <View style={styles.socialButtons}>
-              <TouchableOpacity style={styles.socialButton}>
-                <Ionicons name="logo-google" size={24} color={colors.text.inverse} />
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.socialButton}>
-                <Ionicons name="logo-apple" size={24} color={colors.text.inverse} />
-              </TouchableOpacity>
+            <Button
+              title={loading ? 'Signing In...' : 'Sign In'}
+              onPress={handleLogin}
+              loading={loading}
+              disabled={loading}
+              gradient
+              size="lg"
+              fullWidth
+              style={styles.button}
+            />
+
+            <View style={styles.footer}>
+              <Text style={styles.footerText}>Don't have an account?</Text>
+              <Button
+                title="Create Account"
+                onPress={() => navigation.navigate('Register' as never)}
+                variant="ghost"
+                size="sm"
+              />
             </View>
-          </ScrollView>
-        </KeyboardAvoidingView>
-      </LinearGradient>
+          </Card>
+
+          {/* Alternative Login */}
+          <View style={styles.divider}>
+            <View style={styles.dividerLine} />
+            <Text style={styles.dividerText}>Or continue with</Text>
+            <View style={styles.dividerLine} />
+          </View>
+
+          {/* Premium Social Auth Buttons */}
+          <View style={styles.socialButtonsContainer}>
+            <TouchableOpacity
+              style={styles.googleButton}
+              onPress={() => alert('Continue with Google not yet configured.')}
+            >
+              <Ionicons name="logo-google" size={20} color="#EA4335" style={styles.socialIcon} />
+              <Text style={styles.googleButtonText}>Continue with Google</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.appleButton}
+              onPress={() => alert('Continue with Apple not yet configured.')}
+            >
+              <Ionicons name="logo-apple" size={20} color={isDark ? '#000000' : '#FFFFFF'} style={styles.socialIcon} />
+              <Text style={styles.appleButtonText}>Continue with Apple</Text>
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </View>
   );
 }
 
-const createStyles = (colors: Colors) => StyleSheet.create({
+const createStyles = (colors: Colors, isDark: boolean) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.primary[600],
-  },
-  gradient: {
-    flex: 1,
+    backgroundColor: isDark ? '#0B0F19' : '#FAFAFA',
   },
   keyboardView: {
     flex: 1,
@@ -220,35 +215,43 @@ const createStyles = (colors: Colors) => StyleSheet.create({
     paddingHorizontal: spacing[6],
     paddingTop: spacing[16],
     paddingBottom: spacing[8],
+    justifyContent: 'center',
   },
   header: {
     alignItems: 'center',
     marginBottom: spacing[8],
   },
   logoContainer: {
-    marginBottom: spacing[6],
-  },
-  logoGradient: {
-    width: 80,
-    height: 80,
-    borderRadius: borderRadius['2xl'],
+    width: 64,
+    height: 64,
+    borderRadius: borderRadius.full,
+    backgroundColor: isDark ? 'rgba(99, 102, 241, 0.15)' : 'rgba(99, 102, 241, 0.1)',
     alignItems: 'center',
     justifyContent: 'center',
+    marginBottom: spacing[4],
+    borderWidth: 1,
+    borderColor: isDark ? 'rgba(99, 102, 241, 0.3)' : 'rgba(99, 102, 241, 0.15)',
   },
   title: {
     fontSize: typography.fontSize['3xl'],
     fontWeight: typography.fontWeight.bold,
-    color: colors.text.inverse,
+    color: colors.text.primary,
     marginBottom: spacing[2],
   },
   subtitle: {
     fontSize: typography.fontSize.base,
-    color: 'rgba(255,255,255,0.8)',
+    color: colors.text.secondary,
     textAlign: 'center',
+    paddingHorizontal: spacing[4],
   },
   formCard: {
     marginBottom: spacing[6],
-    backgroundColor: colors.background.primary,
+    backgroundColor: isDark ? colors.gray[900] : '#FFFFFF',
+    borderWidth: 1,
+    borderColor: isDark ? colors.gray[800] : colors.gray[200],
+    borderRadius: borderRadius.xl,
+    padding: spacing[6],
+    ...shadows.md,
   },
   forgotPassword: {
     alignSelf: 'flex-end',
@@ -277,29 +280,52 @@ const createStyles = (colors: Colors) => StyleSheet.create({
   divider: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: spacing[6],
+    marginVertical: spacing[6],
   },
   dividerLine: {
     flex: 1,
     height: 1,
-    backgroundColor: 'rgba(255,255,255,0.3)',
+    backgroundColor: isDark ? colors.gray[800] : colors.gray[200],
   },
   dividerText: {
     marginHorizontal: spacing[4],
     fontSize: typography.fontSize.sm,
-    color: 'rgba(255,255,255,0.8)',
+    color: colors.text.secondary,
   },
-  socialButtons: {
+  socialButtonsContainer: {
+    gap: spacing[3],
+  },
+  googleButton: {
     flexDirection: 'row',
-    justifyContent: 'center',
-    gap: spacing[4],
-  },
-  socialButton: {
-    width: 56,
-    height: 56,
-    borderRadius: borderRadius.xl,
-    backgroundColor: 'rgba(255,255,255,0.2)',
     alignItems: 'center',
     justifyContent: 'center',
+    height: 52,
+    borderRadius: borderRadius.lg,
+    backgroundColor: isDark ? colors.gray[800] : '#FFFFFF',
+    borderWidth: 1,
+    borderColor: isDark ? colors.gray[700] : colors.gray[200],
+    ...shadows.sm,
+  },
+  googleButtonText: {
+    fontSize: typography.fontSize.base,
+    fontWeight: typography.fontWeight.semibold,
+    color: isDark ? '#FFFFFF' : colors.gray[800],
+  },
+  appleButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    height: 52,
+    borderRadius: borderRadius.lg,
+    backgroundColor: isDark ? '#FFFFFF' : '#000000',
+    ...shadows.sm,
+  },
+  appleButtonText: {
+    fontSize: typography.fontSize.base,
+    fontWeight: typography.fontWeight.semibold,
+    color: isDark ? '#000000' : '#FFFFFF',
+  },
+  socialIcon: {
+    marginRight: spacing[3],
   },
 });
