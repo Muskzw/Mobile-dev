@@ -26,6 +26,7 @@ import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import { useAuthStore } from '../store/authStore';
 import { BASE_URL } from '../config';
+import UpgradeModal from '../components/UpgradeModal';
 
 export default function DocumentViewScreen() {
   const route = useRoute();
@@ -44,6 +45,9 @@ export default function DocumentViewScreen() {
   const [emailBody, setEmailBody] = React.useState('');
   const [sendingEmail, setSendingEmail] = React.useState(false);
   const [statusLoading, setStatusLoading] = React.useState<string | null>(null);
+  const [showUpgradeModal, setShowUpgradeModal] = React.useState(false);
+  const [upgradeReason, setUpgradeReason] = React.useState('');
+  const [documentsUsed, setDocumentsUsed] = React.useState(0);
 
   const { data: document, isLoading } = useQuery({
     queryKey: ['document', id],
@@ -102,9 +106,16 @@ export default function DocumentViewScreen() {
         },
         { text: 'OK', style: 'cancel' }
       ]);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Duplicate error:', error);
-      Alert.alert('Error', 'Failed to duplicate document');
+      if (error.response?.status === 403 && error.response?.data?.upgradeRequired) {
+        setUpgradeReason(error.response.data.error || 'Upgrade to duplicate more documents');
+        setDocumentsUsed(error.response.data.documentsUsed || 5);
+        setShowOptionsModal(false);
+        setShowUpgradeModal(true);
+      } else {
+        Alert.alert('Error', 'Failed to duplicate document');
+      }
     } finally {
       setDownloadLoading(false);
     }
@@ -113,6 +124,7 @@ export default function DocumentViewScreen() {
   const handleStatusUpdate = async (newStatus: string) => {
     setStatusLoading(newStatus);
     try {
+      // Convert to invoice uses a dedicated endpoint
       if (newStatus === 'convert') {
         const response = await api.post(`/documents/${id}/convert`, { targetType: 'invoice' });
         const newDoc = response.data;
@@ -137,9 +149,17 @@ export default function DocumentViewScreen() {
       queryClient.invalidateQueries({ queryKey: ['documents'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
       setShowOptionsModal(false);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Status update error:', error);
-      Alert.alert('Error', 'Failed to update status');
+      if (error.response?.status === 403 && error.response?.data?.upgradeRequired) {
+        setUpgradeReason(error.response.data.error || 'Upgrade to continue');
+        setDocumentsUsed(error.response.data.documentsUsed || 5);
+        setShowOptionsModal(false);
+        setShowUpgradeModal(true);
+      } else {
+        const message = error?.response?.data?.error || error?.message || 'Failed to update status';
+        Alert.alert('Error', message);
+      }
     } finally {
       setStatusLoading(null);
     }
@@ -816,6 +836,15 @@ export default function DocumentViewScreen() {
           </View>
         </TouchableOpacity>
       </Modal>
+
+      {/* Upgrade Modal */}
+      <UpgradeModal
+        visible={showUpgradeModal}
+        onClose={() => setShowUpgradeModal(false)}
+        currentTier="free"
+        documentsUsed={documentsUsed}
+        reason={upgradeReason}
+      />
     </View>
   );
 }

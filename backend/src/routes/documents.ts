@@ -315,6 +315,9 @@ router.get('/:id', async (req: AuthRequest, res: Response) => {
   }
 });
 
+// Valid document statuses — must match the DB check constraint: documents_status_check
+const VALID_STATUSES = ['draft', 'sent', 'accepted', 'rejected', 'paid', 'overdue'];
+
 // Update document
 router.put('/:id', async (req: AuthRequest, res: Response) => {
   try {
@@ -328,6 +331,13 @@ router.put('/:id', async (req: AuthRequest, res: Response) => {
       taxRate,
       status
     } = req.body;
+
+    // Validate status if provided
+    if (status && !VALID_STATUSES.includes(status)) {
+      return res.status(400).json({
+        error: `Invalid status '${status}'. Use the /convert endpoint to change document type.`
+      });
+    }
 
     // Verify ownership
     const docCheck = await pool.query(

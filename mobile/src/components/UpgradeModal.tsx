@@ -9,6 +9,7 @@ import {
     Dimensions,
     ActivityIndicator,
     Alert,
+    Linking,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
@@ -29,6 +30,30 @@ interface UpgradeModalProps {
     reason?: string;
 }
 
+const FREE_LIMITS = [
+    { icon: 'document-text-outline', label: '5 documents / month', hit: true },
+    { icon: 'people-outline', label: 'Up to 10 clients', hit: false },
+    { icon: 'cube-outline', label: 'Up to 20 products', hit: false },
+    { icon: 'image-outline', label: 'Watermark on PDFs', hit: true },
+];
+
+const PREMIUM_FEATURES = [
+    'Unlimited documents every month',
+    'No watermarks on PDFs',
+    'WhatsApp sharing',
+    'Multiple invoice templates',
+    'Priority support',
+    'Custom branding',
+];
+
+const BUSINESS_FEATURES = [
+    'Everything in Premium',
+    'Team collaboration',
+    'Advanced analytics',
+    'API access',
+    'White-label options',
+];
+
 export default function UpgradeModal({
     visible,
     onClose,
@@ -41,8 +66,8 @@ export default function UpgradeModal({
     const [loading, setLoading] = useState(false);
     const [offerings, setOfferings] = useState<any>(null);
     const [purchasing, setPurchasing] = useState(false);
+    const [revenueCatReady, setRevenueCatReady] = useState(false);
 
-    // Fetch offerings when modal opens
     useEffect(() => {
         if (visible) {
             loadOfferings();
@@ -53,9 +78,15 @@ export default function UpgradeModal({
         setLoading(true);
         try {
             const offers = await getOfferings();
-            setOfferings(offers);
+            if (offers?.current?.availablePackages?.length > 0) {
+                setOfferings(offers);
+                setRevenueCatReady(true);
+            } else {
+                setRevenueCatReady(false);
+            }
         } catch (error) {
             console.error('Failed to load offerings:', error);
+            setRevenueCatReady(false);
         } finally {
             setLoading(false);
         }
@@ -63,7 +94,8 @@ export default function UpgradeModal({
 
     const handlePurchase = async (packageId: string) => {
         if (!offerings?.current?.availablePackages) {
-            Alert.alert('Error', 'No packages available');
+            // Fallback: contact to upgrade
+            handleContactUpgrade();
             return;
         }
 
@@ -72,7 +104,7 @@ export default function UpgradeModal({
         );
 
         if (!selectedPackage) {
-            Alert.alert('Error', 'Package not found');
+            handleContactUpgrade();
             return;
         }
 
@@ -81,7 +113,6 @@ export default function UpgradeModal({
             const result = await purchasePackage(selectedPackage);
 
             if (result.success) {
-                // Update backend with new subscription tier
                 const newTier = result.isBusiness ? 'business' : result.isPremium ? 'premium' : 'free';
 
                 try {
@@ -90,7 +121,6 @@ export default function UpgradeModal({
                         subscriptionId: result.customerInfo?.originalAppUserId,
                     });
 
-                    // Update local user state
                     if (user) {
                         useAuthStore.setState({
                             user: {
@@ -100,7 +130,10 @@ export default function UpgradeModal({
                         });
                     }
 
-                    Alert.alert('🎉 Success!', `Welcome to ${newTier.charAt(0).toUpperCase() + newTier.slice(1)}!`);
+                    Alert.alert(
+                        '🎉 Welcome to ' + newTier.charAt(0).toUpperCase() + newTier.slice(1) + '!',
+                        'Your account has been upgraded. Enjoy all premium features!'
+                    );
                     onClose();
                 } catch (apiError) {
                     console.error('Failed to update backend:', apiError);
@@ -111,7 +144,7 @@ export default function UpgradeModal({
             }
         } catch (error) {
             console.error('Purchase error:', error);
-            Alert.alert('Error', 'Failed to complete purchase');
+            Alert.alert('Error', 'Failed to complete purchase. Please try again.');
         } finally {
             setPurchasing(false);
         }
@@ -126,39 +159,46 @@ export default function UpgradeModal({
                 const newTier = result.isBusiness ? 'business' : result.isPremium ? 'premium' : 'free';
 
                 if (newTier !== 'free') {
-                    // Update backend
-                    await api.put('/users/subscription', {
-                        tier: newTier,
-                    });
-
+                    await api.put('/users/subscription', { tier: newTier });
                     Alert.alert('✅ Restored!', `Your ${newTier} subscription has been restored.`);
                     onClose();
                 } else {
-                    Alert.alert('No Purchases', 'No active subscriptions found.');
+                    Alert.alert('No Purchases Found', 'We could not find any previous purchases linked to this account.');
                 }
             }
         } catch (error) {
-            Alert.alert('Error', 'Failed to restore purchases');
+            Alert.alert('Error', 'Failed to restore purchases. Please try again.');
         } finally {
             setPurchasing(false);
         }
     };
 
-    // Fallback plans if RevenueCat isn't configured yet
-    const fallbackPlans = [
+    const handleContactUpgrade = () => {
+        Alert.alert(
+            '📩 Upgrade via Email',
+            'Send us an email to upgrade your account and unlock all premium features.',
+            [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                    text: 'Send Email',
+                    onPress: () => {
+                        Linking.openURL(
+                            'mailto:esitholezw@gmail.com?subject=Upgrade%20Request&body=Hi%2C%20I%20would%20like%20to%20upgrade%20my%20account%20to%20Premium.'
+                        );
+                    },
+                },
+            ]
+        );
+    };
+
+    const plans = [
         {
             id: '$rc_monthly_premium',
             name: 'Premium',
             price: '$7.99',
             period: '/month',
-            features: [
-                'Unlimited documents',
-                'No watermarks',
-                'WhatsApp sharing',
-                'Priority support',
-                'Custom branding',
-            ],
-            gradient: ['#6366f1', '#8b5cf6'],
+            features: PREMIUM_FEATURES,
+            gradient: ['#6366f1', '#8b5cf6'] as [string, string],
             popular: true,
         },
         {
@@ -166,14 +206,8 @@ export default function UpgradeModal({
             name: 'Business',
             price: '$14.99',
             period: '/month',
-            features: [
-                'Everything in Premium',
-                'Team collaboration',
-                'Advanced analytics',
-                'API access',
-                'White-label options',
-            ],
-            gradient: ['#f59e0b', '#ef4444'],
+            features: BUSINESS_FEATURES,
+            gradient: ['#f59e0b', '#ef4444'] as [string, string],
             popular: false,
         },
     ];
@@ -183,15 +217,16 @@ export default function UpgradeModal({
         name: pkg.product.title.includes('Business') ? 'Business' : 'Premium',
         price: pkg.product.priceString,
         period: '/' + (pkg.packageType === 'MONTHLY' ? 'month' : 'year'),
-        features: pkg.product.title.includes('Business')
-            ? fallbackPlans[1].features
-            : fallbackPlans[0].features,
+        features: pkg.product.title.includes('Business') ? BUSINESS_FEATURES : PREMIUM_FEATURES,
         gradient: pkg.product.title.includes('Business')
-            ? fallbackPlans[1].gradient
-            : fallbackPlans[0].gradient,
+            ? (['#f59e0b', '#ef4444'] as [string, string])
+            : (['#6366f1', '#8b5cf6'] as [string, string]),
         popular: !pkg.product.title.includes('Business'),
         package: pkg,
-    })) || fallbackPlans;
+    })) || plans;
+
+    const docsRemaining = Math.max(0, 5 - documentsUsed);
+    const progressPct = Math.min(100, (documentsUsed / 5) * 100);
 
     return (
         <Modal
@@ -207,142 +242,200 @@ export default function UpgradeModal({
                     onPress={onClose}
                 />
                 <View style={[styles.container, { backgroundColor: colors.background.primary }]}>
-                    {/* Header */}
-                    <View style={styles.header}>
-                        <View style={styles.iconContainer}>
+                    {/* Drag handle */}
+                    <View style={[styles.dragHandle, { backgroundColor: colors.gray[300] }]} />
+
+                    {/* Close button */}
+                    <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+                        <Ionicons name="close" size={24} color={colors.text.secondary} />
+                    </TouchableOpacity>
+
+                    <ScrollView showsVerticalScrollIndicator={false} bounces={false}>
+                        {/* Header */}
+                        <View style={styles.headerSection}>
                             <LinearGradient
                                 colors={['#6366f1', '#8b5cf6']}
                                 style={styles.iconGradient}
                             >
                                 <Ionicons name="rocket" size={32} color="#fff" />
                             </LinearGradient>
-                        </View>
-
-                        <TouchableOpacity
-                            onPress={onClose}
-                            style={styles.closeButton}
-                            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                        >
-                            <Ionicons name="close" size={24} color={colors.text.secondary} />
-                        </TouchableOpacity>
-                    </View>
-
-                    {/* Title */}
-                    <Text style={[styles.title, { color: colors.text.primary }]}>
-                        Upgrade to Premium
-                    </Text>
-
-                    {/* Reason */}
-                    {reason && (
-                        <View style={[styles.reasonBadge, { backgroundColor: colors.warning + '20' }]}>
-                            <Ionicons name="information-circle" size={18} color={colors.warning} />
-                            <Text style={[styles.reasonText, { color: colors.warning }]}>
-                                {reason}
+                            <Text style={[styles.title, { color: colors.text.primary }]}>
+                                Unlock Premium Features
                             </Text>
-                        </View>
-                    )}
-
-                    {/* Documents Used */}
-                    {documentsUsed > 0 && (
-                        <View style={styles.usageContainer}>
-                            <Text style={[styles.usageText, { color: colors.text.secondary }]}>
-                                You've used <Text style={{ color: colors.primary[600], fontWeight: '700' }}>{documentsUsed} of 5</Text> free documents
-                            </Text>
-                            <View style={styles.progressBar}>
-                                <View
-                                    style={[
-                                        styles.progressFill,
-                                        { width: `${(documentsUsed / 5) * 100}%` }
-                                    ]}
-                                >
-                                    <LinearGradient
-                                        colors={['#6366f1', '#8b5cf6']}
-                                        start={{ x: 0, y: 0 }}
-                                        end={{ x: 1, y: 0 }}
-                                        style={StyleSheet.absoluteFill}
-                                    />
+                            {reason ? (
+                                <View style={[styles.reasonBadge, { backgroundColor: colors.warning + '20' }]}>
+                                    <Ionicons name="information-circle" size={16} color={colors.warning} />
+                                    <Text style={[styles.reasonText, { color: colors.warning }]}>
+                                        {reason}
+                                    </Text>
                                 </View>
+                            ) : null}
+                        </View>
+
+                        {/* Usage Progress */}
+                        <View style={[styles.usageCard, { backgroundColor: colors.background.secondary }]}>
+                            <View style={styles.usageHeader}>
+                                <Text style={[styles.usageTitle, { color: colors.text.primary }]}>
+                                    Your Free Plan Usage
+                                </Text>
+                                <Text style={[
+                                    styles.usageBadge,
+                                    { color: docsRemaining === 0 ? colors.error : colors.success }
+                                ]}>
+                                    {docsRemaining === 0 ? 'Limit reached' : `${docsRemaining} left`}
+                                </Text>
+                            </View>
+
+                            <View style={styles.progressRow}>
+                                <Text style={[styles.progressLabel, { color: colors.text.secondary }]}>
+                                    Documents this month
+                                </Text>
+                                <Text style={[styles.progressCount, { color: colors.text.primary }]}>
+                                    {documentsUsed} / 5
+                                </Text>
+                            </View>
+                            <View style={[styles.progressBar, { backgroundColor: colors.gray[200] }]}>
+                                <LinearGradient
+                                    colors={progressPct >= 100 ? ['#ef4444', '#dc2626'] : ['#6366f1', '#8b5cf6']}
+                                    start={{ x: 0, y: 0 }}
+                                    end={{ x: 1, y: 0 }}
+                                    style={[styles.progressFill, { width: `${progressPct}%` }]}
+                                />
+                            </View>
+
+                            {/* Free plan limits */}
+                            <View style={styles.limitsGrid}>
+                                {FREE_LIMITS.map((limit, i) => (
+                                    <View key={i} style={styles.limitItem}>
+                                        <Ionicons
+                                            name={limit.hit ? 'close-circle' : 'checkmark-circle'}
+                                            size={16}
+                                            color={limit.hit ? colors.error : colors.success}
+                                        />
+                                        <Text style={[
+                                            styles.limitText,
+                                            { color: limit.hit ? colors.error : colors.text.secondary }
+                                        ]}>
+                                            {limit.label}
+                                        </Text>
+                                    </View>
+                                ))}
                             </View>
                         </View>
-                    )}
 
-                    {/* Loading or Plans */}
-                    {loading ? (
-                        <View style={styles.loadingContainer}>
-                            <ActivityIndicator size="large" color={colors.primary[600]} />
-                            <Text style={[styles.loadingText, { color: colors.text.secondary }]}>
-                                Loading offers...
+                        {/* Plans */}
+                        {loading ? (
+                            <View style={styles.loadingContainer}>
+                                <ActivityIndicator size="large" color={colors.primary[600]} />
+                                <Text style={[styles.loadingText, { color: colors.text.secondary }]}>
+                                    Loading plans...
+                                </Text>
+                            </View>
+                        ) : (
+                            <View style={styles.plansSection}>
+                                <Text style={[styles.sectionLabel, { color: colors.text.secondary }]}>
+                                    CHOOSE YOUR PLAN
+                                </Text>
+                                {displayPlans.map((plan: any, index: number) => (
+                                    <TouchableOpacity
+                                        key={index}
+                                        activeOpacity={0.9}
+                                        style={styles.planCard}
+                                        onPress={() => revenueCatReady ? handlePurchase(plan.id) : handleContactUpgrade()}
+                                        disabled={purchasing}
+                                    >
+                                        <LinearGradient
+                                            colors={plan.gradient}
+                                            start={{ x: 0, y: 0 }}
+                                            end={{ x: 1, y: 1 }}
+                                            style={styles.planGradient}
+                                        >
+                                            {plan.popular && (
+                                                <View style={styles.popularBadge}>
+                                                    <Ionicons name="star" size={10} color="#fff" />
+                                                    <Text style={styles.popularText}>MOST POPULAR</Text>
+                                                </View>
+                                            )}
+
+                                            <View style={styles.planHeader}>
+                                                <View>
+                                                    <Text style={styles.planName}>{plan.name}</Text>
+                                                    <View style={styles.priceRow}>
+                                                        <Text style={styles.price}>{plan.price}</Text>
+                                                        <Text style={styles.period}>{plan.period}</Text>
+                                                    </View>
+                                                </View>
+                                            </View>
+
+                                            <View style={styles.featuresContainer}>
+                                                {plan.features.map((feature: string, i: number) => (
+                                                    <View key={i} style={styles.featureRow}>
+                                                        <Ionicons name="checkmark-circle" size={18} color="rgba(255,255,255,0.9)" />
+                                                        <Text style={styles.featureText}>{feature}</Text>
+                                                    </View>
+                                                ))}
+                                            </View>
+
+                                            <View style={styles.ctaButton}>
+                                                {purchasing ? (
+                                                    <ActivityIndicator size="small" color="#fff" />
+                                                ) : (
+                                                    <>
+                                                        <Text style={styles.ctaText}>
+                                                            {revenueCatReady ? `Get ${plan.name}` : `Upgrade to ${plan.name}`}
+                                                        </Text>
+                                                        <Ionicons name="arrow-forward" size={18} color="#fff" />
+                                                    </>
+                                                )}
+                                            </View>
+                                        </LinearGradient>
+                                    </TouchableOpacity>
+                                ))}
+
+                                {/* What happens next info */}
+                                {!revenueCatReady && (
+                                    <View style={[styles.infoBox, { backgroundColor: colors.primary[50] ?? colors.background.secondary, borderColor: colors.primary[200] ?? colors.primary[600] }]}>
+                                        <Ionicons name="mail-outline" size={20} color={colors.primary[600]} />
+                                        <Text style={[styles.infoText, { color: colors.primary[700] ?? colors.primary[600] }]}>
+                                            Tap a plan to contact us and upgrade your account. We'll activate it within 24 hours.
+                                        </Text>
+                                    </View>
+                                )}
+                            </View>
+                        )}
+
+                        {/* Footer actions */}
+                        <View style={styles.footer}>
+                            <TouchableOpacity
+                                onPress={handleRestore}
+                                disabled={purchasing}
+                                style={styles.restoreButton}
+                            >
+                                <Text style={[styles.restoreText, { color: colors.primary[600] }]}>
+                                    Restore Previous Purchase
+                                </Text>
+                            </TouchableOpacity>
+
+                            {/* Continue on free plan */}
+                            <TouchableOpacity
+                                onPress={onClose}
+                                style={[styles.freePlanButton, { borderColor: colors.gray[300] }]}
+                            >
+                                <Text style={[styles.freePlanText, { color: colors.text.secondary }]}>
+                                    Continue on Free Plan
+                                </Text>
+                                <Text style={[styles.freePlanSub, { color: colors.gray[400] }]}>
+                                    {docsRemaining > 0
+                                        ? `${docsRemaining} document${docsRemaining !== 1 ? 's' : ''} remaining this month`
+                                        : 'Upgrade to create more documents'}
+                                </Text>
+                            </TouchableOpacity>
+
+                            <Text style={[styles.footerText, { color: colors.text.secondary }]}>
+                                Cancel anytime · Secure payment · No hidden fees
                             </Text>
                         </View>
-                    ) : (
-                        <ScrollView
-                            style={styles.plansContainer}
-                            showsVerticalScrollIndicator={false}
-                        >
-                            {displayPlans.map((plan: any, index: number) => (
-                                <TouchableOpacity
-                                    key={index}
-                                    activeOpacity={0.9}
-                                    style={styles.planCard}
-                                    onPress={() => handlePurchase(plan.id)}
-                                    disabled={purchasing}
-                                >
-                                    <LinearGradient
-                                        colors={plan.gradient as any}
-                                        start={{ x: 0, y: 0 }}
-                                        end={{ x: 1, y: 1 }}
-                                        style={styles.planGradient}
-                                    >
-                                        {plan.popular && (
-                                            <View style={styles.popularBadge}>
-                                                <Text style={styles.popularText}>MOST POPULAR</Text>
-                                            </View>
-                                        )}
-
-                                        <View style={styles.planHeader}>
-                                            <Text style={styles.planName}>{plan.name}</Text>
-                                            <View style={styles.priceContainer}>
-                                                <Text style={styles.price}>{plan.price}</Text>
-                                                <Text style={styles.period}>{plan.period}</Text>
-                                            </View>
-                                        </View>
-
-                                        <View style={styles.featuresContainer}>
-                                            {plan.features.map((feature: string, i: number) => (
-                                                <View key={i} style={styles.featureRow}>
-                                                    <Ionicons name="checkmark-circle" size={20} color="#fff" />
-                                                    <Text style={styles.featureText}>{feature}</Text>
-                                                </View>
-                                            ))}
-                                        </View>
-
-                                        <View style={styles.ctaButton}>
-                                            {purchasing ? (
-                                                <ActivityIndicator size="small" color="#fff" />
-                                            ) : (
-                                                <>
-                                                    <Text style={styles.ctaText}>Select {plan.name}</Text>
-                                                    <Ionicons name="arrow-forward" size={20} color="#fff" />
-                                                </>
-                                            )}
-                                        </View>
-                                    </LinearGradient>
-                                </TouchableOpacity>
-                            ))}
-                        </ScrollView>
-                    )}
-
-                    {/* Footer */}
-                    <View style={styles.footer}>
-                        <TouchableOpacity onPress={handleRestore} disabled={purchasing}>
-                            <Text style={[styles.restoreText, { color: colors.primary[600] }]}>
-                                Restore Purchases
-                            </Text>
-                        </TouchableOpacity>
-                        <Text style={[styles.footerText, { color: colors.text.secondary }]}>
-                            Cancel anytime • Secure payment
-                        </Text>
-                    </View>
+                    </ScrollView>
                 </View>
             </BlurView>
         </Modal>
@@ -355,90 +448,136 @@ const styles = StyleSheet.create({
         justifyContent: 'flex-end',
     },
     container: {
-        borderTopLeftRadius: borderRadius['2xl'],
-        borderTopRightRadius: borderRadius['2xl'],
-        paddingTop: spacing[6],
-        paddingBottom: spacing[8],
-        maxHeight: '90%',
+        borderTopLeftRadius: 28,
+        borderTopRightRadius: 28,
+        paddingBottom: spacing[10],
+        maxHeight: '92%',
     },
-    header: {
-        flexDirection: 'row',
+    dragHandle: {
+        width: 40,
+        height: 4,
+        borderRadius: 2,
+        alignSelf: 'center',
+        marginTop: spacing[3],
+        marginBottom: spacing[2],
+    },
+    closeButton: {
+        position: 'absolute',
+        right: spacing[6],
+        top: spacing[6],
+        zIndex: 10,
+        padding: spacing[2],
+    },
+    headerSection: {
         alignItems: 'center',
-        justifyContent: 'center',
+        paddingTop: spacing[4],
         paddingHorizontal: spacing[6],
-        marginBottom: spacing[4],
-    },
-    iconContainer: {
-        alignItems: 'center',
+        marginBottom: spacing[5],
     },
     iconGradient: {
         width: 72,
         height: 72,
-        borderRadius: borderRadius.full,
+        borderRadius: 36,
         alignItems: 'center',
         justifyContent: 'center',
+        marginBottom: spacing[4],
         shadowColor: '#6366f1',
         shadowOffset: { width: 0, height: 8 },
         shadowOpacity: 0.4,
         shadowRadius: 16,
         elevation: 12,
     },
-    closeButton: {
-        position: 'absolute',
-        right: spacing[6],
-        top: 0,
-    },
     title: {
         fontSize: typography.fontSize['2xl'],
         fontWeight: typography.fontWeight.bold as any,
         textAlign: 'center',
-        marginBottom: spacing[4],
-        paddingHorizontal: spacing[6],
+        marginBottom: spacing[3],
     },
     reasonBadge: {
         flexDirection: 'row',
         alignItems: 'center',
         gap: spacing[2],
-        paddingVertical: spacing[3],
+        paddingVertical: spacing[2],
         paddingHorizontal: spacing[4],
         borderRadius: borderRadius.full,
-        marginHorizontal: spacing[6],
-        marginBottom: spacing[4],
     },
     reasonText: {
         fontSize: typography.fontSize.sm,
         fontWeight: typography.fontWeight.medium as any,
         flex: 1,
     },
-    usageContainer: {
-        paddingHorizontal: spacing[6],
-        marginBottom: spacing[6],
+    usageCard: {
+        marginHorizontal: spacing[6],
+        borderRadius: borderRadius.xl,
+        padding: spacing[5],
+        marginBottom: spacing[5],
     },
-    usageText: {
-        fontSize: typography.fontSize.base,
-        textAlign: 'center',
+    usageHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
         marginBottom: spacing[3],
+    },
+    usageTitle: {
+        fontSize: typography.fontSize.base,
+        fontWeight: typography.fontWeight.semibold as any,
+    },
+    usageBadge: {
+        fontSize: typography.fontSize.xs,
+        fontWeight: typography.fontWeight.bold as any,
+        textTransform: 'uppercase',
+        letterSpacing: 0.5,
+    },
+    progressRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        marginBottom: spacing[2],
+    },
+    progressLabel: {
+        fontSize: typography.fontSize.sm,
+    },
+    progressCount: {
+        fontSize: typography.fontSize.sm,
+        fontWeight: typography.fontWeight.semibold as any,
     },
     progressBar: {
         height: 8,
-        backgroundColor: '#e5e7eb',
         borderRadius: borderRadius.full,
         overflow: 'hidden',
+        marginBottom: spacing[4],
     },
     progressFill: {
         height: '100%',
         borderRadius: borderRadius.full,
     },
+    limitsGrid: {
+        gap: spacing[2],
+    },
+    limitItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: spacing[2],
+    },
+    limitText: {
+        fontSize: typography.fontSize.sm,
+    },
+    plansSection: {
+        paddingHorizontal: spacing[6],
+        marginBottom: spacing[4],
+    },
+    sectionLabel: {
+        fontSize: typography.fontSize.xs,
+        fontWeight: typography.fontWeight.semibold as any,
+        letterSpacing: 1,
+        marginBottom: spacing[3],
+    },
     loadingContainer: {
-        padding: spacing[12],
+        padding: spacing[10],
         alignItems: 'center',
     },
     loadingText: {
-        marginTop: spacing[4],
+        marginTop: spacing[3],
         fontSize: typography.fontSize.base,
-    },
-    plansContainer: {
-        paddingHorizontal: spacing[6],
     },
     planCard: {
         marginBottom: spacing[4],
@@ -462,47 +601,50 @@ const styles = StyleSheet.create({
         paddingHorizontal: spacing[3],
         paddingVertical: spacing[1],
         borderRadius: borderRadius.full,
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: spacing[1],
     },
     popularText: {
         color: '#fff',
-        fontSize: typography.fontSize.xs,
-        fontWeight: typography.fontWeight.bold as any,
+        fontSize: 10,
+        fontWeight: '700',
         letterSpacing: 0.5,
     },
     planHeader: {
-        marginBottom: spacing[5],
+        marginBottom: spacing[4],
     },
     planName: {
         fontSize: typography.fontSize.xl,
         fontWeight: typography.fontWeight.bold as any,
         color: '#fff',
-        marginBottom: spacing[2],
+        marginBottom: spacing[1],
     },
-    priceContainer: {
+    priceRow: {
         flexDirection: 'row',
         alignItems: 'baseline',
     },
     price: {
-        fontSize: typography.fontSize['3xl'],
+        fontSize: 32,
         fontWeight: typography.fontWeight.bold as any,
         color: '#fff',
     },
     period: {
-        fontSize: typography.fontSize.lg,
+        fontSize: typography.fontSize.base,
         color: 'rgba(255, 255, 255, 0.8)',
         marginLeft: spacing[1],
     },
     featuresContainer: {
         marginBottom: spacing[5],
+        gap: spacing[2],
     },
     featureRow: {
         flexDirection: 'row',
         alignItems: 'center',
         gap: spacing[2],
-        marginBottom: spacing[3],
     },
     featureText: {
-        fontSize: typography.fontSize.base,
+        fontSize: typography.fontSize.sm,
         color: '#fff',
         flex: 1,
     },
@@ -518,21 +660,55 @@ const styles = StyleSheet.create({
         borderColor: 'rgba(255, 255, 255, 0.3)',
     },
     ctaText: {
-        fontSize: typography.fontSize.lg,
+        fontSize: typography.fontSize.base,
         fontWeight: typography.fontWeight.semibold as any,
         color: '#fff',
     },
+    infoBox: {
+        flexDirection: 'row',
+        alignItems: 'flex-start',
+        gap: spacing[3],
+        padding: spacing[4],
+        borderRadius: borderRadius.xl,
+        borderWidth: 1,
+        marginTop: spacing[2],
+    },
+    infoText: {
+        fontSize: typography.fontSize.sm,
+        flex: 1,
+        lineHeight: 20,
+    },
     footer: {
-        paddingTop: spacing[4],
+        paddingHorizontal: spacing[6],
         alignItems: 'center',
-        gap: spacing[2],
+        gap: spacing[3],
+    },
+    restoreButton: {
+        paddingVertical: spacing[2],
     },
     restoreText: {
         fontSize: typography.fontSize.sm,
         fontWeight: typography.fontWeight.semibold as any,
-        marginBottom: spacing[2],
+    },
+    freePlanButton: {
+        width: '100%',
+        paddingVertical: spacing[4],
+        paddingHorizontal: spacing[5],
+        borderRadius: borderRadius.xl,
+        borderWidth: 1.5,
+        alignItems: 'center',
+        gap: spacing[1],
+    },
+    freePlanText: {
+        fontSize: typography.fontSize.base,
+        fontWeight: typography.fontWeight.semibold as any,
+    },
+    freePlanSub: {
+        fontSize: typography.fontSize.xs,
     },
     footerText: {
-        fontSize: typography.fontSize.sm,
+        fontSize: typography.fontSize.xs,
+        textAlign: 'center',
+        paddingTop: spacing[2],
     },
 });

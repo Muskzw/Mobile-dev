@@ -50,6 +50,11 @@ export const SUBSCRIPTION_LIMITS = {
     }
 };
 
+// Admin emails always have unlimited access — bypass all subscription checks
+const ADMIN_EMAILS = [
+    'esitholezw@gmail.com',
+];
+
 // Check if user can perform an action
 export function canPerformAction(
     user: any,
@@ -57,6 +62,11 @@ export function canPerformAction(
 ): { allowed: boolean; reason?: string } {
     const tier = user.subscription_tier || 'free';
     const limits = SUBSCRIPTION_LIMITS[tier as keyof typeof SUBSCRIPTION_LIMITS];
+
+    // Admin emails bypass all limits
+    if (user.email && ADMIN_EMAILS.includes(user.email.toLowerCase())) {
+        return { allowed: true };
+    }
 
     if (!limits) {
         return { allowed: false, reason: 'Invalid subscription tier' };
@@ -101,6 +111,11 @@ export function canPerformAction(
 export function hasFeature(user: any, feature: string): boolean {
     const tier = user.subscription_tier || 'free';
     const limits = SUBSCRIPTION_LIMITS[tier as keyof typeof SUBSCRIPTION_LIMITS];
+
+    // Admin emails always have all features
+    if (user.email && ADMIN_EMAILS.includes(user.email.toLowerCase())) {
+        return true;
+    }
 
     if (!limits) return false;
 
