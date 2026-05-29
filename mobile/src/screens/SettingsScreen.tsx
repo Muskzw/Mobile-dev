@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -9,6 +9,7 @@ import {
   Switch,
   Image,
   StatusBar,
+  Modal,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
@@ -28,10 +29,16 @@ export default function SettingsScreen() {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
   const { user, currentCompany, companies, setAuth, setCurrentCompany, logout } = useAuthStore();
-  const { colors, isDark } = useTheme();
+  const { colors, isDark, themePreference, setThemePreference } = useTheme();
   const styles = createStyles(colors);
 
   const [loading, setLoading] = useState(false);
+  const [preferencesLoading, setPreferencesLoading] = useState(true);
+  const [editingProfile, setEditingProfile] = useState(false);
+  const [profileForm, setProfileForm] = useState({
+    fullName: user?.fullName || '',
+    email: user?.email || '',
+  });
 
   const [aiEnabled, setAiEnabled] = useState(true);
   const [notifications, setNotifications] = useState(true);
@@ -73,6 +80,117 @@ export default function SettingsScreen() {
       }
     }
   }, [currentCompany]);
+
+  // Load preferences from backend on mount
+  useEffect(() => {
+    const loadPreferences = async () => {
+      try {
+        const response = await api.get('/settings');
+        const data = response.data || {};
+        if (data.aiEnabled !== undefined) setAiEnabled(data.aiEnabled);
+        if (data.notifications !== undefined) setNotifications(data.notifications);
+      } catch (e) {
+        console.error('Failed to load settings from server', e);
+      } finally {
+        setPreferencesLoading(false);
+      }
+    };
+    loadPreferences();
+  }, []);
+
+  const handleToggleAi = async (val: boolean) => {
+    setAiEnabled(val);
+    try {
+      await api.put('/settings', { aiEnabled: val });
+    } catch (e) {
+      console.error('Failed to save AI setting', e);
+      Alert.alert('Error', 'Failed to save preference to server');
+      setAiEnabled(!val); // rollback
+    }
+  };
+
+  const handleToggleNotifications = async (val: boolean) => {
+    setNotifications(val);
+    try {
+      await api.put('/settings', { notifications: val });
+    } catch (e) {
+      console.error('Failed to save notifications setting', e);
+      Alert.alert('Error', 'Failed to save preference to server');
+      setNotifications(!val); // rollback
+    }
+  };
+
+  const handleThemePress = () => {
+    Alert.alert(
+      'Select App Theme',
+      'Choose how you want the app interface to look.',
+      [
+        {
+          text: 'Follow System Default',
+          onPress: () => setThemePreference('system'),
+          style: themePreference === 'system' ? 'destructive' : 'default'
+        },
+        {
+          text: 'Always Light',
+          onPress: () => setThemePreference('light'),
+          style: themePreference === 'light' ? 'destructive' : 'default'
+        },
+        {
+          text: 'Always Dark',
+          onPress: () => setThemePreference('dark'),
+          style: themePreference === 'dark' ? 'destructive' : 'default'
+        },
+        { text: 'Cancel', style: 'cancel' }
+      ]
+    );
+  };
+
+  // Sync profile form when user store details change
+  useEffect(() => {
+    if (user) {
+      setProfileForm({
+        fullName: user.fullName || '',
+        email: user.email || '',
+      });
+    }
+  }, [user]);
+
+  const handleSaveProfile = async () => {
+    if (!profileForm.fullName.trim()) {
+      Alert.alert('Error', 'Full Name is required');
+      return;
+    }
+    if (!profileForm.email.trim() || !/\S+@\S+\.\S+/.test(profileForm.email)) {
+      Alert.alert('Error', 'A valid email is required');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const response = await api.put('/auth/profile', {
+        fullName: profileForm.fullName,
+        email: profileForm.email,
+      });
+
+      // Update auth store
+      const updatedUser = response.data.user;
+      setAuth(useAuthStore.getState().token!, {
+        id: user!.id,
+        email: updatedUser.email,
+        fullName: updatedUser.fullName,
+        subscription_tier: user?.subscription_tier,
+      }, companies);
+
+      setEditingProfile(false);
+      Alert.alert('Success', 'Profile details updated successfully');
+    } catch (error: any) {
+      console.error(error);
+      const errMsg = error.response?.data?.error || 'Failed to save profile details';
+      Alert.alert('Error', errMsg);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const pickImage = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -226,16 +344,25 @@ export default function SettingsScreen() {
       <ScrollView contentContainerStyle={styles.content}>
         {/* Profile Section */}
         <View style={styles.profileSection}>
-          <LinearGradient
-            colors={colors.gradients.primary as any}
-            style={styles.avatar}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
+          <TouchableOpacity 
+            activeOpacity={0.8} 
+            onPress={() => setEditingProfile(true)}
+            style={styles.avatarContainer}
           >
-            <Text style={styles.avatarText}>
-              {user?.fullName?.charAt(0) || user?.email?.charAt(0) || 'U'}
-            </Text>
-          </LinearGradient>
+            <LinearGradient
+              colors={colors.gradients.primary as any}
+              style={styles.avatar}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+            >
+              <Text style={styles.avatarText}>
+                {user?.fullName?.charAt(0) || user?.email?.charAt(0) || 'U'}
+              </Text>
+            </LinearGradient>
+            <View style={styles.editAvatarBadge}>
+              <Ionicons name="pencil" size={12} color="white" />
+            </View>
+          </TouchableOpacity>
           <Text style={styles.userName}>{user?.fullName || 'User'}</Text>
           <Text style={styles.userEmail}>{user?.email}</Text>
           <View style={styles.planBadge}>
@@ -310,7 +437,7 @@ export default function SettingsScreen() {
               />
             </View>
           ) : (
-            <View>
+            <View style={{ padding: spacing[4] }}>
               <TouchableOpacity onPress={pickImage} style={styles.logoPicker}>
                 {logoUri ? (
                   <Image source={{ uri: logoUri }} style={styles.pickerImage} />
@@ -414,7 +541,7 @@ export default function SettingsScreen() {
             title="AI Features"
             subtitle="Enable AI writing & insights"
             value={aiEnabled}
-            onValueChange={setAiEnabled}
+            onValueChange={handleToggleAi}
           />
           <View style={styles.divider} />
           <SettingItem
@@ -422,14 +549,20 @@ export default function SettingsScreen() {
             title="Notifications"
             subtitle="Updates & reminders"
             value={notifications}
-            onValueChange={setNotifications}
+            onValueChange={handleToggleNotifications}
           />
           <View style={styles.divider} />
-          <TouchableOpacity>
+          <TouchableOpacity onPress={handleThemePress} activeOpacity={0.7}>
             <SettingItem
               icon="moon"
               title="Dark Mode"
-              subtitle="Follows your device system settings"
+              subtitle={
+                themePreference === 'system'
+                  ? 'Follows device system settings'
+                  : themePreference === 'dark'
+                  ? 'Always Dark Mode'
+                  : 'Always Light Mode'
+              }
               type="link"
             />
           </TouchableOpacity>
@@ -473,6 +606,47 @@ export default function SettingsScreen() {
 
         <Text style={styles.versionText}>Version 1.0.0</Text>
       </ScrollView>
+
+      {/* Profile Edit Modal */}
+      <Modal
+        visible={editingProfile}
+        animationType="fade"
+        transparent={true}
+        onRequestClose={() => setEditingProfile(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <Card style={styles.modalCard} padding={6}>
+            <Text style={styles.modalTitle}>Edit Profile</Text>
+            <Input
+              label="Full Name"
+              value={profileForm.fullName}
+              onChangeText={(text) => setProfileForm({ ...profileForm, fullName: text })}
+            />
+            <Input
+              label="Email Address"
+              value={profileForm.email}
+              onChangeText={(text) => setProfileForm({ ...profileForm, email: text })}
+              keyboardType="email-address"
+              autoCapitalize="none"
+            />
+            <View style={styles.modalButtons}>
+              <Button
+                title="Cancel"
+                onPress={() => setEditingProfile(false)}
+                variant="ghost"
+                style={{ flex: 1, marginRight: spacing[2] }}
+              />
+              <Button
+                title="Save"
+                onPress={handleSaveProfile}
+                gradient
+                style={{ flex: 1 }}
+                loading={loading}
+              />
+            </View>
+          </Card>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -501,6 +675,24 @@ const createStyles = (colors: Colors) => StyleSheet.create({
   profileSection: {
     alignItems: 'center',
     marginBottom: spacing[8],
+  },
+  avatarContainer: {
+    position: 'relative',
+    marginBottom: spacing[4],
+  },
+  editAvatarBadge: {
+    position: 'absolute',
+    right: 0,
+    bottom: 0,
+    width: 26,
+    height: 26,
+    borderRadius: borderRadius.full,
+    backgroundColor: colors.primary[600],
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: colors.background.primary,
+    ...shadows.sm,
   },
   avatar: {
     width: 80,
@@ -541,13 +733,16 @@ const createStyles = (colors: Colors) => StyleSheet.create({
     fontWeight: typography.fontWeight.bold,
   },
   sectionTitle: {
-    fontSize: typography.fontSize.sm,
+    fontSize: typography.fontSize.xs,
     fontWeight: typography.fontWeight.bold,
-    color: colors.text.secondary,
+    color: colors.primary[600],
     marginBottom: spacing[3],
-    marginTop: spacing[2],
+    marginTop: spacing[4],
     textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    letterSpacing: 1,
+    borderLeftWidth: 3,
+    borderLeftColor: colors.primary[500],
+    paddingLeft: spacing[2],
   },
   card: {
     marginBottom: spacing[6],
@@ -688,5 +883,27 @@ const createStyles = (colors: Colors) => StyleSheet.create({
     marginTop: spacing[6],
     color: colors.text.tertiary,
     fontSize: typography.fontSize.xs,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+    justifyContent: 'center',
+    padding: spacing[6],
+  },
+  modalCard: {
+    backgroundColor: colors.background.primary,
+    borderRadius: borderRadius.xl,
+    ...shadows.lg,
+  },
+  modalTitle: {
+    fontSize: typography.fontSize.lg,
+    fontWeight: typography.fontWeight.bold,
+    color: colors.text.primary,
+    marginBottom: spacing[4],
+    textAlign: 'center',
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    marginTop: spacing[4],
   },
 });

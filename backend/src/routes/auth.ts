@@ -300,5 +300,49 @@ router.put('/users/subscription', authenticate, async (req: AuthRequest, res: Re
   }
 });
 
+// Update Profile
+router.put('/profile', authenticate, [
+  body('email').isEmail().normalizeEmail(),
+  body('fullName').optional().trim()
+], async (req: AuthRequest, res: Response) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+
+    const { email, fullName } = req.body;
+    const userId = req.userId;
+
+    // Check if email is already taken by another user
+    const emailCheck = await pool.query('SELECT id FROM users WHERE email = $1 AND id != $2', [email, userId]);
+    if (emailCheck.rows.length > 0) {
+      return res.status(400).json({ error: 'Email already in use' });
+    }
+
+    const result = await pool.query(
+      `UPDATE users 
+       SET email = $1, full_name = $2, updated_at = NOW() 
+       WHERE id = $3 
+       RETURNING id, email, full_name`,
+      [email, fullName || null, userId]
+    );
+
+    const updatedUser = result.rows[0];
+
+    res.json({
+      message: 'Profile updated successfully',
+      user: {
+        id: updatedUser.id,
+        email: updatedUser.email,
+        fullName: updatedUser.full_name
+      }
+    });
+  } catch (error) {
+    console.error('Update profile error:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
 export default router;
 
