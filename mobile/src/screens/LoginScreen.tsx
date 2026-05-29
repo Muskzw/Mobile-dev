@@ -9,13 +9,12 @@ import {
   StatusBar,
   TouchableOpacity,
   ActivityIndicator,
-  Modal,
-  TextInput,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { GoogleSignin, statusCodes } from '@react-native-google-signin/google-signin';
 import api from '../api/client';
 import { useAuthStore } from '../store/authStore';
 import { Button, Input, Card } from '../components';
@@ -36,10 +35,13 @@ export default function LoginScreen() {
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
-  const [mockGoogleVisible, setMockGoogleVisible] = useState(false);
-  const [customEmail, setCustomEmail] = useState('');
-  const [customName, setCustomName] = useState('');
-  const [showCustomInput, setShowCustomInput] = useState(false);
+
+  useEffect(() => {
+    GoogleSignin.configure({
+      webClientId: GOOGLE_WEB_CLIENT_ID,
+      offlineAccess: true,
+    });
+  }, []);
 
   const validate = () => {
     const newErrors: { email?: string; password?: string } = {};
@@ -58,13 +60,19 @@ export default function LoginScreen() {
     return Object.keys(newErrors).length === 0;
   };
 
-  const submitMockGoogleLogin = async (selectedEmail: string, selectedName: string) => {
-    setMockGoogleVisible(false);
+  const handleGoogleLogin = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
     setLoading(true);
     try {
-      const mockIdToken = `mock-google-token-${selectedEmail}-${selectedName.replace(/\s+/g, '_')}`;
-      const response = await api.post('/auth/google', { idToken: mockIdToken });
+      await GoogleSignin.hasPlayServices();
+      const userInfo = await GoogleSignin.signIn();
+      const idToken = userInfo.idToken;
+
+      if (!idToken) {
+        throw new Error('Google Sign-In failed: No ID Token retrieved');
+      }
+
+      const response = await api.post('/auth/google', { idToken });
       const { token, user, companies } = response.data;
 
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
@@ -80,17 +88,24 @@ export default function LoginScreen() {
       }
     } catch (error: any) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
-      console.error('Mock Google Auth Error:', error);
-      alert(error.response?.data?.error || 'Mock Google authentication failed.');
+      console.error('Real Google Auth Error:', error);
+      
+      let errorMsg = 'Google authentication failed.';
+      if (error.code === statusCodes.SIGN_IN_CANCELLED) {
+        errorMsg = 'Google Sign-In was cancelled.';
+      } else if (error.code === statusCodes.IN_PROGRESS) {
+        errorMsg = 'Google Sign-In is already in progress.';
+      } else if (error.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
+        errorMsg = 'Google Play Services are not available or outdated.';
+      } else if (error.response?.data?.error) {
+        errorMsg = error.response.data.error;
+      } else if (error.message) {
+        errorMsg = error.message;
+      }
+      alert(errorMsg);
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleGoogleLogin = async () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
-    // Open our premium simulated Google chooser bottom sheet directly (100% Expo Go compatible!)
-    setMockGoogleVisible(true);
   };
 
   const handleLogin = async () => {
@@ -244,119 +259,8 @@ export default function LoginScreen() {
               )}
               <Text style={styles.googleButtonText}>Continue with Google</Text>
             </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.appleButton}
-              onPress={() => alert('Continue with Apple not yet configured.')}
-            >
-              <Ionicons name="logo-apple" size={20} color={isDark ? '#000000' : '#FFFFFF'} style={styles.socialIcon} />
-              <Text style={styles.appleButtonText}>Continue with Apple</Text>
-            </TouchableOpacity>
           </View>
         </ScrollView>
-
-        <Modal
-          visible={mockGoogleVisible}
-          animationType="slide"
-          transparent={true}
-          onRequestClose={() => setMockGoogleVisible(false)}
-        >
-          <View style={styles.modalOverlay}>
-            <View style={styles.modalContent}>
-              {/* Google Header */}
-              <View style={styles.googleHeader}>
-                <Ionicons name="logo-google" size={28} color="#4285F4" />
-                <Text style={styles.googleTitle}>Choose an account</Text>
-                <Text style={styles.googleSubtitle}>to continue to Quotation Maker</Text>
-              </View>
-
-              {/* Account Items */}
-              <ScrollView style={styles.accountsList} showsVerticalScrollIndicator={false}>
-                {/* Account 1 */}
-                <TouchableOpacity
-                  style={styles.accountRow}
-                  onPress={() => submitMockGoogleLogin('esitholezw@gmail.com', 'Elon Musk')}
-                >
-                  <View style={[styles.avatarCircle, { backgroundColor: '#3B82F6' }]}>
-                    <Text style={styles.avatarText}>E</Text>
-                  </View>
-                  <View style={styles.accountDetails}>
-                    <Text style={styles.accountName}>Elon Musk (Admin)</Text>
-                    <Text style={styles.accountEmail}>esitholezw@gmail.com</Text>
-                  </View>
-                </TouchableOpacity>
-
-                {/* Account 2 */}
-                <TouchableOpacity
-                  style={styles.accountRow}
-                  onPress={() => submitMockGoogleLogin('elon@google.com', 'Elon Musk')}
-                >
-                  <View style={[styles.avatarCircle, { backgroundColor: '#10B981' }]}>
-                    <Text style={styles.avatarText}>G</Text>
-                  </View>
-                  <View style={styles.accountDetails}>
-                    <Text style={styles.accountName}>Elon Musk</Text>
-                    <Text style={styles.accountEmail}>elon@google.com</Text>
-                  </View>
-                </TouchableOpacity>
-
-                {/* Custom Account Input Toggle */}
-                <TouchableOpacity
-                  style={styles.accountRow}
-                  onPress={() => setShowCustomInput(!showCustomInput)}
-                >
-                  <View style={[styles.avatarCircle, { backgroundColor: colors.primary[600] + '15' }]}>
-                    <Ionicons name={showCustomInput ? "chevron-up" : "person-add"} size={16} color={colors.primary[600]} />
-                  </View>
-                  <View style={styles.accountDetails}>
-                    <Text style={styles.accountName}>Use another account</Text>
-                    <Text style={styles.accountEmail}>Type custom Google email</Text>
-                  </View>
-                </TouchableOpacity>
-
-                {showCustomInput && (
-                  <View style={styles.customForm}>
-                    <TextInput
-                      style={styles.customInput}
-                      placeholder="Full Name"
-                      placeholderTextColor="#9CA3AF"
-                      value={customName}
-                      onChangeText={setCustomName}
-                    />
-                    <TextInput
-                      style={styles.customInput}
-                      placeholder="Google Email (e.g. user@gmail.com)"
-                      placeholderTextColor="#9CA3AF"
-                      keyboardType="email-address"
-                      autoCapitalize="none"
-                      value={customEmail}
-                      onChangeText={setCustomEmail}
-                    />
-                    <TouchableOpacity
-                      style={styles.customSubmitBtn}
-                      onPress={() => {
-                        if (!customEmail || !customName) {
-                          alert('Please enter both name and email');
-                          return;
-                        }
-                        submitMockGoogleLogin(customEmail, customName);
-                      }}
-                    >
-                      <Text style={styles.customSubmitText}>Sign In with Custom Account</Text>
-                    </TouchableOpacity>
-                  </View>
-                )}
-              </ScrollView>
-
-              <TouchableOpacity
-                style={styles.googleCancelButton}
-                onPress={() => setMockGoogleVisible(false)}
-              >
-                <Text style={styles.googleCancelText}>Cancel</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </Modal>
       </KeyboardAvoidingView>
     </View>
   );
