@@ -15,6 +15,7 @@ import { useTheme } from '../context/ThemeContext';
 import { useAuthStore } from '../store/authStore';
 import { spacing, typography, borderRadius, Colors } from '../theme';
 import { Button } from '../components/Button';
+import * as Haptics from 'expo-haptics';
 
 const { width } = Dimensions.get('window');
 
@@ -63,21 +64,25 @@ export default function OnboardingScreen() {
     const pageIndex = Math.round(xOffset / width);
     if (pageIndex !== activeSlide) {
       setActiveSlide(pageIndex);
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
     }
   };
 
   const handleNext = () => {
     if (activeSlide < slides.length - 1) {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
       scrollViewRef.current?.scrollTo({
         x: (activeSlide + 1) * width,
         animated: true,
       });
     } else {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
       setHasCompletedOnboarding(true);
     }
   };
 
   const handleSkip = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
     setHasCompletedOnboarding(true);
   };
 

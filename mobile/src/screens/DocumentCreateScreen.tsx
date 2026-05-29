@@ -11,6 +11,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   StatusBar,
+  ActivityIndicator,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
@@ -25,6 +26,7 @@ import { Button } from '../components/Button';
 import { Input } from '../components/Input';
 import { Card } from '../components/Card';
 import UpgradeModal from '../components/UpgradeModal';
+import * as Haptics from 'expo-haptics';
 
 interface Client {
   id: string;
@@ -72,6 +74,31 @@ export default function DocumentCreateScreen({ route }: any) {
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [upgradeReason, setUpgradeReason] = useState('');
   const [documentsUsed, setDocumentsUsed] = useState(0);
+
+  // AI Settings State
+  const [aiEnabled, setAiEnabled] = useState(true);
+  const [aiLoadingItemId, setAiLoadingItemId] = useState<string | null>(null);
+
+  // Fetch AI preferences from Settings
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const response = await api.get('/settings');
+        if (response.data && response.data.aiEnabled !== undefined) {
+          let val = response.data.aiEnabled;
+          if (typeof val === 'string') {
+            try {
+              val = JSON.parse(val);
+            } catch (_) {}
+          }
+          setAiEnabled(!!val);
+        }
+      } catch (error) {
+        console.log('Error fetching settings for AI:', error);
+      }
+    };
+    fetchSettings();
+  }, []);
 
   // Queries
   const { data: clients } = useQuery({
@@ -150,10 +177,38 @@ export default function DocumentCreateScreen({ route }: any) {
 
   // Handlers
   const handleAddItem = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
     setItems([...items, { id: Date.now().toString(), description: '', quantity: '1', unit_price: '0' }]);
   };
 
+  const handleAiAssist = async (itemId: string, currentText: string) => {
+    if (!currentText.trim()) {
+      Alert.alert('AI Assistant', 'Please type a rough outline, product name, or service description first so the AI has something to expand!');
+      return;
+    }
+
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+    setAiLoadingItemId(itemId);
+    try {
+      const response = await api.post('/ai/write', {
+        type: 'quotation',
+        prompt: currentText,
+      });
+
+      if (response.data && response.data.text) {
+        handleUpdateItem(itemId, 'description', response.data.text.trim());
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+      }
+    } catch (error: any) {
+      console.error('AI write error:', error);
+      Alert.alert('AI Assistant Failed', 'We were unable to connect to the AI service. Please make sure process.env.OPENAI_API_KEY is configured on the backend server.');
+    } finally {
+      setAiLoadingItemId(null);
+    }
+  };
+
   const handleAddProduct = (product: any) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
     setItems([...items, {
       id: Date.now().toString(),
       description: product.name,
@@ -166,11 +221,13 @@ export default function DocumentCreateScreen({ route }: any) {
   const handleApplyDiscount = () => {
     const val = parseFloat(discountValue || '0');
     if (isNaN(val) || val <= 0) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
       Alert.alert('Error', 'Please enter a valid discount amount');
       return;
     }
 
     if (discountType === 'percentage' && val > 100) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
       Alert.alert('Error', 'Discount percentage cannot exceed 100%');
       return;
     }
@@ -178,10 +235,12 @@ export default function DocumentCreateScreen({ route }: any) {
     const calculatedAmt = discountType === 'percentage' ? productsSubtotal * (val / 100) : val;
     
     if (calculatedAmt > productsSubtotal) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
       Alert.alert('Error', 'Discount cannot exceed products subtotal');
       return;
     }
 
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
     const discountDescription = discountType === 'percentage' ? `Discount (${val}%)` : 'Discount';
 
     setItems([...items, {
@@ -202,19 +261,23 @@ export default function DocumentCreateScreen({ route }: any) {
   };
 
   const handleRemoveItem = (id: string) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
     setItems(items.filter(item => item.id !== id));
   };
 
   const handleSave = async () => {
     if (!selectedClient) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
       Alert.alert('Error', 'Please select a client');
       return;
     }
     if (items.length === 0) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
       Alert.alert('Error', 'Please add at least one item');
       return;
     }
 
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
     setLoading(true);
     try {
       const payload = {
@@ -236,12 +299,14 @@ export default function DocumentCreateScreen({ route }: any) {
 
       if (editMode && documentId) {
         await api.put(`/documents/${documentId}`, payload);
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
         Alert.alert('Success', `${type} updated successfully`, [
           { text: 'OK', onPress: () => navigation.goBack() }
         ]);
       } else {
         const response = await api.post('/documents', payload);
         console.log('Document created successfully:', response.data);
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
         Alert.alert('Success', `${type} created successfully`, [
           { text: 'OK', onPress: () => navigation.goBack() }
         ]);
@@ -482,6 +547,19 @@ export default function DocumentCreateScreen({ route }: any) {
                   value={item.description}
                   onChangeText={(text) => handleUpdateItem(item.id, 'description', text)}
                   style={styles.itemInput}
+                  rightIcon={
+                    aiLoadingItemId === item.id ? (
+                      <ActivityIndicator size="small" color={colors.primary[600]} />
+                    ) : aiEnabled ? (
+                      <TouchableOpacity 
+                        onPress={() => handleAiAssist(item.id, item.description)}
+                        style={{ padding: spacing[1] }}
+                        activeOpacity={0.7}
+                      >
+                        <Ionicons name="sparkles" size={20} color={colors.primary[500]} />
+                      </TouchableOpacity>
+                    ) : null
+                  }
                 />
 
                 <View style={styles.itemRow}>

@@ -17,6 +17,7 @@ import { useAuthStore } from '../store/authStore';
 import { Button, Input, Card } from '../components';
 import { useTheme } from '../context/ThemeContext';
 import { spacing, typography, borderRadius, shadows, Colors } from '../theme';
+import * as Haptics from 'expo-haptics';
 
 export default function LoginScreen() {
   const navigation = useNavigation();
@@ -47,13 +48,18 @@ export default function LoginScreen() {
   };
 
   const handleLogin = async () => {
-    if (!validate()) return;
+    if (!validate()) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
+      return;
+    }
 
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
     setLoading(true);
     try {
       const response = await api.post('/auth/login', { email, password });
       const { token, user, companies } = response.data;
 
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
       setAuth(token, user, companies);
       if (companies.length > 0) {
         setCurrentCompany(companies[0]);

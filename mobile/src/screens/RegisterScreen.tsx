@@ -17,6 +17,7 @@ import { useAuthStore } from '../store/authStore';
 import { Button, Input, Card } from '../components';
 import { useTheme } from '../context/ThemeContext';
 import { spacing, typography, borderRadius, shadows, Colors } from '../theme';
+import * as Haptics from 'expo-haptics';
 
 export default function RegisterScreen() {
   const navigation = useNavigation();
@@ -50,8 +51,12 @@ export default function RegisterScreen() {
   };
 
   const handleRegister = async () => {
-    if (!validate()) return;
+    if (!validate()) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
+      return;
+    }
 
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
     setLoading(true);
     try {
       console.log('Attempting to register with API...');
@@ -65,6 +70,7 @@ export default function RegisterScreen() {
       console.log('Registration successful:', response.data);
       const { token, user, companies } = response.data;
 
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
       // Set auth - this will automatically trigger navigation to logged-in screens
       setAuth(token, user, companies || []);
     } catch (error: any) {
