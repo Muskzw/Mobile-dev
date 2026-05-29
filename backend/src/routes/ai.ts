@@ -9,9 +9,17 @@ const router = express.Router();
 router.use(authenticate);
 router.use(requireCompany);
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY
-});
+// Lazy-initialize OpenAI so a missing key doesn't crash the server on startup
+let _openai: OpenAI | null = null;
+function getOpenAI(): OpenAI {
+  if (!process.env.OPENAI_API_KEY) {
+    throw new Error('AI features are not configured. Please set OPENAI_API_KEY.');
+  }
+  if (!_openai) {
+    _openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+  }
+  return _openai;
+}
 
 // AI Document Writer - Generate professional description
 router.post('/write-description', [
@@ -30,7 +38,7 @@ router.post('/write-description', [
       ? 'You are a professional business communication assistant. Write clear, friendly, and professional email messages for business documents.'
       : 'You are a professional business document writer. Write clear, concise, and professional descriptions for business quotations and invoices.';
 
-    const completion = await openai.chat.completions.create({
+    const completion = await getOpenAI().chat.completions.create({
       model: 'gpt-4',
       messages: [
         { role: 'system', content: systemPrompt },
@@ -84,7 +92,7 @@ ${history?.avg_price ? `- Historical average price: $${parseFloat(history.avg_pr
 
 Provide a suggested selling price with a brief explanation.`;
 
-    const completion = await openai.chat.completions.create({
+    const completion = await getOpenAI().chat.completions.create({
       model: 'gpt-4',
       messages: [
         { role: 'system', content: 'You are a pricing expert. Provide competitive pricing suggestions based on market data and cost analysis.' },
@@ -141,7 +149,7 @@ ${text}
 
 Return only valid JSON array, no other text.`;
 
-    const completion = await openai.chat.completions.create({
+    const completion = await getOpenAI().chat.completions.create({
       model: 'gpt-4',
       messages: [
         { role: 'system', content: 'You are a data extraction assistant. Extract structured data from business documents and return only valid JSON.' },
@@ -244,7 +252,7 @@ router.get('/insights', async (req: AuthRequest, res: Response) => {
 Provide brief, actionable recommendations.`;
 
       try {
-        const completion = await openai.chat.completions.create({
+        const completion = await getOpenAI().chat.completions.create({
           model: 'gpt-4',
           messages: [
             { role: 'system', content: 'You are a business analytics advisor. Provide concise, actionable recommendations.' },

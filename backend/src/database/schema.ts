@@ -12,10 +12,13 @@ export async function createTables() {
         password_hash VARCHAR(255) NOT NULL,
         full_name VARCHAR(255),
         subscription_status VARCHAR(50) DEFAULT 'trial',
+        subscription_tier VARCHAR(50) DEFAULT 'free',
         trial_ends_at TIMESTAMP,
         subscription_ends_at TIMESTAMP,
         reset_token VARCHAR(255),
         reset_token_expiry TIMESTAMP,
+        documents_created_this_month INTEGER DEFAULT 0,
+        last_reset_date DATE DEFAULT CURRENT_DATE,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )

@@ -42,6 +42,7 @@ export default function ClientsScreen() {
   const [deviceContacts, setDeviceContacts] = useState<any[]>([]);
   const [selectedContacts, setSelectedContacts] = useState<Set<string>>(new Set());
   const [newClient, setNewClient] = useState({ name: '', email: '', phone: '', address: '' });
+  const [contactSearch, setContactSearch] = useState('');
 
   const { data: clients, isLoading, refetch } = useQuery({
     queryKey: ['clients'],
@@ -82,7 +83,6 @@ export default function ClientsScreen() {
 
   const handleImportFromContacts = async () => {
     try {
-      // Request permission
       const { status } = await Contacts.requestPermissionsAsync();
       if (status !== 'granted') {
         Alert.alert('Permission Denied', 'We need contacts permission to import your contacts');
@@ -95,8 +95,9 @@ export default function ClientsScreen() {
       });
 
       if (data.length > 0) {
-        const contactsWithEmail = data.filter(contact => contact.emails && contact.emails.length > 0);
-        setDeviceContacts(contactsWithEmail);
+        // Show ALL contacts (email is optional — phone-only contacts are still useful)
+        const sorted = [...data].sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+        setDeviceContacts(sorted);
         setShowImportModal(true);
       } else {
         Alert.alert('No Contacts', 'No contacts found on your device');
@@ -130,11 +131,14 @@ export default function ClientsScreen() {
       const contactsToImport = deviceContacts.filter(c => selectedContacts.has(c.id));
 
       for (const contact of contactsToImport) {
-        const clientData = {
+        const clientData: any = {
           name: contact.name || 'Unknown',
-          email: contact.emails?.[0]?.email || '',
           phone: contact.phoneNumbers?.[0]?.number || undefined,
         };
+        // Only include email if present (backend requires valid email format)
+        if (contact.emails?.[0]?.email) {
+          clientData.email = contact.emails[0].email;
+        }
 
         try {
           await api.post('/clients', clientData);
@@ -146,6 +150,7 @@ export default function ClientsScreen() {
       queryClient.invalidateQueries({ queryKey: ['clients'] });
       setShowImportModal(false);
       setSelectedContacts(new Set());
+      setContactSearch('');
       Alert.alert('Success', `Imported ${selectedContacts.size} contact(s)`);
     } catch (error) {
       Alert.alert('Error', 'Failed to import contacts');
@@ -153,6 +158,19 @@ export default function ClientsScreen() {
       setLoading(false);
     }
   };
+
+  const handleSelectAll = () => {
+    const filtered = filteredDeviceContacts;
+    if (selectedContacts.size === filtered.length) {
+      setSelectedContacts(new Set());
+    } else {
+      setSelectedContacts(new Set(filtered.map(c => c.id)));
+    }
+  };
+
+  const filteredDeviceContacts = deviceContacts.filter(c =>
+    !contactSearch || (c.name || '').toLowerCase().includes(contactSearch.toLowerCase())
+  );
 
   const filteredClients = clients?.filter((client: any) =>
     client.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -388,31 +406,45 @@ export default function ClientsScreen() {
             <TouchableOpacity onPress={() => {
               setShowImportModal(false);
               setSelectedContacts(new Set());
+              setContactSearch('');
             }}>
               <Text style={styles.closeText}>Close</Text>
             </TouchableOpacity>
           </View>
 
-          <View style={{ padding: spacing[4], backgroundColor: colors.background.secondary }}>
-            <Text style={[styles.importHint, { color: colors.text.secondary }]}>
-              Select contacts to import ({selectedContacts.size} selected)
-            </Text>
+          <View style={{ padding: spacing[4], backgroundColor: colors.background.secondary, gap: spacing[2] }}>
+            <Input
+              placeholder="Search contacts..."
+              value={contactSearch}
+              onChangeText={setContactSearch}
+              icon={<Ionicons name="search" size={20} color={colors.gray[400]} />}
+            />
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+              <Text style={[styles.importHint, { color: colors.text.secondary }]}>
+                {selectedContacts.size} of {filteredDeviceContacts.length} selected
+              </Text>
+              <TouchableOpacity onPress={handleSelectAll} style={{ paddingHorizontal: spacing[3], paddingVertical: spacing[1] }}>
+                <Text style={{ color: colors.primary[600], fontWeight: '600', fontSize: 13 }}>
+                  {selectedContacts.size === filteredDeviceContacts.length && filteredDeviceContacts.length > 0 ? 'Deselect All' : 'Select All'}
+                </Text>
+              </TouchableOpacity>
+            </View>
           </View>
 
           <FlatList
-            data={deviceContacts}
+            data={filteredDeviceContacts}
             keyExtractor={(item) => item.id}
             renderItem={({ item }) => (
               <TouchableOpacity
                 onPress={() => toggleContactSelection(item.id)}
-                style={styles.contactItem}
+                style={styles.modalContactItem}
               >
                 <View style={{ flex: 1 }}>
                   <Text style={[styles.contactName, { color: colors.text.primary }]}>
                     {item.name || 'Unknown'}
                   </Text>
                   <Text style={[styles.contactEmail, { color: colors.text.secondary }]}>
-                    {item.emails?.[0]?.email || 'No email'}
+                    {item.emails?.[0]?.email || item.phoneNumbers?.[0]?.number || 'No contact info'}
                   </Text>
                 </View>
                 <View style={[
@@ -629,7 +661,7 @@ const createStyles = (colors: Colors, isDark: boolean) => StyleSheet.create({
     fontSize: typography.fontSize.sm,
     textAlign: 'center',
   },
-  contactItem: {
+  modalContactItem: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: spacing[4],

@@ -11,6 +11,7 @@ import {
     Platform,
     ScrollView,
     StatusBar,
+    RefreshControl,
 } from 'react-native';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigation } from '@react-navigation/native';
@@ -36,7 +37,7 @@ export default function ProductsScreen() {
     const [loading, setLoading] = useState(false);
     const [editingItem, setEditingItem] = useState<any>(null);
 
-    const { data: products, isLoading } = useQuery({
+    const { data: products, isLoading, refetch } = useQuery({
         queryKey: ['saved-items'],
         queryFn: async () => {
             const response = await api.get('/saved-items');
@@ -189,6 +190,9 @@ export default function ProductsScreen() {
                 renderItem={({ item }) => <ProductItem item={item} />}
                 contentContainerStyle={styles.listContent}
                 showsVerticalScrollIndicator={false}
+                refreshControl={
+                    <RefreshControl refreshing={isLoading} onRefresh={refetch} tintColor={colors.primary[500]} />
+                }
                 ListEmptyComponent={
                     <View style={styles.emptyState}>
                         <View style={styles.emptyIconContainer}>

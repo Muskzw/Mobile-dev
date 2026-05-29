@@ -1,5 +1,6 @@
 import 'react-native-gesture-handler';
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+import { View, ActivityIndicator } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
@@ -33,7 +34,7 @@ const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
 const queryClient = new QueryClient();
 
-// Initialize auth store from AsyncStorage
+// Initialize auth store from AsyncStorage — returns a promise so AppNavigator can wait
 const initAuth = async () => {
   try {
     const stored = await AsyncStorage.getItem('auth-storage');
@@ -41,7 +42,6 @@ const initAuth = async () => {
       const parsed = JSON.parse(stored);
       if (parsed.state?.token && parsed.state?.user?.id) {
         useAuthStore.setState(parsed.state);
-
         // Initialize RevenueCat with user ID
         await initializePurchases(parsed.state.user.id.toString());
       }
@@ -50,8 +50,6 @@ const initAuth = async () => {
     console.error('Auth init error:', error);
   }
 };
-
-initAuth();
 
 function MainTabs() {
   const { colors } = useTheme();
@@ -118,6 +116,21 @@ function MainTabs() {
 function AppNavigator() {
   const { token } = useAuthStore();
   const { colors } = useTheme();
+  const [isReady, setIsReady] = useState(false);
+
+  useEffect(() => {
+    initAuth().finally(() => setIsReady(true));
+  }, []);
+
+  // Show a blank loading screen while AsyncStorage is being read
+  // This prevents the login screen from flashing on users who are already logged in
+  if (!isReady) {
+    return (
+      <View style={{ flex: 1, backgroundColor: colors.background.primary, alignItems: 'center', justifyContent: 'center' }}>
+        <ActivityIndicator size="large" color={colors.primary[600]} />
+      </View>
+    );
+  }
 
   return (
     <NavigationContainer>

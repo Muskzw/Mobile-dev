@@ -327,13 +327,33 @@ export default function DocumentCreateScreen({ route }: any) {
                 </TouchableOpacity>
               </View>
               <View style={{ flex: 1 }}>
-                <Input
-                  label="Tax Rate (%)"
-                  value={taxRate}
-                  onChangeText={setTaxRate}
-                  keyboardType="numeric"
-                  placeholder="10"
-                />
+                <Text style={{ fontSize: typography.fontSize.xs, color: colors.text.secondary, marginBottom: spacing[1], marginLeft: spacing[1] }}>Tax Rate</Text>
+                <View style={styles.taxPresets}>
+                  {['0', '5', '10', '15', '20'].map((preset) => (
+                    <TouchableOpacity
+                      key={preset}
+                      style={[
+                        styles.taxPresetBtn,
+                        taxRate === preset && { backgroundColor: colors.primary[600], borderColor: colors.primary[600] }
+                      ]}
+                      onPress={() => setTaxRate(preset)}
+                    >
+                      <Text style={[
+                        styles.taxPresetText,
+                        taxRate === preset && { color: 'white' }
+                      ]}>{preset}%</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+                {!['0', '5', '10', '15', '20'].includes(taxRate) && (
+                  <Input
+                    value={taxRate}
+                    onChangeText={setTaxRate}
+                    keyboardType="numeric"
+                    placeholder="Custom %"
+                    style={{ marginTop: spacing[1] }}
+                  />
+                )}
               </View>
             </View>
           </Card>
@@ -713,6 +733,24 @@ const createStyles = (colors: Colors) => StyleSheet.create({
     fontSize: typography.fontSize.sm,
     fontWeight: typography.fontWeight.bold,
     color: colors.primary[600],
+  },
+  taxPresets: {
+    flexDirection: 'row',
+    gap: spacing[1],
+    flexWrap: 'wrap',
+  },
+  taxPresetBtn: {
+    paddingVertical: spacing[1],
+    paddingHorizontal: spacing[2],
+    borderRadius: borderRadius.md,
+    borderWidth: 1,
+    borderColor: colors.gray[300],
+    backgroundColor: colors.background.secondary,
+  },
+  taxPresetText: {
+    fontSize: typography.fontSize.xs,
+    fontWeight: typography.fontWeight.semibold,
+    color: colors.text.secondary,
   },
   itemCard: {
     marginBottom: spacing[4],

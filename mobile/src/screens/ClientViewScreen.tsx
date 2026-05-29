@@ -57,10 +57,17 @@ export default function ClientViewScreen() {
     const { data: clientDocuments } = useQuery({
         queryKey: ['client-documents', clientId],
         queryFn: async () => {
-            const response = await api.get('/documents');
-            return response.data.filter((doc: any) => doc.client_id === clientId);
+            const response = await api.get(`/documents?clientId=${clientId}`);
+            return response.data;
         },
     });
+
+    // Compute revenue stats from client documents
+    const totalRevenue = clientDocuments?.reduce((sum: number, doc: any) => {
+        if (doc.status === 'paid') return sum + parseFloat(doc.total || 0);
+        return sum;
+    }, 0) ?? 0;
+    const currency = clientDocuments?.[0]?.currency || 'USD';
 
     const updateMutation = useMutation({
         mutationFn: async (data: any) => {
@@ -247,6 +254,26 @@ export default function ClientViewScreen() {
                     )}
                 </Card>
 
+                {/* Stats Row */}
+                {!isEditing && clientDocuments && (
+                    <View style={styles.statsRow}>
+                        <View style={[styles.statCard, { backgroundColor: colors.success + '12', borderColor: colors.success + '30' }]}>
+                            <Ionicons name="cash-outline" size={20} color={colors.success} />
+                            <Text style={[styles.statValue, { color: colors.success }]}>
+                                {currency} {totalRevenue.toFixed(2)}
+                            </Text>
+                            <Text style={styles.statLabel}>Revenue (paid)</Text>
+                        </View>
+                        <View style={[styles.statCard, { backgroundColor: colors.primary[50], borderColor: colors.primary[100] }]}>
+                            <Ionicons name="document-text-outline" size={20} color={colors.primary[600]} />
+                            <Text style={[styles.statValue, { color: colors.primary[600] }]}>
+                                {clientDocuments.length}
+                            </Text>
+                            <Text style={styles.statLabel}>Documents</Text>
+                        </View>
+                    </View>
+                )}
+
                 {/* Documents Section */}
                 {!isEditing && (
                     <>
@@ -260,7 +287,7 @@ export default function ClientViewScreen() {
                                     <Card style={styles.documentCard} padding={4}>
                                         <View style={styles.documentIcon}>
                                             <Ionicons
-                                                name={doc.type === 'INVOICE' ? 'receipt' : 'document-text'}
+                                                name={doc.type === 'invoice' ? 'receipt' : 'document-text'}
                                                 size={20}
                                                 color={colors.primary[600]}
                                             />
@@ -397,6 +424,28 @@ const createStyles = (colors: Colors) => StyleSheet.create({
         marginBottom: spacing[3],
         textTransform: 'uppercase',
         letterSpacing: 0.5,
+    },
+    statsRow: {
+        flexDirection: 'row',
+        gap: spacing[3],
+        marginBottom: spacing[6],
+    },
+    statCard: {
+        flex: 1,
+        alignItems: 'center',
+        padding: spacing[4],
+        borderRadius: borderRadius.xl,
+        borderWidth: 1,
+        gap: spacing[1],
+    },
+    statValue: {
+        fontSize: typography.fontSize.lg,
+        fontWeight: typography.fontWeight.bold,
+    },
+    statLabel: {
+        fontSize: typography.fontSize.xs,
+        color: colors.text.secondary,
+        fontWeight: typography.fontWeight.medium,
     },
     documentCard: {
         flexDirection: 'row',

@@ -234,7 +234,7 @@ router.post('/', [
 // Get all documents
 router.get('/', async (req: AuthRequest, res: Response) => {
   try {
-    const { type, status, search, page = 1, limit = 20 } = req.query;
+    const { type, status, search, clientId, page = 1, limit = 20 } = req.query;
 
     // Convert page and limit to numbers
     const pageNum = parseInt(page as string, 10) || 1;
@@ -269,6 +269,12 @@ router.get('/', async (req: AuthRequest, res: Response) => {
       paramCount++;
       query += ` AND d.status = $${paramCount}`;
       params.push(status);
+    }
+
+    if (clientId) {
+      paramCount++;
+      query += ` AND d.client_id = $${paramCount}`;
+      params.push(clientId);
     }
 
     if (search) {

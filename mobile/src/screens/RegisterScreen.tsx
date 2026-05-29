@@ -85,7 +85,7 @@ export default function RegisterScreen() {
       } else if (error.request) {
         errorMessage = 'Cannot connect to server. Please check your connection.';
       } else {
-        errorMessage = error.message;
+        errorMessage = error.message || 'Cannot connect to server. Please check your connection.';
       }
 
       alert(errorMessage);

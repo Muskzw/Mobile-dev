@@ -68,16 +68,20 @@ export default function DashboardScreen() {
 
             const period = last6Months.find(p => p.month === month && p.year === year);
             if (period) {
-              period.value += parseFloat(doc.total);
+              const val = parseFloat(doc.total);
+              period.value += isNaN(val) ? 0 : val;
             }
           }
         });
+
+        const allZeros = last6Months.every(m => m.value === 0);
 
         return {
           labels: last6Months.map(m => m.month),
           datasets: [{
             data: last6Months.map(m => m.value)
-          }]
+          }],
+          allZeros
         };
       } catch (e) {
         console.error('Chart data error', e);
@@ -89,7 +93,8 @@ export default function DashboardScreen() {
   const { data: recentDocuments } = useQuery({
     queryKey: ['recent-documents'],
     queryFn: async () => {
-      const response = await api.get('/documents?limit=3&sort=created_at:desc');
+      // Backend orders by created_at DESC by default; just limit to 3
+      const response = await api.get('/documents?limit=3');
       return response.data;
     }
   });
@@ -194,7 +199,7 @@ export default function DashboardScreen() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Income Overview</Text>
           <Card style={styles.chartCard} padding={0}>
-            {chartData ? (
+            {chartData && !chartData.allZeros ? (
               <LineChart
                 data={chartData}
                 width={width - spacing[12]}
@@ -222,6 +227,12 @@ export default function DashboardScreen() {
                   borderRadius: 16
                 }}
               />
+            ) : chartData && chartData.allZeros ? (
+              <View style={styles.emptyChartContainer}>
+                <Ionicons name="analytics" size={40} color={colors.text.tertiary} style={{ marginBottom: spacing[2] }} />
+                <Text style={styles.emptyChartText}>No income data recorded yet</Text>
+                <Text style={styles.emptyChartSubtext}>Paid invoices in the last 6 months will appear here</Text>
+              </View>
             ) : (
               <View style={{ height: 220, alignItems: 'center', justifyContent: 'center' }}>
                 <ActivityIndicator color={colors.primary[500]} />
@@ -275,10 +286,12 @@ export default function DashboardScreen() {
           <Card style={styles.recentCard} padding={0}>
             {recentDocuments && recentDocuments.length > 0 ? (
               recentDocuments.map((doc: any, index: number) => {
-                const isInvoice = doc.type === 'INVOICE';
-                const iconName = isInvoice ? 'receipt' : 'document-text';
-                const iconColor = isInvoice ? colors.secondary[600] : colors.primary[600];
-                const bgColor = isInvoice
+                // DB stores types in lowercase ('invoice', 'quotation', etc.)
+                const isInvoice = doc.type === 'invoice';
+                const isReceipt = doc.type === 'receipt';
+                const iconName = isInvoice || isReceipt ? 'receipt' : 'document-text';
+                const iconColor = isInvoice || isReceipt ? colors.secondary[600] : colors.primary[600];
+                const bgColor = isInvoice || isReceipt
                   ? (isDark ? colors.secondary[900] : '#F0FDF4')
                   : (isDark ? colors.primary[900] : '#EEF2FF');
 
@@ -308,10 +321,15 @@ export default function DashboardScreen() {
                     </View>
                     <View style={styles.recentInfo}>
                       <Text style={styles.recentTitle}>
-                        {doc.type} {doc.document_number}
+                        {doc.type.charAt(0).toUpperCase() + doc.type.slice(1).replace('_', ' ')} · {doc.document_number}
                       </Text>
-                      <Text style={styles.recentTime}>{timeAgo(doc.created_at)}</Text>
+                      <Text style={styles.recentTime}>
+                        {doc.client?.name ? `${doc.client.name} · ` : ''}{timeAgo(doc.created_at)}
+                      </Text>
                     </View>
+                    <Text style={[styles.recentTime, { color: colors.text.primary, fontWeight: '600', marginRight: 4 }]}>
+                      {doc.currency} {parseFloat(doc.total).toFixed(2)}
+                    </Text>
                     <Ionicons name="chevron-forward" size={20} color={colors.gray[400]} />
                   </TouchableOpacity>
                 );
@@ -474,6 +492,26 @@ const createStyles = (colors: Colors) => StyleSheet.create({
     ...shadows.sm,
     overflow: 'hidden',
     alignItems: 'center',
+  },
+  emptyChartContainer: {
+    height: 220,
+    width: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: spacing[4],
+  },
+  emptyChartText: {
+    fontSize: typography.fontSize.sm,
+    fontWeight: typography.fontWeight.semibold,
+    color: colors.text.secondary,
+    marginTop: spacing[1],
+    textAlign: 'center',
+  },
+  emptyChartSubtext: {
+    fontSize: typography.fontSize.xs,
+    color: colors.text.tertiary,
+    marginTop: spacing[1],
+    textAlign: 'center',
   },
   actionsCard: {
     backgroundColor: colors.background.primary,

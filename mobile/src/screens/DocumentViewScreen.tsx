@@ -43,6 +43,7 @@ export default function DocumentViewScreen() {
   const [emailSubject, setEmailSubject] = React.useState('');
   const [emailBody, setEmailBody] = React.useState('');
   const [sendingEmail, setSendingEmail] = React.useState(false);
+  const [statusLoading, setStatusLoading] = React.useState<string | null>(null);
 
   const { data: document, isLoading } = useQuery({
     queryKey: ['document', id],
@@ -110,16 +111,60 @@ export default function DocumentViewScreen() {
   };
 
   const handleStatusUpdate = async (newStatus: string) => {
+    setStatusLoading(newStatus);
     try {
+      if (newStatus === 'convert') {
+        const response = await api.post(`/documents/${id}/convert`, { targetType: 'invoice' });
+        const newDoc = response.data;
+        queryClient.invalidateQueries({ queryKey: ['documents'] });
+        queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
+        setShowOptionsModal(false);
+        
+        Alert.alert('Success', 'Quotation converted to Invoice successfully!', [
+          {
+            text: 'View Invoice',
+            onPress: () => {
+              (navigation as any).push('DocumentView', { id: newDoc.id });
+            }
+          },
+          { text: 'OK', style: 'cancel' }
+        ]);
+        return;
+      }
+
       await api.put(`/documents/${id}`, { status: newStatus });
       queryClient.invalidateQueries({ queryKey: ['document', id] });
       queryClient.invalidateQueries({ queryKey: ['documents'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
       setShowOptionsModal(false);
-      Alert.alert('Success', `Document marked as ${newStatus}`);
     } catch (error) {
       console.error('Status update error:', error);
       Alert.alert('Error', 'Failed to update status');
+    } finally {
+      setStatusLoading(null);
     }
+  };
+
+  // Returns the quick-action buttons relevant to the current doc type & status
+  const getStatusActions = () => {
+    const status = document?.status?.toLowerCase();
+    const type = document?.type?.toLowerCase();
+    const actions: { label: string; status: string; color: string; icon: string }[] = [];
+
+    if (status === 'draft') {
+      actions.push({ label: 'Mark Sent', status: 'sent', color: colors.primary[600], icon: 'send-outline' });
+    }
+    if (status !== 'paid' && (type === 'invoice' || type === 'receipt' || type === 'proforma')) {
+      actions.push({ label: 'Mark Paid', status: 'paid', color: colors.success, icon: 'checkmark-circle-outline' });
+    }
+    if (type === 'quotation' && status !== 'accepted' && status !== 'rejected') {
+      actions.push({ label: 'Accepted', status: 'accepted', color: colors.success, icon: 'thumbs-up-outline' });
+      actions.push({ label: 'Rejected', status: 'rejected', color: colors.error, icon: 'thumbs-down-outline' });
+    }
+    if (status === 'accepted' && type === 'quotation') {
+      actions.push({ label: 'Convert to Invoice', status: 'convert', color: colors.secondary[600], icon: 'receipt-outline' });
+    }
+    return actions;
   };
 
   const showMenu = () => {
@@ -477,8 +522,27 @@ export default function DocumentViewScreen() {
       </ScrollView>
 
       {/* Actions Footer */}
-      {/* Actions Footer */}
       <View style={[styles.footer, { paddingBottom: insets.bottom + spacing[4] }]}>
+        {/* Quick Status Actions */}
+        {getStatusActions().length > 0 && (
+          <View style={styles.statusActions}>
+            {getStatusActions().map((action) => (
+              <TouchableOpacity
+                key={action.status}
+                style={[styles.statusActionBtn, { borderColor: action.color, backgroundColor: `${action.color}12` }]}
+                onPress={() => handleStatusUpdate(action.status)}
+                disabled={statusLoading !== null}
+              >
+                {statusLoading === action.status ? (
+                  <ActivityIndicator size="small" color={action.color} />
+                ) : (
+                  <Ionicons name={action.icon as any} size={16} color={action.color} />
+                )}
+                <Text style={[styles.statusActionText, { color: action.color }]}>{action.label}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
         <View style={styles.footerButtons}>
           <Button
             title="Edit"
@@ -950,6 +1014,25 @@ const createStyles = (colors: Colors) => StyleSheet.create({
   footerButtons: {
     flexDirection: 'row',
     alignItems: 'center',
+  },
+  statusActions: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing[2],
+    marginBottom: spacing[3],
+  },
+  statusActionBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing[1],
+    paddingVertical: spacing[2],
+    paddingHorizontal: spacing[3],
+    borderRadius: borderRadius.full,
+    borderWidth: 1.5,
+  },
+  statusActionText: {
+    fontSize: typography.fontSize.sm,
+    fontWeight: typography.fontWeight.semibold,
   },
   moreButton: {
     width: 48,
