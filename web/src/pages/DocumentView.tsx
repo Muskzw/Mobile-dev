@@ -226,10 +226,26 @@ export default function DocumentView() {
                     </td>
                     <td className="px-4 py-4 text-right text-gray-900">{item.quantity}</td>
                     <td className="px-4 py-4 text-right text-gray-900">
-                      {document.currency} {parseFloat(item.unit_price).toFixed(2)}
+                      {parseFloat(item.unit_price) < 0 ? (
+                        <span className="text-red-600 font-semibold">
+                          -{document.currency} {Math.abs(parseFloat(item.unit_price)).toFixed(2)}
+                        </span>
+                      ) : (
+                        <span>
+                          {document.currency} {parseFloat(item.unit_price).toFixed(2)}
+                        </span>
+                      )}
                     </td>
                     <td className="px-4 py-4 text-right font-medium text-gray-900">
-                      {document.currency} {parseFloat(item.total).toFixed(2)}
+                      {parseFloat(item.total) < 0 ? (
+                        <span className="text-red-600 font-bold">
+                          -{document.currency} {Math.abs(parseFloat(item.total)).toFixed(2)}
+                        </span>
+                      ) : (
+                        <span>
+                          {document.currency} {parseFloat(item.total).toFixed(2)}
+                        </span>
+                      )}
                     </td>
                   </tr>
                 ))}

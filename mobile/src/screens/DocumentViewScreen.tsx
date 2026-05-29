@@ -469,22 +469,31 @@ export default function DocumentViewScreen() {
         {/* Items */}
         <Text style={styles.sectionTitle}>Items</Text>
         <Card style={styles.sectionCard} padding={0}>
-          {document?.items?.map((item: any, index: number) => (
-            <View key={index} style={[
-              styles.itemRow,
-              index !== document.items.length - 1 && styles.itemBorder
-            ]}>
-              <View style={styles.itemInfo}>
-                <Text style={styles.itemName}>{item.description}</Text>
-                <Text style={styles.itemQuantity}>
-                  {item.quantity} x {document.currency} {parseFloat(item.unit_price).toFixed(2)}
+          {document?.items?.map((item: any, index: number) => {
+            const isDiscount = parseFloat(item.unit_price) < 0;
+            return (
+              <View key={index} style={[
+                styles.itemRow,
+                index !== document.items.length - 1 && styles.itemBorder
+              ]}>
+                <View style={styles.itemInfo}>
+                  <Text style={styles.itemName}>{item.description}</Text>
+                  <Text style={styles.itemQuantity}>
+                    {isDiscount ? (
+                      <Text style={{ color: colors.error, fontWeight: typography.fontWeight.semibold }}>
+                        Discount Applied
+                      </Text>
+                    ) : (
+                      `${item.quantity} x ${document.currency} ${parseFloat(item.unit_price).toFixed(2)}`
+                    )}
+                  </Text>
+                </View>
+                <Text style={[styles.itemTotal, isDiscount && { color: colors.error }]}>
+                  {isDiscount ? '-' : ''}{document.currency} {Math.abs(parseFloat(item.total)).toFixed(2)}
                 </Text>
               </View>
-              <Text style={styles.itemTotal}>
-                {document.currency} {parseFloat(item.total).toFixed(2)}
-              </Text>
-            </View>
-          ))}
+            );
+          })}
         </Card>
 
         {/* Totals */}

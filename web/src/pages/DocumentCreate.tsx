@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useForm, useFieldArray } from 'react-hook-form';
 import toast from 'react-hot-toast';
@@ -32,7 +32,7 @@ export default function DocumentCreate() {
   const [loading, setLoading] = useState(false);
   const [aiLoading, setAiLoading] = useState(false);
   
-  const { register, control, handleSubmit, formState: { errors }, watch, setValue } = useForm<DocumentForm>({
+  const { register, control, handleSubmit, watch, setValue } = useForm<DocumentForm>({
     defaultValues: {
       type: searchParams.get('type') || 'quotation',
       issueDate: new Date().toISOString().split('T')[0],
@@ -84,6 +84,50 @@ export default function DocumentCreate() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleApplyDiscount = () => {
+    const input = window.prompt("Enter discount amount (e.g. 50 or 10%):");
+    if (!input) return;
+
+    const cleanInput = input.trim();
+    const isPercentage = cleanInput.endsWith('%');
+    const value = parseFloat(isPercentage ? cleanInput.slice(0, -1) : cleanInput);
+
+    if (isNaN(value) || value <= 0) {
+      toast.error("Please enter a valid discount amount");
+      return;
+    }
+
+    if (isPercentage && value > 100) {
+      toast.error("Discount percentage cannot exceed 100%");
+      return;
+    }
+
+    // Calculate products subtotal for percentage calculation
+    const productsSubtotal = items.reduce((sum, item) => {
+      const price = parseFloat(item.unitPrice?.toString() || '0');
+      if (price > 0) {
+        return sum + (parseFloat(item.quantity?.toString() || '0') * price);
+      }
+      return sum;
+    }, 0);
+
+    const calculatedAmt = isPercentage ? productsSubtotal * (value / 100) : value;
+
+    if (calculatedAmt > productsSubtotal) {
+      toast.error("Discount cannot exceed products subtotal");
+      return;
+    }
+
+    append({
+      name: isPercentage ? `Discount (${value}%)` : 'Discount',
+      description: 'Applied discount',
+      quantity: 1,
+      unitPrice: -parseFloat(calculatedAmt.toFixed(2))
+    });
+
+    toast.success("Discount added successfully!");
   };
 
   const handleAIWrite = async (index: number) => {
@@ -203,98 +247,144 @@ export default function DocumentCreate() {
           <div className="bg-white rounded-lg shadow p-6">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold text-gray-900">Items</h2>
-              <button
-                type="button"
-                onClick={() => append({ name: '', quantity: 1, unitPrice: 0 })}
-                className="flex items-center space-x-2 text-blue-600 hover:text-blue-700"
-              >
-                <Plus className="w-4 h-4" />
-                <span>Add Item</span>
-              </button>
+              <div className="flex items-center space-x-4">
+                <button
+                  type="button"
+                  onClick={handleApplyDiscount}
+                  className="flex items-center space-x-2 text-green-600 hover:text-green-700 text-sm font-medium"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>Add Discount</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => append({ name: '', quantity: 1, unitPrice: 0 })}
+                  className="flex items-center space-x-2 text-blue-600 hover:text-blue-700 text-sm font-medium"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>Add Item</span>
+                </button>
+              </div>
             </div>
 
             <div className="space-y-4">
-              {fields.map((field, index) => (
-                <div key={field.id} className="border border-gray-200 rounded-lg p-4 space-y-3">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="md:col-span-2">
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Item Name *
-                      </label>
-                      <input
-                        {...register(`items.${index}.name`, { required: true })}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                        placeholder="Item or service name"
-                      />
-                    </div>
-                    <div className="md:col-span-2">
-                      <div className="flex items-center justify-between mb-1">
-                        <label className="block text-sm font-medium text-gray-700">
-                          Description
-                        </label>
+              {fields.map((field, index) => {
+                const isDiscount = items[index] && parseFloat(items[index].unitPrice?.toString() || '0') < 0;
+                if (isDiscount) {
+                  return (
+                    <div key={field.id} className="border border-dashed border-red-300 bg-red-50 rounded-lg p-4 flex items-center justify-between">
+                      <div className="flex items-center space-x-3">
+                        <div className="p-2 bg-red-100 rounded-full text-red-600">
+                          <Plus className="w-5 h-5 transform rotate-45" />
+                        </div>
+                        <div>
+                          <span className="font-semibold text-gray-900 block">{items[index].name}</span>
+                          <span className="text-sm text-gray-500">{items[index].description || 'Applied discount'}</span>
+                        </div>
+                      </div>
+                      <div className="flex items-center space-x-6">
+                        <span className="text-lg font-bold text-red-600">
+                          -${parseFloat(Math.abs(parseFloat(items[index].unitPrice?.toString() || '0')).toFixed(2))}
+                        </span>
                         <button
                           type="button"
-                          onClick={() => handleAIWrite(index)}
-                          disabled={aiLoading}
-                          className="flex items-center space-x-1 text-xs text-purple-600 hover:text-purple-700"
+                          onClick={() => remove(index)}
+                          className="text-red-600 hover:text-red-700 text-sm font-medium"
                         >
-                          <Sparkles className="w-3 h-3" />
-                          <span>AI Write</span>
+                          Remove
                         </button>
                       </div>
-                      <textarea
-                        {...register(`items.${index}.description`)}
-                        rows={2}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                        placeholder="Item description"
-                      />
+                      {/* Hidden inputs to make sure react-hook-form receives the data correctly */}
+                      <input type="hidden" {...register(`items.${index}.name`)} />
+                      <input type="hidden" {...register(`items.${index}.description`)} />
+                      <input type="hidden" {...register(`items.${index}.quantity`)} />
+                      <input type="hidden" {...register(`items.${index}.unitPrice`)} />
                     </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Quantity *
-                      </label>
-                      <input
-                        type="number"
-                        step="0.01"
-                        {...register(`items.${index}.quantity`, { required: true, min: 0.01 })}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                      />
-                    </div>
-                    <div>
-                      <div className="flex items-center justify-between mb-1">
-                        <label className="block text-sm font-medium text-gray-700">
-                          Unit Price *
+                  );
+                }
+
+                return (
+                  <div key={field.id} className="border border-gray-200 rounded-lg p-4 space-y-3">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="md:col-span-2">
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Item Name *
                         </label>
-                        <button
-                          type="button"
-                          onClick={() => handleAIPriceEstimate(index)}
-                          disabled={aiLoading}
-                          className="flex items-center space-x-1 text-xs text-purple-600 hover:text-purple-700"
-                        >
-                          <DollarSign className="w-3 h-3" />
-                          <span>AI Estimate</span>
-                        </button>
+                        <input
+                          {...register(`items.${index}.name`, { required: true })}
+                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                          placeholder="Item or service name"
+                        />
                       </div>
-                      <input
-                        type="number"
-                        step="0.01"
-                        {...register(`items.${index}.unitPrice`, { required: true, min: 0 })}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                      />
+                      <div className="md:col-span-2">
+                        <div className="flex items-center justify-between mb-1">
+                          <label className="block text-sm font-medium text-gray-700">
+                            Description
+                          </label>
+                          <button
+                            type="button"
+                            onClick={() => handleAIWrite(index)}
+                            disabled={aiLoading}
+                            className="flex items-center space-x-1 text-xs text-purple-600 hover:text-purple-700"
+                          >
+                            <Sparkles className="w-3 h-3" />
+                            <span>AI Write</span>
+                          </button>
+                        </div>
+                        <textarea
+                          {...register(`items.${index}.description`)}
+                          rows={2}
+                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                          placeholder="Item description"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Quantity *
+                        </label>
+                        <input
+                          type="number"
+                          step="0.01"
+                          {...register(`items.${index}.quantity`, { required: true, min: 0.01 })}
+                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                        />
+                      </div>
+                      <div>
+                        <div className="flex items-center justify-between mb-1">
+                          <label className="block text-sm font-medium text-gray-700">
+                            Unit Price *
+                          </label>
+                          <button
+                            type="button"
+                            onClick={() => handleAIPriceEstimate(index)}
+                            disabled={aiLoading}
+                            className="flex items-center space-x-1 text-xs text-purple-600 hover:text-purple-700"
+                          >
+                            <DollarSign className="w-3 h-3" />
+                            <span>AI Estimate</span>
+                          </button>
+                        </div>
+                        <input
+                          type="number"
+                          step="0.01"
+                          {...register(`items.${index}.unitPrice`, { required: true })}
+                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                        />
+                      </div>
                     </div>
+                    {fields.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => remove(index)}
+                        className="text-red-600 hover:text-red-700 text-sm flex items-center space-x-1"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                        <span>Remove</span>
+                      </button>
+                    )}
                   </div>
-                  {fields.length > 1 && (
-                    <button
-                      type="button"
-                      onClick={() => remove(index)}
-                      className="text-red-600 hover:text-red-700 text-sm flex items-center space-x-1"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                      <span>Remove</span>
-                    </button>
-                  )}
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
 

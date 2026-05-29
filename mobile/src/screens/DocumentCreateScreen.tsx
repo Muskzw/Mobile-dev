@@ -64,6 +64,9 @@ export default function DocumentCreateScreen({ route }: any) {
   const [currency, setCurrency] = useState(currentCompany?.currency || 'USD');
   const [terms, setTerms] = useState(currentCompany?.terms || '');
   const [showCurrencyModal, setShowCurrencyModal] = useState(false);
+  const [showDiscountModal, setShowDiscountModal] = useState(false);
+  const [discountType, setDiscountType] = useState<'percentage' | 'flat'>('percentage');
+  const [discountValue, setDiscountValue] = useState('');
 
   // Upgrade Modal State
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
@@ -133,6 +136,15 @@ export default function DocumentCreateScreen({ route }: any) {
   const subtotal = items.reduce((sum, item) => {
     return sum + (parseFloat(item.quantity || '0') * parseFloat(item.unit_price || '0'));
   }, 0);
+
+  const productsSubtotal = items.reduce((sum, item) => {
+    const price = parseFloat(item.unit_price || '0');
+    if (price > 0) {
+      return sum + (parseFloat(item.quantity || '0') * price);
+    }
+    return sum;
+  }, 0);
+
   const taxAmount = subtotal * (parseFloat(taxRate || '0') / 100);
   const total = subtotal + taxAmount;
 
@@ -149,6 +161,38 @@ export default function DocumentCreateScreen({ route }: any) {
       unit_price: product.unit_price
     }]);
     setShowProductModal(false);
+  };
+
+  const handleApplyDiscount = () => {
+    const val = parseFloat(discountValue || '0');
+    if (isNaN(val) || val <= 0) {
+      Alert.alert('Error', 'Please enter a valid discount amount');
+      return;
+    }
+
+    if (discountType === 'percentage' && val > 100) {
+      Alert.alert('Error', 'Discount percentage cannot exceed 100%');
+      return;
+    }
+
+    const calculatedAmt = discountType === 'percentage' ? productsSubtotal * (val / 100) : val;
+    
+    if (calculatedAmt > productsSubtotal) {
+      Alert.alert('Error', 'Discount cannot exceed products subtotal');
+      return;
+    }
+
+    const discountDescription = discountType === 'percentage' ? `Discount (${val}%)` : 'Discount';
+
+    setItems([...items, {
+      id: 'discount-' + Date.now(),
+      description: discountDescription,
+      quantity: '1',
+      unit_price: `-${calculatedAmt.toFixed(2)}`
+    }]);
+
+    setDiscountValue('');
+    setShowDiscountModal(false);
   };
 
   const handleUpdateItem = (id: string, field: keyof Item, value: string) => {
@@ -377,51 +421,93 @@ export default function DocumentCreateScreen({ route }: any) {
                 <Ionicons name="cube-outline" size={16} color={colors.secondary[600]} />
                 <Text style={styles.addProductText}>+ Product</Text>
               </TouchableOpacity>
+              <TouchableOpacity onPress={() => setShowDiscountModal(true)} style={styles.actionButton}>
+                <Ionicons name="pricetag-outline" size={16} color={colors.primary[600]} />
+                <Text style={styles.addItemText}>+ Discount</Text>
+              </TouchableOpacity>
               <TouchableOpacity onPress={handleAddItem}>
                 <Text style={styles.addItemText}>+ Add Item</Text>
               </TouchableOpacity>
             </View>
           </View>
 
-          {items.map((item, index) => (
-            <Card key={item.id} style={styles.itemCard} padding={4}>
-              <View style={styles.itemHeader}>
-                <Text style={styles.itemNumber}>Item {index + 1}</Text>
-                <TouchableOpacity onPress={() => handleRemoveItem(item.id)}>
-                  <Ionicons name="trash-outline" size={20} color={colors.error} />
-                </TouchableOpacity>
-              </View>
+          {items.map((item, index) => {
+            const isDiscount = parseFloat(item.unit_price || '0') < 0 || item.id.startsWith('discount-');
+            if (isDiscount) {
+              return (
+                <Card 
+                  key={item.id} 
+                  style={{
+                    ...styles.itemCard,
+                    borderStyle: 'dashed',
+                    borderWidth: 1.5,
+                    borderColor: colors.error,
+                    backgroundColor: isDark ? 'rgba(239, 68, 68, 0.1)' : 'rgba(239, 68, 68, 0.05)',
+                  }} 
+                  padding={4}
+                >
+                  <View style={styles.itemHeader}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing[1] }}>
+                      <Ionicons name="pricetag" size={16} color={colors.error} />
+                      <Text style={[styles.itemNumber, { color: colors.error }]}>Discount Applied</Text>
+                    </View>
+                    <TouchableOpacity onPress={() => handleRemoveItem(item.id)}>
+                      <Ionicons name="trash-outline" size={20} color={colors.error} />
+                    </TouchableOpacity>
+                  </View>
 
-              <Input
-                placeholder="Description"
-                value={item.description}
-                onChangeText={(text) => handleUpdateItem(item.id, 'description', text)}
-                style={styles.itemInput}
-              />
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: spacing[1] }}>
+                    <Text style={{ fontSize: typography.fontSize.base, fontWeight: typography.fontWeight.semibold, color: colors.text.primary }}>
+                      {item.description}
+                    </Text>
+                    <Text style={{ fontSize: typography.fontSize.lg, fontWeight: typography.fontWeight.bold, color: colors.error }}>
+                      -{currency} {Math.abs(parseFloat(item.unit_price || '0')).toFixed(2)}
+                    </Text>
+                  </View>
+                </Card>
+              );
+            }
 
-              <View style={styles.itemRow}>
-                <View style={{ flex: 1, marginRight: spacing[2] }}>
-                  <Input
-                    placeholder="Qty"
-                    value={item.quantity}
-                    onChangeText={(text) => handleUpdateItem(item.id, 'quantity', text)}
-                    keyboardType="numeric"
-                    style={styles.itemInput}
-                  />
+            return (
+              <Card key={item.id} style={styles.itemCard} padding={4}>
+                <View style={styles.itemHeader}>
+                  <Text style={styles.itemNumber}>Item {index + 1}</Text>
+                  <TouchableOpacity onPress={() => handleRemoveItem(item.id)}>
+                    <Ionicons name="trash-outline" size={20} color={colors.error} />
+                  </TouchableOpacity>
                 </View>
-                <View style={{ flex: 2 }}>
-                  <Input
-                    placeholder="Price"
-                    value={item.unit_price}
-                    onChangeText={(text) => handleUpdateItem(item.id, 'unit_price', text)}
-                    keyboardType="numeric"
-                    icon={<Text style={{ color: colors.gray[500] }}>$</Text>}
-                    style={styles.itemInput}
-                  />
+
+                <Input
+                  placeholder="Description"
+                  value={item.description}
+                  onChangeText={(text) => handleUpdateItem(item.id, 'description', text)}
+                  style={styles.itemInput}
+                />
+
+                <View style={styles.itemRow}>
+                  <View style={{ flex: 1, marginRight: spacing[2] }}>
+                    <Input
+                      placeholder="Qty"
+                      value={item.quantity}
+                      onChangeText={(text) => handleUpdateItem(item.id, 'quantity', text)}
+                      keyboardType="numeric"
+                      style={styles.itemInput}
+                    />
+                  </View>
+                  <View style={{ flex: 2 }}>
+                    <Input
+                      placeholder="Price"
+                      value={item.unit_price}
+                      onChangeText={(text) => handleUpdateItem(item.id, 'unit_price', text)}
+                      keyboardType="numeric"
+                      icon={<Text style={{ color: colors.gray[500] }}>{currency}</Text>}
+                      style={styles.itemInput}
+                    />
+                  </View>
                 </View>
-              </View>
-            </Card>
-          ))}
+              </Card>
+            );
+          })}
 
           {items.length === 0 && (
             <TouchableOpacity onPress={handleAddItem} style={styles.emptyItems}>
@@ -611,6 +697,109 @@ export default function DocumentCreateScreen({ route }: any) {
                 </TouchableOpacity>
               ))}
             </ScrollView>
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* Discount Modal */}
+      <Modal
+        visible={showDiscountModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowDiscountModal(false)}
+      >
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setShowDiscountModal(false)}
+        >
+          <View style={styles.modalContent}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing[4] }}>
+              <Text style={{ fontSize: typography.fontSize.lg, fontWeight: typography.fontWeight.bold, color: colors.text.primary }}>Apply Discount</Text>
+              <TouchableOpacity onPress={() => setShowDiscountModal(false)}>
+                <Ionicons name="close" size={24} color={colors.text.primary} />
+              </TouchableOpacity>
+            </View>
+
+            <View style={{ flexDirection: 'row', gap: spacing[2], marginBottom: spacing[4] }}>
+              <TouchableOpacity
+                style={{
+                  flex: 1,
+                  paddingVertical: spacing[3],
+                  borderRadius: borderRadius.md,
+                  borderWidth: 1,
+                  borderColor: discountType === 'percentage' ? colors.primary[600] : colors.gray[300],
+                  backgroundColor: discountType === 'percentage' ? colors.primary[50] : colors.background.primary,
+                  alignItems: 'center'
+                }}
+                onPress={() => setDiscountType('percentage')}
+              >
+                <Text style={{ fontWeight: typography.fontWeight.semibold, color: discountType === 'percentage' ? colors.primary[700] : colors.text.secondary }}>Percentage (%)</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={{
+                  flex: 1,
+                  paddingVertical: spacing[3],
+                  borderRadius: borderRadius.md,
+                  borderWidth: 1,
+                  borderColor: discountType === 'flat' ? colors.primary[600] : colors.gray[300],
+                  backgroundColor: discountType === 'flat' ? colors.primary[50] : colors.background.primary,
+                  alignItems: 'center'
+                }}
+                onPress={() => setDiscountType('flat')}
+              >
+                <Text style={{ fontWeight: typography.fontWeight.semibold, color: discountType === 'flat' ? colors.primary[700] : colors.text.secondary }}>Flat Amount ({currency})</Text>
+              </TouchableOpacity>
+            </View>
+
+            <Input
+              placeholder={discountType === 'percentage' ? "Enter percentage (e.g. 10)" : "Enter amount (e.g. 50)"}
+              value={discountValue}
+              onChangeText={setDiscountValue}
+              keyboardType="numeric"
+              icon={<Text style={{ color: colors.gray[500] }}>{discountType === 'percentage' ? '%' : currency}</Text>}
+            />
+
+            {(() => {
+              const val = parseFloat(discountValue || '0');
+              let calculatedAmt = 0;
+              if (!isNaN(val) && val > 0) {
+                calculatedAmt = discountType === 'percentage' ? productsSubtotal * (val / 100) : val;
+              }
+              const previewNewSubtotal = Math.max(0, productsSubtotal - calculatedAmt);
+              return (
+                <View style={{
+                  backgroundColor: isDark ? colors.gray[800] : colors.gray[50],
+                  padding: spacing[4],
+                  borderRadius: borderRadius.md,
+                  marginVertical: spacing[4],
+                  gap: spacing[2],
+                  borderWidth: 1,
+                  borderColor: isDark ? colors.gray[700] : colors.gray[200]
+                }}>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                    <Text style={{ color: colors.text.secondary }}>Products Subtotal:</Text>
+                    <Text style={{ color: colors.text.primary, fontWeight: typography.fontWeight.semibold }}>{currency} {productsSubtotal.toFixed(2)}</Text>
+                  </View>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                    <Text style={{ color: colors.text.secondary }}>Discount Amount:</Text>
+                    <Text style={{ color: colors.error, fontWeight: typography.fontWeight.bold }}>-{currency} {calculatedAmt.toFixed(2)}</Text>
+                  </View>
+                  <View style={{ height: 1, backgroundColor: isDark ? colors.gray[700] : colors.gray[200], marginVertical: spacing[1] }} />
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                    <Text style={{ color: colors.text.primary, fontWeight: typography.fontWeight.bold }}>Est. New Subtotal:</Text>
+                    <Text style={{ color: colors.primary[600], fontWeight: typography.fontWeight.bold }}>{currency} {previewNewSubtotal.toFixed(2)}</Text>
+                  </View>
+                </View>
+              );
+            })()}
+
+            <Button
+              title="Apply Discount"
+              onPress={handleApplyDiscount}
+              gradient
+              fullWidth
+            />
           </View>
         </TouchableOpacity>
       </Modal>
