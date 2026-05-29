@@ -643,7 +643,7 @@ export default function DocumentCreateScreen({ route }: any) {
         animationType="slide"
         presentationStyle="pageSheet"
       >
-        <View style={styles.modalContainer}>
+        <View style={[styles.modalContainer, { paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || insets.top || 24) : 0 }]}>
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>Select Client</Text>
             <TouchableOpacity onPress={() => setShowClientModal(false)}>
@@ -659,10 +659,13 @@ export default function DocumentCreateScreen({ route }: any) {
             />
           </View>
           <FlatList
-            data={clients?.filter((c: any) =>
-              c.name.toLowerCase().includes(clientSearch.toLowerCase()) ||
-              c.email.toLowerCase().includes(clientSearch.toLowerCase())
-            ) || []}
+            data={clients?.filter((c: any) => {
+              if (!c) return false;
+              const search = (clientSearch || '').toLowerCase();
+              const name = (c.name || '').toLowerCase();
+              const email = (c.email || '').toLowerCase();
+              return name.includes(search) || email.includes(search);
+            }) || []}
             keyExtractor={(item) => item.id}
             renderItem={({ item }) => (
               <TouchableOpacity
@@ -673,11 +676,11 @@ export default function DocumentCreateScreen({ route }: any) {
                 }}
               >
                 <View style={styles.clientAvatar}>
-                  <Text style={styles.clientInitials}>{item.name.charAt(0)}</Text>
+                  <Text style={styles.clientInitials}>{(item.name || 'C').charAt(0)}</Text>
                 </View>
                 <View>
-                  <Text style={styles.clientListName}>{item.name}</Text>
-                  <Text style={styles.clientListEmail}>{item.email}</Text>
+                  <Text style={styles.clientListName}>{item.name || 'Unknown'}</Text>
+                  <Text style={styles.clientListEmail}>{item.email || ''}</Text>
                 </View>
                 {selectedClient?.id === item.id && (
                   <Ionicons name="checkmark" size={24} color={colors.primary[600]} style={{ marginLeft: 'auto' }} />
@@ -693,7 +696,7 @@ export default function DocumentCreateScreen({ route }: any) {
         animationType="slide"
         presentationStyle="pageSheet"
       >
-        <View style={styles.modalContainer}>
+        <View style={[styles.modalContainer, { paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || insets.top || 24) : 0 }]}>
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>Select Product</Text>
             <TouchableOpacity onPress={() => setShowProductModal(false)}>
@@ -709,9 +712,12 @@ export default function DocumentCreateScreen({ route }: any) {
             />
           </View>
           <FlatList
-            data={products?.filter((p: any) =>
-              p.name.toLowerCase().includes(productSearch.toLowerCase())
-            ) || []}
+            data={products?.filter((p: any) => {
+              if (!p) return false;
+              const search = (productSearch || '').toLowerCase();
+              const name = (p.name || '').toLowerCase();
+              return name.includes(search);
+            }) || []}
             keyExtractor={(item) => item.id}
             renderItem={({ item }) => (
               <TouchableOpacity
@@ -722,8 +728,8 @@ export default function DocumentCreateScreen({ route }: any) {
                   <Ionicons name="cube-outline" size={20} color={colors.primary[700]} />
                 </View>
                 <View>
-                  <Text style={styles.clientListName}>{item.name}</Text>
-                  <Text style={styles.clientListEmail}>${parseFloat(item.unit_price).toFixed(2)}</Text>
+                  <Text style={styles.clientListName}>{item.name || 'Unknown'}</Text>
+                  <Text style={styles.clientListEmail}>${parseFloat(item.unit_price || '0').toFixed(2)}</Text>
                 </View>
                 <Ionicons name="add-circle-outline" size={24} color={colors.primary[600]} style={{ marginLeft: 'auto' }} />
               </TouchableOpacity>

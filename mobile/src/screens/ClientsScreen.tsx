@@ -172,10 +172,13 @@ export default function ClientsScreen() {
     !contactSearch || (c.name || '').toLowerCase().includes(contactSearch.toLowerCase())
   );
 
-  const filteredClients = clients?.filter((client: any) =>
-    client.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    client.email?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredClients = clients?.filter((client: any) => {
+    if (!client) return false;
+    const search = (searchQuery || '').toLowerCase();
+    const name = (client.name || '').toLowerCase();
+    const email = (client.email || '').toLowerCase();
+    return name.includes(search) || email.includes(search);
+  });
 
   const handleCall = (phone: string) => {
     Linking.openURL(`tel:${phone}`);
@@ -337,7 +340,7 @@ export default function ClientsScreen() {
         visible={showAddModal}
         animationType="slide"
       >
-        <View style={styles.modalContainer}>
+        <View style={[styles.modalContainer, { paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || insets.top || 24) : 0 }]}>
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>New Client</Text>
             <TouchableOpacity onPress={() => setShowAddModal(false)}>
@@ -400,7 +403,7 @@ export default function ClientsScreen() {
         visible={showImportModal}
         animationType="slide"
       >
-        <View style={styles.modalContainer}>
+        <View style={[styles.modalContainer, { paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || insets.top || 24) : 0 }]}>
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>Import Contacts</Text>
             <TouchableOpacity onPress={() => {

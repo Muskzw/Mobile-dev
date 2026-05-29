@@ -65,24 +65,36 @@ export const lightColors = {
 
 export const darkColors = {
     ...palette,
+    gray: {
+        50: '#181A20', // Darkest gray (inverted)
+        100: '#22252D', // Dark border / card-accent
+        200: '#2C303B', // Divider / border
+        300: '#474D5A',
+        400: '#6A7282',
+        500: '#8A93A4',
+        600: '#AAB3C4',
+        700: '#CAD3E2',
+        800: '#EAF3FF',
+        900: '#F8FAFC', // Lightest gray (inverted)
+    },
     success: '#10B981',
     warning: '#F59E0B',
     error: '#EF4444',
     info: '#3B82F6',
     shadow: '#000000',
     background: {
-        primary: '#111827', // gray-900
-        secondary: '#000000',
-        tertiary: '#1F2937', // gray-800
+        primary: '#1E2530',   // Elevated card background
+        secondary: '#0F131A', // Base page background
+        tertiary: '#29313E',  // Input field background
     },
     text: {
-        primary: '#F9FAFB', // gray-50
-        secondary: '#D1D5DB', // gray-300
-        tertiary: '#9CA3AF', // gray-400
-        inverse: '#111827',
+        primary: '#F8FAFC',
+        secondary: '#94A3B8',
+        tertiary: '#64748B',
+        inverse: '#0F131A',
     },
     gradients: {
-        primary: ['#4F46E5', '#7C3AED'], // Slightly darker
+        primary: ['#4F46E5', '#7C3AED'],
         secondary: ['#059669', '#047857'],
         sunset: ['#D97706', '#DC2626'],
         ocean: ['#2563EB', '#4F46E5'],

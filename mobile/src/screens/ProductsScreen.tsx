@@ -241,7 +241,7 @@ export default function ProductsScreen() {
                 animationType="slide"
                 presentationStyle="pageSheet"
             >
-                <View style={styles.modalContainer}>
+                <View style={[styles.modalContainer, { paddingTop: Platform.OS === 'android' ? insets.top : 0 }]}>
                     <View style={styles.modalHeader}>
                         <Text style={styles.modalTitle}>{editingItem ? 'Edit Product' : 'New Product'}</Text>
                         <TouchableOpacity onPress={() => {

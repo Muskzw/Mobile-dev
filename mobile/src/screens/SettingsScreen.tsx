@@ -485,22 +485,16 @@ export default function SettingsScreen() {
                 onChangeText={(text) => setCompanyForm({ ...companyForm, phone: text })}
                 keyboardType="phone-pad"
               />
-              <View style={{ flexDirection: 'row', gap: spacing[4] }}>
-                <View style={{ flex: 1 }}>
-                  <Input
-                    label="Business Label (e.g. VAT)"
-                    value={companyForm.businessLabel}
-                    onChangeText={(text) => setCompanyForm({ ...companyForm, businessLabel: text })}
-                  />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Input
-                    label="Business Number"
-                    value={companyForm.businessNumber}
-                    onChangeText={(text) => setCompanyForm({ ...companyForm, businessNumber: text })}
-                  />
-                </View>
-              </View>
+              <Input
+                label="Business Label (e.g. VAT, Tax ID)"
+                value={companyForm.businessLabel}
+                onChangeText={(text) => setCompanyForm({ ...companyForm, businessLabel: text })}
+              />
+              <Input
+                label="Business Number / Tax ID"
+                value={companyForm.businessNumber}
+                onChangeText={(text) => setCompanyForm({ ...companyForm, businessNumber: text })}
+              />
               <Input
                 label="Business Category"
                 value={companyForm.businessCategory}

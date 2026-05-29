@@ -15,6 +15,7 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import api from '../api/client';
 import { useAuthStore } from '../store/authStore';
 import { Button, Input, Card } from '../components';
@@ -26,6 +27,7 @@ import { GOOGLE_WEB_CLIENT_ID } from '../config';
 
 export default function RegisterScreen() {
   const navigation = useNavigation();
+  const insets = useSafeAreaInsets();
   const { setAuth } = useAuthStore();
   const { colors, isDark } = useTheme();
   const styles = createStyles(colors, isDark);
@@ -151,7 +153,7 @@ export default function RegisterScreen() {
         style={styles.keyboardView}
       >
         <ScrollView
-          contentContainerStyle={styles.scrollContent}
+          contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top + spacing[6] }]}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
