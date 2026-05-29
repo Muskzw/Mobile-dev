@@ -8,13 +8,18 @@ async function testWatermark() {
         console.log('🧪 Starting PDF Watermark Test...');
 
         // 1. Get a test user (Free Tier)
-        const userResult = await pool.query(`
-      UPDATE users 
-      SET subscription_tier = 'free' 
-      WHERE email = 'test@example.com' 
-      RETURNING *
-    `);
-        const user = userResult.rows[0];
+        const userResult = await pool.query("SELECT * FROM users LIMIT 1");
+        let user = userResult.rows[0];
+        if (!user) {
+            console.log('⚠️ No users found in database, using dummy free tier user');
+            user = {
+                id: 'dummy-user-id',
+                email: 'dummy@example.com',
+                subscription_tier: 'free'
+            };
+        } else {
+            user.subscription_tier = 'free';
+        }
         console.log(`👤 Test User: ${user.email} (Tier: ${user.subscription_tier})`);
 
         // 2. Get a document for this user
@@ -30,17 +35,34 @@ async function testWatermark() {
         const docResult = await pool.query('SELECT * FROM documents WHERE company_id = $1 LIMIT 1', [company.id]);
         let document = docResult.rows[0];
 
-        // If no document, create a dummy one in memory
+        // If no document or it lacks items, use dummy data or mock items array
         if (!document) {
             console.log('⚠️ No document found, using dummy data');
             document = {
                 type: 'quotation',
                 document_number: 'TEST-001',
                 created_at: new Date(),
-                total: '100.00',
+                issue_date: new Date(),
+                subtotal: '100.00',
+                tax_rate: '10',
+                tax_amount: '10.00',
+                total: '110.00',
                 currency: 'USD',
-                items: []
+                items: [
+                    { name: 'Product A', quantity: 2, unit_price: '50.00', total: '100.00' }
+                ]
             };
+        } else {
+            // Mock items and date fields if missing/unjoined in raw database query
+            if (!document.items) {
+                document.items = [
+                    { name: 'Product A', quantity: 2, unit_price: '50.00', total: '100.00' }
+                ];
+            }
+            if (!document.issue_date) document.issue_date = document.created_at || new Date();
+            if (!document.subtotal) document.subtotal = document.total || '100.00';
+            if (!document.tax_rate) document.tax_rate = '10';
+            if (!document.tax_amount) document.tax_amount = '10.00';
         }
 
         // 3. Generate PDF

@@ -215,15 +215,18 @@ export async function generatePDF(document: any, company: any, client: any | nul
     if (isFreeTier) {
       const watermarkY = 760;
 
-      // Subtle background box
-      doc.rect(50, watermarkY - 5, 500, 20)
-        .fillAndStroke('#FEF3C7', '#F59E0B');
+      // Subtle neutral background box
+      doc.fillColor('#F3F4F6').strokeColor('#E5E7EB')
+        .rect(50, watermarkY - 5, 500, 20)
+        .fillAndStroke();
 
-      // Watermark text
-      doc.fillColor('#92400E').fontSize(9).font('Helvetica-Bold')
-        .text('📄 Created with Quotation Maker', 180, watermarkY, { continued: true })
-        .fillColor('#B45309').fontSize(8).font('Helvetica')
-        .text(' - Upgrade to Premium to remove this watermark', { link: 'https://yourapp.com/upgrade' });
+      // Watermark text - clean and premium (no emojis to prevent font distortion)
+      doc.fillColor('#4B5563').fontSize(9).font('Helvetica-Bold')
+        .text('Created with Quotation Maker', 170, watermarkY, { continued: true })
+        .fillColor('#6B7280').font('Helvetica')
+        .text(' - ')
+        .fillColor(primaryColor).font('Helvetica-Bold')
+        .text('Upgrade to Premium to remove this watermark', { link: 'https://yourapp.com/upgrade' });
     }
 
     // Page number at bottom
