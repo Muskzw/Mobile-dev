@@ -43,26 +43,28 @@ async function testWatermark() {
                 document_number: 'TEST-001',
                 created_at: new Date(),
                 issue_date: new Date(),
-                subtotal: '100.00',
+                subtotal: '90.00',
                 tax_rate: '10',
-                tax_amount: '10.00',
-                total: '110.00',
+                tax_amount: '9.00',
+                total: '99.00',
                 currency: 'USD',
                 items: [
-                    { name: 'Product A', quantity: 2, unit_price: '50.00', total: '100.00' }
+                    { name: 'Product A', quantity: 2, unit_price: '50.00', total: '100.00' },
+                    { name: 'Discount (10%)', quantity: 1, unit_price: '-10.00', total: '-10.00' }
                 ]
             };
         } else {
             // Mock items and date fields if missing/unjoined in raw database query
             if (!document.items) {
                 document.items = [
-                    { name: 'Product A', quantity: 2, unit_price: '50.00', total: '100.00' }
+                    { name: 'Product A', quantity: 2, unit_price: '50.00', total: '100.00' },
+                    { name: 'Discount (10%)', quantity: 1, unit_price: '-10.00', total: '-10.00' }
                 ];
             }
             if (!document.issue_date) document.issue_date = document.created_at || new Date();
-            if (!document.subtotal) document.subtotal = document.total || '100.00';
+            if (!document.subtotal) document.subtotal = '90.00';
             if (!document.tax_rate) document.tax_rate = '10';
-            if (!document.tax_amount) document.tax_amount = '10.00';
+            if (!document.tax_amount) document.tax_amount = '9.00';
         }
 
         // 3. Generate PDF

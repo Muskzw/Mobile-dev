@@ -99,10 +99,14 @@ export async function generatePDF(document: any, company: any, client: any | nul
     y += 25;
 
     // Table Rows
-    doc.fillColor('#374151').font('Helvetica');
     document.items.forEach((item: any, i: number) => {
       const rowY = y;
       const rowHeight = item.description && item.description !== item.name ? 35 : 25;
+
+      const isDiscount = parseFloat(item.unit_price || '0') < 0;
+      const rowColor = isDiscount ? '#B91C1C' : '#374151';
+      const nameColor = isDiscount ? '#B91C1C' : '#111827';
+      const descColor = isDiscount ? '#EF4444' : secondaryColor;
 
       // Alternating row background
       if (i % 2 === 0) {
@@ -110,29 +114,30 @@ export async function generatePDF(document: any, company: any, client: any | nul
       }
 
       // Item number
-      doc.fillColor('#374151').fontSize(9).font('Helvetica')
+      doc.fillColor(rowColor).fontSize(9).font(isDiscount ? 'Helvetica-Bold' : 'Helvetica')
         .text((i + 1).toString(), 55, rowY + 6);
 
       // Item name
-      doc.fillColor('#111827').fontSize(9).font('Helvetica-Bold')
+      doc.fillColor(nameColor).fontSize(9).font('Helvetica-Bold')
         .text(item.name || item.description, 80, rowY + 6, { width: 260 });
 
       // Item description/details (if different from name)
       if (item.description && item.description !== item.name) {
-        doc.fillColor(secondaryColor).fontSize(7).font('Helvetica')
+        doc.fillColor(descColor).fontSize(7).font('Helvetica')
           .text(item.description, 80, rowY + 18, { width: 260 });
       }
 
       // Quantity
-      doc.fillColor('#374151').fontSize(9).font('Helvetica')
+      doc.fillColor(rowColor).fontSize(9).font(isDiscount ? 'Helvetica-Bold' : 'Helvetica')
         .text(item.quantity.toString(), 350, rowY + 8, { width: 50, align: 'center' });
 
       // Price
-      doc.text(parseFloat(item.unit_price).toFixed(2), 410, rowY + 8, { width: 60, align: 'right' });
+      doc.fillColor(rowColor).fontSize(9).font(isDiscount ? 'Helvetica-Bold' : 'Helvetica')
+        .text((isDiscount ? '-' : '') + Math.abs(parseFloat(item.unit_price)).toFixed(2), 410, rowY + 8, { width: 60, align: 'right' });
 
       // Total
-      doc.font('Helvetica-Bold')
-        .text(parseFloat(item.total).toFixed(2), 480, rowY + 8, { width: 65, align: 'right' });
+      doc.fillColor(rowColor).fontSize(9).font('Helvetica-Bold')
+        .text((isDiscount ? '-' : '') + Math.abs(parseFloat(item.total)).toFixed(2), 480, rowY + 8, { width: 65, align: 'right' });
 
       y += rowHeight;
     });
@@ -214,19 +219,8 @@ export async function generatePDF(document: any, company: any, client: any | nul
     const isFreeTier = !user || user.subscription_tier === 'free';
     if (isFreeTier) {
       const watermarkY = 760;
-
-      // Subtle neutral background box
-      doc.fillColor('#F3F4F6').strokeColor('#E5E7EB')
-        .rect(50, watermarkY - 5, 500, 20)
-        .fillAndStroke();
-
-      // Watermark text - clean and premium (no emojis to prevent font distortion)
-      doc.fillColor('#4B5563').fontSize(9).font('Helvetica-Bold')
-        .text('Created with Quotation Maker', 170, watermarkY, { continued: true })
-        .fillColor('#6B7280').font('Helvetica')
-        .text(' - ')
-        .fillColor(primaryColor).font('Helvetica-Bold')
-        .text('Upgrade to Premium to remove this watermark', { link: 'https://yourapp.com/upgrade' });
+      doc.fillColor('#9CA3AF').fontSize(8).font('Helvetica')
+        .text('created with AIqoute', 50, watermarkY, { align: 'center', width: 500 });
     }
 
     // Page number at bottom
