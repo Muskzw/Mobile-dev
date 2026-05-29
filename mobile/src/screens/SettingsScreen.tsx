@@ -232,16 +232,16 @@ export default function SettingsScreen() {
     try {
       const formData = new FormData();
       formData.append('name', companyForm.name);
-      formData.append('contact_name', companyForm.contactName);
+      formData.append('contactName', companyForm.contactName);
       formData.append('email', companyForm.email);
       formData.append('phone', companyForm.phone);
       formData.append('address', companyForm.address);
-      formData.append('address_line2', companyForm.addressLine2);
-      formData.append('address_line3', companyForm.addressLine3);
-      formData.append('business_label', companyForm.businessLabel);
-      formData.append('business_number', companyForm.businessNumber);
-      formData.append('business_category', companyForm.businessCategory);
-      formData.append('payment_instructions', companyForm.paymentInstructions);
+      formData.append('addressLine2', companyForm.addressLine2);
+      formData.append('addressLine3', companyForm.addressLine3);
+      formData.append('businessLabel', companyForm.businessLabel);
+      formData.append('businessNumber', companyForm.businessNumber);
+      formData.append('businessCategory', companyForm.businessCategory);
+      formData.append('paymentInstructions', companyForm.paymentInstructions);
 
       if (logoUri && !logoUri.startsWith('http')) {
         const filename = logoUri.split('/').pop();
