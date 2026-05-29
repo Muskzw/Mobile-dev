@@ -25,8 +25,8 @@ export const Input: React.FC<InputProps> = ({
     ...props
 }) => {
     const [isFocused, setIsFocused] = useState(false);
-    const { colors } = useTheme();
-    const styles = createStyles(colors);
+    const { colors, isDark } = useTheme();
+    const styles = createStyles(colors, isDark);
 
     return (
         <View style={styles.container}>
@@ -53,7 +53,7 @@ export const Input: React.FC<InputProps> = ({
     );
 };
 
-const createStyles = (colors: Colors) => StyleSheet.create({
+const createStyles = (colors: Colors, isDark: boolean) => StyleSheet.create({
     container: {
         marginBottom: spacing[4],
     },
@@ -68,7 +68,7 @@ const createStyles = (colors: Colors) => StyleSheet.create({
         alignItems: 'center',
         backgroundColor: colors.background.secondary,
         borderWidth: 1,
-        borderColor: colors.gray[200],
+        borderColor: isDark ? colors.gray[800] : colors.gray[200],
         borderRadius: borderRadius.lg,
         paddingHorizontal: spacing[4],
         minHeight: 52,

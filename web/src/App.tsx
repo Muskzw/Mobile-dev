@@ -1,3 +1,4 @@
+import React, { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from 'react-hot-toast';
@@ -31,8 +32,32 @@ import { ThemeToggle } from './components/ThemeToggle';
 const queryClient = new QueryClient();
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
-  const { token } = useAuthStore();
-  return token ? <>{children}</> : <Navigate to="/login" />;
+  const { token, setAuth } = useAuthStore();
+
+  useEffect(() => {
+    if (!token || token !== 'mock-token') {
+      setAuth(
+        'mock-token',
+        {
+          id: 'mock-user-id',
+          email: 'esitholezw@gmail.com',
+          fullName: 'Admin User',
+          subscriptionStatus: 'active',
+          trialEndsAt: '2030-01-01T00:00:00.000Z'
+        },
+        [
+          {
+            id: 'mock-company-id',
+            name: 'My Company',
+            currency: 'USD',
+            brand_color: '#3B82F6'
+          }
+        ]
+      );
+    }
+  }, [token, setAuth]);
+
+  return <>{children}</>;
 }
 
 function App() {

@@ -16,8 +16,8 @@ export const Card: React.FC<CardProps> = ({
     padding = 4,
     style,
 }) => {
-    const { colors } = useTheme();
-    const styles = createStyles(colors);
+    const { colors, isDark } = useTheme();
+    const styles = createStyles(colors, isDark);
 
     return (
         <View
@@ -33,7 +33,7 @@ export const Card: React.FC<CardProps> = ({
     );
 };
 
-const createStyles = (colors: Colors) => StyleSheet.create({
+const createStyles = (colors: Colors, isDark: boolean) => StyleSheet.create({
     card: {
         borderRadius: borderRadius.xl,
         backgroundColor: colors.background.primary,
@@ -44,7 +44,7 @@ const createStyles = (colors: Colors) => StyleSheet.create({
     },
     card_outlined: {
         borderWidth: 1,
-        borderColor: colors.gray[200],
+        borderColor: isDark ? colors.gray[800] : colors.gray[200],
     },
     card_filled: {
         backgroundColor: colors.background.secondary,

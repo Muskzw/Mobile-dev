@@ -53,7 +53,7 @@ const initAuth = async () => {
 };
 
 function MainTabs() {
-  const { colors } = useTheme();
+  const { colors, isDark } = useTheme();
 
   return (
     <Tab.Navigator
@@ -79,7 +79,7 @@ function MainTabs() {
         tabBarStyle: {
           backgroundColor: colors.background.primary,
           borderTopWidth: 1,
-          borderTopColor: colors.gray[200],
+          borderTopColor: isDark ? colors.gray[800] : colors.gray[200],
           paddingBottom: 5,
           paddingTop: 5,
           height: 60,
@@ -116,7 +116,7 @@ function MainTabs() {
 
 function AppNavigator() {
   const { token, hasCompletedOnboarding } = useAuthStore();
-  const { colors } = useTheme();
+  const { colors, isDark } = useTheme();
   const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
@@ -133,8 +133,20 @@ function AppNavigator() {
     );
   }
 
+  const navTheme = {
+    dark: isDark,
+    colors: {
+      primary: colors.primary[600],
+      background: colors.background.secondary,
+      card: colors.background.primary,
+      text: colors.text.primary,
+      border: isDark ? colors.gray[800] : colors.gray[200],
+      notification: colors.error,
+    },
+  };
+
   return (
-    <NavigationContainer>
+    <NavigationContainer theme={navTheme}>
       <Stack.Navigator
         screenOptions={{
           headerShown: false,
