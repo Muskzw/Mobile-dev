@@ -271,9 +271,9 @@ export default function RegisterScreen() {
               disabled={loading}
             >
               {loading ? (
-                <ActivityIndicator size="small" color="#EA4335" style={styles.socialIcon} />
+                <ActivityIndicator size="small" color="#4285F4" style={styles.socialIcon} />
               ) : (
-                <Ionicons name="logo-google" size={20} color="#EA4335" style={styles.socialIcon} />
+                <Ionicons name="logo-google" size={20} color="#4285F4" style={styles.socialIcon} />
               )}
               <Text style={styles.googleButtonText}>Continue with Google</Text>
             </TouchableOpacity>
@@ -335,9 +335,9 @@ const createStyles = (colors: Colors, isDark: boolean) => StyleSheet.create({
   },
   formCard: {
     marginBottom: spacing[6],
-    backgroundColor: isDark ? colors.gray[900] : '#FFFFFF',
+    backgroundColor: isDark ? colors.background.primary : '#FFFFFF',
     borderWidth: 1,
-    borderColor: isDark ? colors.gray[800] : colors.gray[200],
+    borderColor: isDark ? colors.gray[100] : colors.gray[200],
     borderRadius: borderRadius.xl,
     padding: spacing[6],
     ...shadows.md,
