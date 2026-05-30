@@ -66,7 +66,7 @@ export default function LoginScreen() {
     try {
       await GoogleSignin.hasPlayServices();
       const userInfo = await GoogleSignin.signIn();
-      const idToken = userInfo.idToken;
+      const idToken = userInfo.data?.idToken || userInfo.idToken;
 
       if (!idToken) {
         throw new Error('Google Sign-In failed: No ID Token retrieved');
