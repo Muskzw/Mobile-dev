@@ -44,7 +44,7 @@ const createStyles = (colors: Colors, isDark: boolean) => StyleSheet.create({
     },
     card_outlined: {
         borderWidth: 1,
-        borderColor: isDark ? colors.gray[800] : colors.gray[200],
+        borderColor: colors.gray[200],
     },
     card_filled: {
         backgroundColor: colors.background.secondary,

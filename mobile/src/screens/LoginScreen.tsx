@@ -349,7 +349,7 @@ const createStyles = (colors: Colors, isDark: boolean) => StyleSheet.create({
   dividerLine: {
     flex: 1,
     height: 1,
-    backgroundColor: isDark ? colors.gray[800] : colors.gray[200],
+    backgroundColor: colors.gray[200],
   },
   dividerText: {
     marginHorizontal: spacing[4],
@@ -365,15 +365,15 @@ const createStyles = (colors: Colors, isDark: boolean) => StyleSheet.create({
     justifyContent: 'center',
     height: 52,
     borderRadius: borderRadius.lg,
-    backgroundColor: isDark ? colors.gray[800] : '#FFFFFF',
+    backgroundColor: isDark ? colors.gray[100] : '#FFFFFF',
     borderWidth: 1,
-    borderColor: isDark ? colors.gray[700] : colors.gray[200],
+    borderColor: colors.gray[200],
     ...shadows.sm,
   },
   googleButtonText: {
     fontSize: typography.fontSize.base,
     fontWeight: typography.fontWeight.semibold,
-    color: isDark ? '#FFFFFF' : colors.gray[800],
+    color: isDark ? colors.text.primary : colors.gray[800],
   },
   appleButton: {
     flexDirection: 'row',

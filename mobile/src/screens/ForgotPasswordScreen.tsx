@@ -182,9 +182,9 @@ const createStyles = (colors: Colors, isDark: boolean) => StyleSheet.create({
     },
     card: {
         marginBottom: spacing[6],
-        backgroundColor: isDark ? colors.gray[900] : '#FFFFFF',
+        backgroundColor: isDark ? colors.background.primary : '#FFFFFF',
         borderWidth: 1,
-        borderColor: isDark ? colors.gray[800] : colors.gray[200],
+        borderColor: colors.gray[200],
         borderRadius: borderRadius.xl,
         padding: spacing[6],
         ...shadows.md,

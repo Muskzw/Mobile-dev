@@ -68,7 +68,7 @@ const createStyles = (colors: Colors, isDark: boolean) => StyleSheet.create({
         alignItems: 'center',
         backgroundColor: colors.background.secondary,
         borderWidth: 1,
-        borderColor: isDark ? colors.gray[800] : colors.gray[200],
+        borderColor: colors.gray[200],
         borderRadius: borderRadius.lg,
         paddingHorizontal: spacing[4],
         minHeight: 52,
